@@ -1,0 +1,69 @@
+@import 'tailwindcss';
+@import './styles/tokens.css' layer(base);
+@import './styles/animations.css' layer(base);
+
+@theme {
+  /* Colors mapped from tokens */
+  --color-white: var(--color-white);
+  --color-black: var(--color-black);
+  --color-surface-primary: var(--color-white);
+  --color-surface-secondary: var(--color-gray-2);
+  --color-neutral-3: var(--color-neutral-3);
+  --color-neutral-4: var(--color-neutral-4);
+  --color-neutral-5: var(--color-neutral-5);
+  --color-neutral-7: var(--color-neutral-7);
+  --color-neutral-9: var(--color-neutral-9);
+  --color-neutral-11: var(--color-neutral-11);
+  --color-neutral-12: var(--color-neutral-12);
+  --color-accent-3: var(--color-accent-3);
+  --color-accent-9: var(--color-accent-9);
+  --color-accent-10: var(--color-accent-10);
+  --color-accent-contrast: var(--color-accent-contrast);
+  --color-red-9: var(--color-red-9);
+
+  /* Card accent palette */
+  --color-card-blue-bg: var(--color-card-blue-bg);
+  --color-card-blue: var(--color-card-blue);
+  --color-card-green-bg: var(--color-card-green-bg);
+  --color-card-green: var(--color-card-green);
+  --color-card-pink-bg: var(--color-card-pink-bg);
+  --color-card-pink: var(--color-card-pink);
+  --color-card-pink-bold: var(--color-card-pink-bold);
+  --color-card-purple-bg: var(--color-card-purple-bg);
+  --color-card-purple: var(--color-card-purple);
+  --color-card-red-bg: var(--color-card-red-bg);
+  --color-card-red: var(--color-card-red);
+  --color-card-orange-bg: var(--color-card-orange-bg);
+  --color-card-orange: var(--color-card-orange);
+
+  /* Font families */
+  --font-sans: 'Inter', -apple-system, Roboto, Helvetica, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+
+  /* Font weights — aligned with design token scale */
+  --font-weight-normal: 500;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+
+  /* Shadows */
+  --shadow-panel: var(--shadow-panel);
+  --shadow-toolbar: var(--shadow-toolbar);
+  --shadow-card-hover: var(--shadow-card-hover);
+
+  /* Custom animations */
+  --animate-fab-pop-in: fab-pop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fab-float: fab-float 3s ease-in-out 0.5s infinite;
+  --animate-badge-pulse: badge-pulse 2s ease-in-out infinite;
+}
+@import './styles/reset.css' layer(base);
+@import './styles/layout.css' layer(components);
+@import './styles/chat.css' layer(components);
+@import './styles/catalog.css' layer(components);
+@import './styles/map.css' layer(components);
+@import './styles/timeline.css' layer(components);
+/* forms.css — migrated to Tailwind utilities */
+@import './styles/home.css' layer(components);
+/* fojo-fab.css — migrated to Tailwind utilities */
+/* documents.css — migrated to Tailwind utilities */
+@import './styles/detail-page.css' layer(components);

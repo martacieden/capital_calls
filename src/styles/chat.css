@@ -1,0 +1,257 @@
+/* Base bubble styles — must stay CSS because parent-child selectors
+   (.chat-message--assistant/--user) override max-width, background, padding */
+.chat-message__bubble {
+  max-width: 95%;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-gray-12);
+}
+
+/* ========== FOJO PANEL — container slide in/out transitions ========== */
+.chat-container {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: start;
+  justify-content: center;
+  width: 0;
+  max-width: 0;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-20px);
+  overflow: hidden;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    min-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-container--open {
+  opacity: 1;
+  transform: translateX(0);
+  width: var(--fojo-width);
+  min-width: var(--fojo-min-width);
+  max-width: var(--fojo-max-width);
+  overflow: visible;
+}
+
+.chat-container--closing {
+  opacity: 0;
+  transform: translateX(-20px);
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+}
+
+/* Panel transition (will-change for smooth animation) */
+.chat-panel {
+  transform: translateX(0);
+  opacity: 1;
+  will-change: transform, opacity;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========== WELCOME SECTION — scrollbar hide ========== */
+.chat-welcome {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-welcome::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========== WELCOME — parent-child typography ========== */
+.welcome-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.welcome-text h3 {
+  color: var(--color-black);
+  text-align: center;
+  font-size: 19px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+  letter-spacing: -0.02px;
+}
+
+.welcome-text p {
+  color: var(--color-neutral-11);
+  font-size: 14px;
+  font-weight: var(--font-weight-regular);
+  line-height: 1.6;
+  letter-spacing: -0.08px;
+}
+
+/* ========== CREATION FLOW — parent-child ========== */
+.creation-item-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.creation-item-card__icon {
+  background: var(--color-accent-3);
+  color: var(--color-accent-9);
+}
+
+.creation-item-card--relationship .creation-item-card__icon {
+  background: var(--color-accent-3);
+  color: var(--color-accent-9);
+}
+
+/* ========== FOJO PIPELINE — parent-child icon/text color ========== */
+.fojo-pipeline__step--complete .fojo-pipeline__step-icon {
+  color: #30a46c;
+}
+
+.fojo-pipeline__step--running .fojo-pipeline__step-icon {
+  color: var(--color-accent-9);
+}
+
+.fojo-pipeline__step--complete .fojo-pipeline__step-text {
+  font-weight: 500;
+  color: var(--color-gray-12);
+}
+
+.fojo-pipeline__step--running .fojo-pipeline__step-text {
+  font-weight: 500;
+  color: var(--color-gray-12);
+}
+
+.fojo-pipeline__step--pending .fojo-pipeline__step-text {
+  font-weight: 400;
+  color: var(--color-neutral-9);
+}
+
+/* ========== CHAT INPUT — placeholder ========== */
+.chat-input::placeholder {
+  color: var(--color-neutral-11);
+}
+
+/* ========== AI DISCLAIMER / RESIZE HANDLE — transitions ========== */
+.ai-disclaimer {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-resize-handle {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========== CHAT MESSAGES — scrollbar hide ========== */
+.chat-messages {
+  scrollbar-width: none;
+}
+
+.chat-messages::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========== CHAT MESSAGE — sibling & parent-child combinators ========== */
+
+/* Tighten gap between consecutive assistant messages */
+.chat-message--assistant + .chat-message--assistant {
+  margin-top: -12px;
+}
+
+.chat-message--assistant .chat-message__col {
+  width: 100%;
+}
+
+.chat-message--user .chat-message__col {
+  align-items: flex-end;
+}
+
+.chat-message--user .chat-message__bubble {
+  max-width: none;
+  background: rgba(0, 91, 226, 0.12);
+  color: var(--color-gray-12);
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message--assistant .chat-message__bubble {
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chat-message--assistant .chat-message__bubble br {
+  display: block;
+  content: '';
+  margin-top: 6px;
+}
+
+/* ========== FOJO TYPING INDICATOR — animation ========== */
+.fojo-typing-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent-9);
+  animation: typing-bounce 1.4s ease-in-out infinite;
+}
+
+.fojo-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.fojo-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ========== NOTIFICATION DROPDOWN — scrollbar hide ========== */
+.chat-notification__dropdown::-webkit-scrollbar {
+  width: 0;
+}
+
+/* ========== NOTIFICATION ITEMS — animation delays ========== */
+.chat-notification__item {
+  animation: notif-item-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.chat-notification__item:first-of-type {
+  animation-delay: 0.04s;
+}
+
+.chat-notification__item:nth-of-type(2) {
+  animation-delay: 0.08s;
+}
+
+/* ========== SMALL SCREEN OVERLAY ========== */
+.chat-container--overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  min-width: 0;
+  max-width: 100vw;
+  height: 100dvh;
+  z-index: 350;
+  opacity: 1;
+  transform: translateX(0);
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--color-white);
+  align-items: stretch;
+  justify-content: stretch;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-container--overlay .chat-panel {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.chat-container--overlay .ai-disclaimer {
+  margin-bottom: 8px;
+}

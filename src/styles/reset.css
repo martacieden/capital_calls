@@ -1,0 +1,30 @@
+/* ========== RESET ========== */
+/* NOTE: box-sizing/margin/padding reset is handled by Tailwind v4 preflight.
+   Keeping this file for non-preflight resets only. */
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--color-black);
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}

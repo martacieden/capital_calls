@@ -1,0 +1,42 @@
+interface FojoMascotProps {
+    size?: number | string
+    className?: string
+    animated?: boolean
+}
+
+export function FojoMascot({ size = 200, className = '', animated = false }: FojoMascotProps) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 200 200"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={`${className}${animated ? ' fojo-breathe' : ''}`}
+        >
+            <rect width="200" height="200" rx="100" fill="url(#fojo-bg)" />
+            <path
+                d="M37.4928 116.133C59.7111 127.36 76.8479 147.1 88.1716 168.149C90.4892 173.632 95.2037 176.764 100.5 177C105.796 176.764 110.511 173.632 112.828 168.149C124.152 147.1 141.289 127.36 163.507 116.133C170.884 112.978 175.43 107.539 174.968 100C175.43 92.4614 170.884 87.0221 163.507 83.8668C141.289 72.6397 124.152 52.8995 112.828 31.8511C110.511 26.3685 105.796 23.2355 100.5 23C95.2038 23.2355 90.4892 26.3685 88.1716 31.8511C76.8479 52.8995 59.7111 72.6397 37.4928 83.8668C30.1158 87.0221 25.5705 92.4614 26.0321 100C25.5705 107.539 30.1158 112.978 37.4928 116.133Z"
+                fill="#D8EAFF"
+            />
+            <rect
+                className={animated ? 'fojo-eye' : undefined}
+                x="72" y="74" width="24" height="52" rx="12"
+                fill="#0048BF"
+            />
+            <path
+                className={animated ? 'fojo-eye' : undefined}
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M128 86C128 79.3726 122.627 74 116 74C109.373 74 104 79.3726 104 86V114H128V86Z"
+                fill="#0048BF"
+            />
+            <defs>
+                <linearGradient id="fojo-bg" x1="0.40708" y1="93.3569" x2="199.593" y2="174.929" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#0048BF" />
+                    <stop offset="1" stopColor="#145CD3" />
+                </linearGradient>
+            </defs>
+        </svg>
+    )
+}

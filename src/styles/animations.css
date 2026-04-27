@@ -1,0 +1,225 @@
+/* ========== SHARED KEYFRAMES — used by Tailwind animate-* utilities ========== */
+
+@keyframes fab-pop-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fab-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-5px) scale(1.03); }
+}
+
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--color-red-1), 0 0 0 4px rgba(229, 72, 77, 0); }
+  50% { box-shadow: 0 0 0 2px var(--color-red-1), 0 0 0 6px rgba(229, 72, 77, 0.18); }
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.5; }
+}
+
+@keyframes card-highlight-fade {
+  0%, 70% { border-color: var(--color-accent-9); box-shadow: 0 0 0 3px rgba(0, 91, 226, 0.12); }
+  100% { border-color: var(--color-gray-4); box-shadow: none; }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+@keyframes load-more-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes doc-exit-left {
+  to { transform: translateX(-32px); opacity: 0; }
+}
+
+@keyframes doc-exit-right {
+  to { transform: translateX(32px); opacity: 0; }
+}
+
+@keyframes doc-enter-from-right {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes doc-enter-from-left {
+  from { transform: translateX(-32px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes chat-area-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fojo-word-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+
+@keyframes notif-dropdown-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes notif-item-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fojo-toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ========== HOME / ONBOARDING KEYFRAMES ========== */
+
+@keyframes onb-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chips-slide-up {
+  from { transform: translateY(6px); opacity: 0.6; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes widget-appear {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes border-rotate {
+  from { --border-angle: 0deg; }
+  to   { --border-angle: 360deg; }
+}
+
+@keyframes avatar-glow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
+  50% { box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.4); }
+}
+
+@keyframes step-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bar-shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float-1 {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50%       { transform: rotate(-4deg) translateY(-6px); }
+}
+
+@keyframes float-2 {
+  0%, 100% { transform: rotate(-1deg) translateY(0); }
+  50%       { transform: rotate(-1deg) translateY(-6px); }
+}
+
+@keyframes float-3 {
+  0%, 100% { transform: rotate(3deg) translateY(0); }
+  50%       { transform: rotate(3deg) translateY(-6px); }
+}
+
+@keyframes v3-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes v3-empty-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes v3-empty-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes card-slide-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes onb-svg-node-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes onb-svg-line-draw {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes node-glow {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.4)); }
+}
+
+@keyframes dot-travel {
+  0%   { offset-distance: 0%; opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+@keyframes timeline-row-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes dot-pulse-wave {
+  0%, 30%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); background: #059669; }
+  15% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.3); background: #10B981; }
+}
+
+@keyframes bar-grow {
+  from { width: 0; }
+  to   { width: var(--bar-width); }
+}
+
+@keyframes bar-breathe {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.88); }
+}
+
+/* Fojo mascot animations */
+@keyframes fojo-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes fojo-blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  97% { transform: scaleY(0.05); }
+}
+
+.fojo-breathe {
+  animation: fojo-breathe 4s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.fojo-eye {
+  animation: fojo-blink 8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center center;
+}

@@ -1,0 +1,894 @@
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { TIMING } from '@/lib/constants'
+import { useRandomTemplate } from '@/lib/hooks/useRandomTemplate'
+import { useDeferredUnmount } from '@/lib/hooks/useDeferredUnmount'
+import { useDetailPanel } from '@/lib/hooks/useDetailPanel'
+import { CatalogDataProvider, useCatalogData } from '@/lib/providers/CatalogDataProvider'
+import { FojoProvider, useFojo } from '@/lib/providers/FojoProvider'
+import { LeftNav } from '@/components/molecules/LeftNav'
+import { ContentHeader } from '@/components/molecules/ContentHeader'
+import { FojoPanel } from '@/components/organisms/FojoPanel'
+import { CatalogToolbar } from '@/components/organisms/CatalogToolbar'
+import { CardView } from '@/components/molecules/CardView'
+import { ListView } from '@/components/molecules/ListView'
+import { FamilyTreeView } from '@/components/organisms/FamilyTreeView'
+import { ItemDetailPanel } from '@/components/organisms/ItemDetailPanel'
+import { UnifiedTimelineStrip } from '@/components/molecules/UnifiedTimelineStrip'
+import { thorntonAssetTimeline } from '@/data/thornton/asset-timeline'
+import { TimelinePage } from '@/components/pages/TimelinePage'
+import { HomePage } from '@/components/pages/HomePage'
+import { OnboardingPage } from '@/components/pages/OnboardingPage'
+import { ValuationsPage } from '@/components/pages/ValuationsPage'
+import { DocumentsPage } from '@/components/pages/DocumentsPage'
+import { AssetDetailPage } from '@/components/pages/AssetDetailPage'
+import { ToastContainer, showToast, updateToast } from '@/components/atoms/Toast'
+import { SearchOverlay } from '@/components/organisms/SearchOverlay'
+import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
+import { FojoMascot } from '@/components/atoms/FojoMascot'
+import type { AnyCatalogItem, DistributionEvent, QuickFilterKey } from '@/data/types'
+import type { CardActionType } from '@/components/molecules/CardActionsMenu'
+import { ActionPromptDropdown } from '@/components/molecules/ActionPromptDropdown'
+import type { PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
+import { THORNTON_POSITIONS, THORNTON_VISUAL_EDGES } from '@/data/thornton/graph-positions'
+import { NODE_W } from '@/lib/helpers/graph-layout'
+import { MOCK_COLLECTION_TEMPLATES } from '@/data/thornton/documents-data'
+import type { DocCollection } from '@/data/thornton/documents-data'
+import { assetCollections as defaultAssetCollections, MOCK_ASSET_COLLECTION_TEMPLATES } from '@/data/thornton/asset-collections'
+import type { AssetCollection } from '@/data/thornton/asset-collections'
+import { CollectionCard } from '@/components/molecules/CollectionCard'
+import { IconChevronRight, IconChevronDown, IconAt } from '@tabler/icons-react'
+import { usePlaceholderRotation } from '@/lib/hooks/usePlaceholderRotation'
+import { useClickOutside } from '@/lib/hooks/useClickOutside'
+import { createPortal } from 'react-dom'
+import { sortByPriority } from '@/lib/helpers/priority-sort'
+
+function App() {
+  return (
+    <FojoProvider>
+      <CatalogDataProvider>
+        <AppShell />
+      </CatalogDataProvider>
+    </FojoProvider>
+  )
+}
+
+function AppShell() {
+  // ── Data from contexts ──
+  const {
+    allItems, allRelationships, allDistributions, getItemById,
+    activeOrgs, setActiveOrgs, activeCategory, setActiveCategory,
+    allCategories, addCustomCategory,
+    filters, addLocalItems, addLocalRelationships,
+  } = useCatalogData()
+
+  const {
+    fojoVisibility, fojoForceOpen, setFojoForceOpen, isSmallScreen,
+    fojoUnreadCount, setFojoUnreadCount,
+    triggerCreation, triggerCreationText, triggerCreationHasFiles, triggerCreationActionType,
+    triggerCreationScenarioId,
+    triggerCreationWithFiles, consumeTriggerCreation,
+    pendingFojoQuery, setPendingFojoQuery, consumePendingFojoQuery,
+    pendingCollection, setPendingCollection,
+    isOnboardingComplete, isProcessing, navBadges, completeOnboarding, clearBadge,
+    isMapExpanded, setIsMapExpanded, isTimelineExpanded, setIsTimelineExpanded,
+    keepFojoOpenForNextExpand,
+  } = useFojo()
+
+  // ── Local navigation state ──
+  const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'documents' | 'detail'>('home')
+  const [detailItemId, setDetailItemId] = useState<string | null>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [mapZoomTargetId, setMapZoomTargetId] = useState<string | null>(null)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
+  const [highlightedItemIds, setHighlightedItemIds] = useState<Set<string>>(new Set())
+  const [isDetailGraphExpanded, setIsDetailGraphExpanded] = useState(false)
+  const pickTemplate = useRandomTemplate(MOCK_COLLECTION_TEMPLATES)
+
+  // ── Asset collections state ──
+  const [assetCollections, setAssetCollections] = useState<AssetCollection[]>(defaultAssetCollections)
+  const [catalogSubView, setCatalogSubView] = useState<'home' | 'all-collections' | 'collection-detail'>('home')
+  const [activeAssetCollection, setActiveAssetCollection] = useState<string | null>(null)
+  const [isNewAssetCollectionOpen, setIsNewAssetCollectionOpen] = useState(false)
+  const [assetCollectionPrompt, setAssetCollectionPrompt] = useState('')
+  const newAssetCollBtnRef = useRef<HTMLButtonElement>(null)
+  const assetCollDropdownRef = useRef<HTMLDivElement>(null)
+  const assetCollInputRef = useRef<HTMLInputElement>(null)
+  const pickAssetTemplate = useRandomTemplate(MOCK_ASSET_COLLECTION_TEMPLATES)
+
+  // ── Effects ──
+  useEffect(() => {
+    const timer = setTimeout(() => setIsInitialLoading(false), TIMING.initialLoading)
+    return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsSearchOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const v3Empty = useDeferredUnmount(isProcessing, TIMING.v3EmptyUnmount)
+
+  // ── Asset collection helpers ──
+  const assetCollPlaceholderExamples = useMemo(() => [
+    'All real estate in Dynasty Trust I',
+    'High-value art and collectibles',
+    'Assets insured for over $10 million',
+    'Investment portfolios managed by Goldman Sachs',
+  ], [])
+  const assetCollPlaceholder = usePlaceholderRotation(assetCollPlaceholderExamples, isNewAssetCollectionOpen && !assetCollectionPrompt)
+  useClickOutside([assetCollDropdownRef, newAssetCollBtnRef], () => setIsNewAssetCollectionOpen(false), isNewAssetCollectionOpen)
+
+  const getAssetCollDropdownStyle = useCallback((): React.CSSProperties => {
+    const rect = newAssetCollBtnRef.current?.getBoundingClientRect()
+    if (!rect) return {}
+    return { position: 'fixed', top: rect.bottom + 6, right: window.innerWidth - rect.right, zIndex: 200 }
+  }, [])
+
+  const handleCreateAssetCollection = useCallback(() => {
+    if (!assetCollectionPrompt.trim()) return
+    setIsNewAssetCollectionOpen(false)
+    setAssetCollectionPrompt('')
+    const template = pickAssetTemplate()
+    const newCollection: AssetCollection = {
+      key: `custom-${Date.now()}`,
+      label: template.label,
+      icon: template.icon,
+      description: template.description,
+      itemIds: template.itemIds,
+    }
+    const toastId = showToast(`Creating "${template.label}" collection...`, 'loading')
+    setTimeout(() => {
+      setAssetCollections(prev => [...prev, newCollection])
+      updateToast(
+        toastId,
+        `Collection "${template.label}" created — ${template.itemIds.length} asset${template.itemIds.length === 1 ? '' : 's'} added`,
+        'success',
+        { label: 'Open', onClick: () => { setActiveAssetCollection(newCollection.key); setCatalogSubView('collection-detail') } }
+      )
+    }, 3000)
+  }, [assetCollectionPrompt, pickAssetTemplate])
+
+  const handleOpenAssetCollection = useCallback((key: string) => {
+    setActiveAssetCollection(key)
+    setCatalogSubView('collection-detail')
+  }, [])
+
+  const handleBackToCatalogHome = useCallback(() => {
+    setCatalogSubView('home')
+    setActiveAssetCollection(null)
+  }, [])
+
+  const currentAssetCollection = activeAssetCollection
+    ? assetCollections.find(c => c.key === activeAssetCollection) ?? null
+    : null
+
+  const collectionFilteredItems = useMemo(() => {
+    if (!currentAssetCollection) return []
+    let items = allItems.filter(i => currentAssetCollection.itemIds.includes(i.id))
+    if (filters.searchQuery.trim()) {
+      const q = filters.searchQuery.toLowerCase()
+      items = items.filter(i =>
+        i.name.toLowerCase().includes(q) ||
+        (i.description && i.description.toLowerCase().includes(q))
+      )
+    }
+    return sortByPriority(items)
+  }, [currentAssetCollection, allItems, filters.searchQuery])
+
+  // Collections filtered by search + quick filter
+  const filteredAssetCollections = useMemo(() => {
+    let result = assetCollections as AssetCollection[]
+    if (filters.searchQuery.trim()) {
+      const q = filters.searchQuery.toLowerCase()
+      result = result.filter(c =>
+        c.label.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q)
+      )
+    }
+    if (filters.activeQuickFilters.size > 0) {
+      result = result.filter(c => c.priorityStatus && filters.activeQuickFilters.has(c.priorityStatus.type as QuickFilterKey))
+    }
+    return sortByPriority(result)
+  }, [assetCollections, filters.searchQuery, filters.activeQuickFilters])
+
+  const MAX_VISIBLE_COLLECTIONS = 4
+
+  // ── Detail panel ──
+  const detail = useDetailPanel(getItemById)
+
+  const handleAddCategory = useCallback((label: string, icon: string) => {
+    const key = label.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    if (!key) return
+    addCustomCategory({ key, label: label.trim(), icon, color: '#A1A1AA', appearsInMap: true })
+  }, [addCustomCategory])
+
+  const handleDeleteItem = useCallback((_id: string) => {}, [])
+  const handleUpdateItem = useCallback((_id: string, _updates: Partial<AnyCatalogItem>) => {}, [])
+  const noop = useCallback(() => {}, [])
+  const handleOpenTimeline = useCallback(() => setActivePage('timeline'), [])
+  const handleItemsCreated = useCallback((items: AnyCatalogItem[]) => {
+    addLocalItems(items)
+    const ids = new Set(items.map(i => i.id))
+    setHighlightedItemIds(ids)
+    setTimeout(() => setHighlightedItemIds(new Set()), TIMING.highlightFade)
+  }, [addLocalItems])
+
+  // Optimistic placeholder for "add new asset" in graph tree
+  const [pendingCreationForItemId, setPendingCreationForItemId] = useState<string | null>(null)
+
+  const handleItemsCreatedWithPlaceholderClear = useCallback((items: AnyCatalogItem[]) => {
+    const sourceId = pendingCreationForItemId
+    handleItemsCreated(items)
+
+    // Place new items in the graph tree, connected to the source node
+    if (sourceId && items.length > 0) {
+      const sourcePos = THORNTON_POSITIONS[sourceId]
+      if (sourcePos) {
+        items.forEach((item, i) => {
+          THORNTON_POSITIONS[item.id] = {
+            x: sourcePos.x + NODE_W + 40,
+            y: sourcePos.y + 60 + i * 180,
+          }
+        })
+        // Add visual edges so buildGraph renders them in Thornton mode
+        items.forEach(item => {
+          THORNTON_VISUAL_EDGES.push({ from: sourceId, to: item.id, label: 'Owned by' })
+        })
+        addLocalRelationships(items.map(item => ({
+          from: sourceId,
+          to: item.id,
+          type: 'owns' as const,
+          label: 'Owned by',
+        })))
+      }
+    }
+
+    setPendingCreationForItemId(null)
+  }, [handleItemsCreated, pendingCreationForItemId, addLocalRelationships])
+
+  // Whether the next detail-panel open should activate edit mode
+  const [detailOpenInEditMode, setDetailOpenInEditMode] = useState(false)
+
+  // Intermediate action prompt state — shown before triggering Fojo
+  const [pendingCardAction, setPendingCardAction] = useState<{
+    action: CardActionType
+    contextName: string
+    anchorRect: PromptAnchorRect | null
+    /** Graph node whose actions menu triggered the prompt (keeps ⋮ visible). */
+    sourceGraphItemId?: string | null
+    /** Timeline event id when prompt came from timeline. */
+    sourceTimelineEventId?: string | null
+    onSubmit: (text: string, hasFiles: boolean) => void
+  } | null>(null)
+
+  // AI actions that need the intermediate prompt step (stable module-level reference via useMemo)
+  const AI_ACTIONS = useMemo(() => new Set<CardActionType>(['create-task', 'add-new-asset', 'change-relation']), [])
+
+  // Build the final prompt from user's typed text + action context
+  const buildPromptFromInput = useCallback((base: string, userText: string): string => {
+    return userText ? `${base} Here's more context: ${userText}` : base
+  }, [])
+
+  // Handle actions from graph tree cards
+  const handleGraphCardAction = useCallback((item: AnyCatalogItem, action: CardActionType, anchor?: PromptAnchorRect | null) => {
+    // Navigate to full detail page (collapse any expanded view so LeftNav is visible)
+    if (action === 'open-detail') {
+      detail.setIsDetailOpen(false)
+      setDetailItemId(item.id)
+      setActivePage('detail')
+      setIsMapExpanded(false)
+      setIsTimelineExpanded(false)
+      return
+    }
+    // Open side panel (view sources shows the same detail panel which includes source docs)
+    if (action === 'view-source') {
+      detail.handleItemClick(item)
+      return
+    }
+    // Open side panel in edit mode
+    if (action === 'edit-fields') {
+      setDetailOpenInEditMode(true)
+      detail.handleItemClick(item)
+      return
+    }
+    // AI actions — show the intermediate prompt_dropdown first (close side panel so it does not stack or steal clicks)
+    if (AI_ACTIONS.has(action)) {
+      detail.handleCloseDetail()
+      const actionTypeMap: Record<string, 'asset' | 'task' | 'relation'> = {
+        'add-new-asset': 'asset', 'create-task': 'task', 'change-relation': 'relation',
+      }
+      setPendingCardAction({
+        action,
+        contextName: item.name,
+        anchorRect: anchor ?? null,
+        sourceGraphItemId: item.id,
+        sourceTimelineEventId: null,
+        onSubmit: (text, hasFiles) => {
+          setPendingCardAction(null)
+          if (action === 'add-new-asset') setPendingCreationForItemId(item.id)
+          const basePrompt = action === 'create-task'
+            ? `I'd like help creating a task related to "${item.name}".`
+            : action === 'add-new-asset'
+              ? `I'd like help adding an asset connected to "${item.name}".`
+              : `I'd like help updating relationships for "${item.name}".`
+          const prompt = buildPromptFromInput(basePrompt, text)
+          triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action])
+        },
+      })
+    }
+  }, [detail, AI_ACTIONS, buildPromptFromInput, triggerCreationWithFiles, setDetailOpenInEditMode])
+
+  // Handle actions from timeline cards
+  const handleTimelineCardAction = useCallback((event: DistributionEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => {
+    const eventLabel = event.description ?? event.triggerCategory ?? 'distribution'
+    if (AI_ACTIONS.has(action)) {
+      detail.handleCloseDetail()
+      const actionTypeMap: Record<string, 'asset' | 'task' | 'relation'> = {
+        'add-new-asset': 'asset', 'create-task': 'task', 'change-relation': 'relation',
+      }
+      setPendingCardAction({
+        action,
+        contextName: eventLabel,
+        anchorRect: anchor ?? null,
+        sourceGraphItemId: null,
+        sourceTimelineEventId: event.id,
+        onSubmit: (text, hasFiles) => {
+          setPendingCardAction(null)
+          const basePrompt = `I'd like help creating a task related to this distribution: "${eventLabel}".`
+          const prompt = buildPromptFromInput(basePrompt, text)
+          triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action])
+        },
+      })
+    }
+  }, [detail, AI_ACTIONS, buildPromptFromInput, triggerCreationWithFiles])
+
+  // Handle "Add relationship" from detail panel
+  const handleAddRelationship = useCallback((item: AnyCatalogItem) => {
+    setPendingCardAction({
+      action: 'change-relation',
+      contextName: item.name,
+      anchorRect: null,
+      sourceGraphItemId: null,
+      sourceTimelineEventId: null,
+      onSubmit: (text, hasFiles) => {
+        setPendingCardAction(null)
+        const basePrompt = `I'd like help adding or updating relationships for "${item.name}".`
+        const prompt = buildPromptFromInput(basePrompt, text)
+        triggerCreationWithFiles(prompt, hasFiles, 'relation')
+      },
+    })
+  }, [buildPromptFromInput, triggerCreationWithFiles])
+
+  const handleCreateCollection = useCallback((item: AnyCatalogItem) => {
+    const template = pickTemplate()
+    const newCollection: DocCollection = {
+      key: `custom-${Date.now()}`,
+      label: template.label,
+      icon: template.icon,
+      pinned: false,
+      docIds: template.docIds,
+      description: template.description,
+    }
+    detail.setIsDetailOpen(false)
+    detail.setDetailPath([])
+    const toastId = showToast(`Creating "${item.name}" collection...`, 'loading')
+    setTimeout(() => {
+      setPendingCollection(newCollection)
+      setIsMapExpanded(false)
+      setActivePage('documents')
+      updateToast(
+        toastId,
+        `Collection "${template.label}" created — ${template.docIds.length} document${template.docIds.length === 1 ? '' : 's'} added`,
+        'success',
+      )
+    }, TIMING.toastDelay)
+  }, [detail, pickTemplate, setPendingCollection, setIsMapExpanded])
+
+  // ── Derived values ──
+  const distributionSummary = useMemo(() => {
+    const trusts = new Set(allDistributions.map(d => d.trustId))
+    const years = allDistributions.map(d => d.triggerYear).filter((y): y is number => y != null)
+    const yearRange = years.length > 0 ? `${Math.min(...years)}\u2013${Math.max(...years)}` : undefined
+    return { count: allDistributions.length, trustCount: trusts.size, yearRange }
+  }, [allDistributions])
+
+  const stripSelectedItem = detail.selectedItem ?? null
+
+  // ── Navigation helpers ──
+  const navigateToDetail = useCallback((id: string) => {
+    if (!getItemById(id)) return // guard: item not in catalog (e.g. task/relation summary cards)
+    setDetailItemId(id)
+    setActivePage('detail')
+    setIsMapExpanded(false)
+    setIsTimelineExpanded(false)
+  }, [getItemById, setIsMapExpanded, setIsTimelineExpanded])
+
+  const navigateToTimeline = useCallback((itemId: string) => {
+    setSelectedItemId(itemId)
+    setIsMapExpanded(false)
+    detail.setIsDetailOpen(false)
+    detail.setDetailPath([])
+    setActivePage('timeline')
+  }, [detail, setIsMapExpanded])
+
+  const handlePostNavigation = useCallback((nav: string, items: AnyCatalogItem[]) => {
+    if (nav === 'timeline') {
+      keepFojoOpenForNextExpand()
+      setFojoForceOpen(true)
+      setActivePage('timeline')
+      setIsTimelineExpanded(true)
+    } else if (nav === 'catalog-grid') {
+      setActivePage('catalog')
+      setActiveView('grid')
+      setFojoForceOpen(true)
+    } else if (nav === 'catalog-map') {
+      // Arm suppression so the chat stays open when we expand the tree to fullscreen
+      keepFojoOpenForNextExpand()
+      setFojoForceOpen(true)
+      setActivePage('catalog')
+      setActiveView('map')
+      setIsMapExpanded(true)
+      // Zoom to the Hamptons Estate node (which has the homeowners-policy relationship)
+      // without opening the detail side-panel.
+      setMapZoomTargetId('thn-a2')
+    } else if (nav === 'documents') {
+      setActivePage('documents')
+      setFojoForceOpen(true)
+    } else if (nav === 'detail' && items[0]) {
+      // Bypass navigateToDetail's getItemById guard — the item was just created and
+      // the state update may not have propagated yet, so we set page state directly.
+      setDetailItemId(items[0].id)
+      setActivePage('detail')
+      setIsMapExpanded(false)
+      setIsTimelineExpanded(false)
+    }
+  }, [navigateToDetail, setFojoForceOpen, keepFojoOpenForNextExpand, setIsMapExpanded, setIsTimelineExpanded])
+
+  // ── Layout flags ──
+  const isMapView = activeView === 'map'
+  const isFullscreen = isMapView && isMapExpanded
+  const isFullscreenDetail = isFullscreen && detail.isDetailOpen
+  const isTimelineDetail = isTimelineExpanded && detail.isDetailOpen
+  const showHeader = !isFullscreen && !isDetailGraphExpanded
+  const hasStrip = isFullscreen && !isProcessing
+  const hasStripContent = hasStrip && stripSelectedItem != null
+  const isAnyFullscreen = isFullscreen || isTimelineExpanded || isDetailGraphExpanded
+  const isChatOpen = fojoVisibility === 'open' && !isSmallScreen
+
+
+  return (
+    <div className={`app-shell${(isFullscreen || isDetailGraphExpanded) ? ' app-shell--map-fullscreen' : ''}${isTimelineExpanded ? ' app-shell--tl-fullscreen' : ''}${isFullscreenDetail ? ' app-shell--map-detail' : ''}${isTimelineDetail ? ' app-shell--tl-detail' : ''}${hasStrip ? ' app-shell--has-strip' : ''}${hasStripContent ? ' app-shell--strip-active' : ''}`}>
+      <LeftNav
+          activeItem={activePage}
+          navBadges={navBadges}
+          onNavItemClick={(id) => {
+              clearBadge(id)
+              if (id === 'search') setIsSearchOpen(true)
+              else if (id === 'timeline') setActivePage('timeline')
+              else if (id === 'catalog') setActivePage('catalog')
+              else if (id === 'home') setActivePage('home')
+              else if (id === 'portfolio') setActivePage('portfolio')
+              else if (id === 'documents') setActivePage('documents')
+          }}
+          onFojoToggle={() => setFojoForceOpen(!fojoForceOpen)}
+          fojoUnreadCount={fojoUnreadCount}
+          isFojoOpen={fojoVisibility === 'open'}
+      />
+
+      <FojoPanel
+        visibility={fojoVisibility}
+        onClose={() => setFojoForceOpen(false)}
+        onUnreadCountChange={setFojoUnreadCount}
+        onOpenTimeline={handleOpenTimeline}
+        distributionSummary={distributionSummary}
+        onCreateItem={noop}
+        onCatalogUpdate={noop}
+        onItemsCreated={handleItemsCreatedWithPlaceholderClear}
+        onItemClick={navigateToDetail}
+        currentPage={activePage}
+        currentItem={activePage === 'detail' && detailItemId ? getItemById(detailItemId) : null}
+        triggerCreation={triggerCreation}
+        triggerCreationText={triggerCreationText}
+        triggerCreationHasFiles={triggerCreationHasFiles}
+        triggerCreationActionType={triggerCreationActionType}
+        triggerCreationScenarioId={triggerCreationScenarioId}
+        onTriggerCreationConsumed={consumeTriggerCreation}
+        isOverlay={isSmallScreen && fojoForceOpen}
+        pendingFojoQuery={pendingFojoQuery}
+        onPendingFojoQueryConsumed={consumePendingFojoQuery}
+        onPostNavigation={handlePostNavigation}
+      />
+
+      {/* Floating FAB only shown in fullscreen mode (left nav is hidden there) */}
+      {fojoVisibility === 'collapsed' && isAnyFullscreen && (
+        <button
+          className="fixed bottom-6 left-6 z-[300] flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border-none bg-transparent p-0 shadow-none transition-transform duration-[180ms] animate-fab-pop-in hover:-translate-y-0.5 active:translate-y-0"
+          onClick={() => setFojoForceOpen(true)}
+          aria-label="Open Fojo"
+        >
+          <FojoMascot size="100%" className="block rounded-full" animated />
+          {fojoUnreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[5px] bg-[#DC2626] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-white)] animate-badge-pulse">
+              {fojoUnreadCount > 9 ? '9+' : fojoUnreadCount}
+            </span>
+          )}
+        </button>
+      )}
+
+      <main className={`main-content${isAnyFullscreen ? ' main-content--map-expanded' : ''}`}>
+        {!isOnboardingComplete && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--color-white)' }}>
+            <OnboardingPage
+              onComplete={() => {
+                completeOnboarding()
+                setActiveOrgs(['org-thornton'])
+                setActivePage('home')
+              }}
+            />
+          </div>
+        )}
+
+        <div style={{ display: activePage === 'home' ? undefined : 'none', height: '100%' }}>
+          <HomePage
+            isProcessing={isProcessing}
+            isOnboardingComplete={isOnboardingComplete}
+            onNavigate={(page) => setActivePage(page as 'catalog' | 'timeline' | 'home' | 'portfolio' | 'documents')}
+            items={allItems}
+            distributions={allDistributions}
+            isChatOpen={isChatOpen}
+            onUploadComplete={(scenarioId) => triggerCreationWithFiles('', true, undefined, scenarioId)}
+          />
+        </div>
+
+        {activePage !== 'home' && (activePage === 'detail' && detailItemId ? (
+          <AssetDetailPage
+            item={getItemById(detailItemId)!}
+            relationships={allRelationships}
+            getItemById={getItemById}
+            onBack={() => { setIsDetailGraphExpanded(false); setActivePage('catalog') }}
+            onNavigate={(id) => { setIsDetailGraphExpanded(false); navigateToDetail(id) }}
+            onActionRequest={handleGraphCardAction}
+            isGraphExpanded={isDetailGraphExpanded}
+            onGraphExpandChange={setIsDetailGraphExpanded}
+          />
+        ) : activePage === 'portfolio' ? (
+          <ValuationsPage items={allItems} isV3Processing={isProcessing} isChatOpen={isChatOpen} />
+        ) : activePage === 'documents' ? (
+          <DocumentsPage
+            onNavigateToTimeline={() => setActivePage('timeline')}
+            pendingCollection={pendingCollection}
+            onCollectionConsumed={() => setPendingCollection(null)}
+            isChatOpen={isChatOpen}
+          />
+        ) : activePage === 'timeline' ? (
+          <TimelinePage
+            distributions={allDistributions}
+            assetTimeline={thorntonAssetTimeline}
+            getItemById={getItemById}
+            activeOrgs={activeOrgs}
+            onOrgsChange={setActiveOrgs}
+            isV3Processing={isProcessing}
+            selectedItemId={selectedItemId}
+            onClearSelectedItem={() => setSelectedItemId(null)}
+            isExpanded={isTimelineExpanded}
+            onToggleExpand={() => setIsTimelineExpanded(v => !v)}
+            onActionRequest={handleTimelineCardAction}
+            actionPromptEventId={pendingCardAction?.sourceTimelineEventId ?? null}
+            timelineActionPrompt={pendingCardAction?.sourceTimelineEventId
+              ? {
+                  action: pendingCardAction.action,
+                  contextName: pendingCardAction.contextName,
+                  anchorRect: pendingCardAction.anchorRect,
+                  sourceTimelineEventId: pendingCardAction.sourceTimelineEventId,
+                  onSubmit: pendingCardAction.onSubmit,
+                }
+              : null}
+            onCloseTimelineActionPrompt={() => setPendingCardAction(null)}
+          />
+        ) : (
+          <div className="flex flex-col flex-1 gap-[var(--spacing-5)] pt-[36px] px-[var(--spacing-6)] pb-0 max-w-[1120px] w-full mx-auto">
+            {showHeader && (
+              <>
+                {catalogSubView === 'collection-detail' && currentAssetCollection ? (
+                  <ContentHeader
+                    title={currentAssetCollection.label}
+                    itemCount={collectionFilteredItems.length}
+                    onNewItemClick={(text, hasFiles) => triggerCreationWithFiles(text, hasFiles)}
+                    breadcrumb={{ label: 'Assets', onClick: handleBackToCatalogHome }}
+                    secondaryAction={{ label: 'Actions', onClick: () => {}, icon: IconChevronDown }}
+                  />
+                ) : catalogSubView === 'all-collections' ? (
+                  <ContentHeader
+                    title="All Collections"
+                    itemCount={assetCollections.length}
+                    breadcrumb={{ label: 'Assets', onClick: handleBackToCatalogHome }}
+                    secondaryAction={{ label: 'New collection', onClick: () => setIsNewAssetCollectionOpen(prev => !prev), buttonRef: newAssetCollBtnRef }}
+                  />
+                ) : (
+                  <ContentHeader
+                    title="Assets"
+                    itemCount={allItems.length}
+                    onNewItemClick={(text, hasFiles) => triggerCreationWithFiles(text, hasFiles)}
+                    secondaryAction={{ label: 'New collection', onClick: () => setIsNewAssetCollectionOpen(prev => !prev), buttonRef: newAssetCollBtnRef }}
+                  />
+                )}
+                <div className="sticky top-[calc(-1*var(--spacing-4))] z-10 bg-[var(--color-white)] pt-[var(--spacing-4)] -mt-[var(--spacing-5)] pb-[var(--spacing-4)] [&>*]:mt-0">
+                  <CatalogToolbar
+                    activeView={activeView}
+                    onViewChange={setActiveView}
+                    activeOrgs={activeOrgs}
+                    onOrgsChange={setActiveOrgs}
+                    activeCategory={activeCategory}
+                    onCategoryChange={setActiveCategory}
+                    dropdownItems={allCategories.map(c => ({ key: c.key, label: c.label, icon: c.icon }))}
+                    onAddCategory={handleAddCategory}
+                    searchQuery={filters.searchQuery}
+                    onSearchChange={filters.setSearchQuery}
+                    activeQuickFilters={filters.activeQuickFilters}
+                    onQuickFilterChange={(key) => filters.toggleQuickFilter(key)}
+                    viewOptions={catalogSubView === 'all-collections' ? null : (catalogSubView === 'collection-detail' ? ['grid', 'list'] : undefined)}
+                    quickFilterItems={[
+                      { key: 'recently-updated', label: 'Recently updated', count: filters.filterCounts['recently-updated'] },
+                      { key: 'expiring-soon', label: 'Expiring soon', count: filters.filterCounts['expiring-soon'], isAlert: true },
+                      { key: 'unlinked', label: 'Unlinked', count: filters.filterCounts['unlinked'] },
+                      { key: 'missing-insurance', label: 'Uninsured', count: filters.filterCounts['missing-insurance'], isAlert: true },
+                      { key: 'stale-valuation', label: 'Stale valuation', count: filters.filterCounts['stale-valuation'], isAlert: true },
+                      { key: 'missing-documents', label: 'Missing documents', count: filters.filterCounts['missing-documents'], isAlert: true },
+                    ]}
+                  />
+                </div>
+              </>
+            )}
+
+            {v3Empty.shouldRender && (
+              <div className={`v3-empty-state${v3Empty.isLeaving ? ' v3-empty-state--leaving' : ''}`}>
+                <img className="v3-empty-state__icon" src={fojoMascotSmall} alt="Fojo" />
+                <div className="v3-empty-state__title">Fojo is building your profile…</div>
+                <div className="v3-empty-state__sub">This page will appear in a moment</div>
+              </div>
+            )}
+
+            {/* ── All Collections dedicated view ── */}
+            {catalogSubView === 'all-collections' && !isProcessing && (
+              <div className="cards-section">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-[var(--spacing-4)]">
+                  {filteredAssetCollections.map(col => (
+                    <CollectionCard
+                      key={col.key}
+                      label={col.label}
+                      icon={col.icon}
+                      count={col.itemIds.length}
+                      countLabel={col.itemIds.length === 1 ? 'asset' : 'assets'}
+                      description={col.description}
+                      priorityStatus={col.priorityStatus}
+                      onClick={() => handleOpenAssetCollection(col.key)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Collection drill-in view ── */}
+            {catalogSubView === 'collection-detail' && !isProcessing && activeView === 'grid' && (
+              <CardView
+                items={collectionFilteredItems}
+                onItemClick={(item) => navigateToDetail(item.id)}
+                isLoading={false}
+                isChatOpen={isChatOpen}
+                highlightedIds={highlightedItemIds}
+              />
+            )}
+            {catalogSubView === 'collection-detail' && !isProcessing && activeView === 'list' && (
+              <ListView items={collectionFilteredItems} onItemClick={(item) => navigateToDetail(item.id)} isLoading={false} />
+            )}
+            {catalogSubView === 'collection-detail' && !isProcessing && collectionFilteredItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-[var(--spacing-3)] flex-1 text-center min-h-[400px]">
+                <h3 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-gray-12)] m-0">No assets in this collection</h3>
+                <p className="text-sm text-[var(--color-neutral-11)] max-w-[340px] m-0 leading-[1.5]">
+                  Assets matching this collection's criteria will appear here.
+                </p>
+              </div>
+            )}
+
+            {/* ── Default catalog home: Collections + All Assets ── */}
+            {catalogSubView === 'home' && !isProcessing && (activeView === 'grid' || activeView === 'list') && (
+              <div className="flex flex-col gap-[var(--spacing-5)] flex-1 min-h-0">
+                {/* Collections */}
+                {filteredAssetCollections.length > 0 && (
+                  <div className="flex flex-col gap-[var(--spacing-2)]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-[var(--font-weight-medium)] text-[var(--color-neutral-9)]">Collections</span>
+                      <button
+                        className="flex items-center gap-[2px] text-[13px] font-[var(--font-weight-semibold)] text-[var(--color-accent-9)] bg-transparent border-none rounded-[var(--radius-md)] cursor-pointer px-[10px] py-[4px] transition-[background,color] duration-150 hover:bg-[#EBF3FF]"
+                        onClick={() => setCatalogSubView('all-collections')}
+                      >
+                        <span>Show all</span>
+                        <IconChevronRight size={14} stroke={2} />
+                      </button>
+                    </div>
+                    <div className={`grid ${isChatOpen ? 'grid-cols-3' : 'grid-cols-4'} gap-[var(--spacing-4)]`}>
+                      {filteredAssetCollections.slice(0, isChatOpen ? 3 : MAX_VISIBLE_COLLECTIONS).map(col => (
+                        <CollectionCard
+                          key={col.key}
+                          label={col.label}
+                          icon={col.icon}
+                          count={col.itemIds.length}
+                          countLabel={col.itemIds.length === 1 ? 'asset' : 'assets'}
+                          description={col.description}
+                          priorityStatus={col.priorityStatus}
+                          onClick={() => handleOpenAssetCollection(col.key)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* All Assets */}
+                <div className="flex flex-col gap-[var(--spacing-3)] flex-1 min-h-0 [&>.cards-section]:mt-0 [&>.cards-section]:pt-0 [&>.list-view]:mt-0 [&>.list-view]:pt-0">
+                  {filteredAssetCollections.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-[var(--font-weight-medium)] text-[var(--color-neutral-9)]">All Assets</span>
+                    </div>
+                  )}
+                  {activeView === 'grid' && (
+                    <CardView
+                      items={filters.filteredItems}
+                      onItemClick={(item) => navigateToDetail(item.id)}
+                      isLoading={isInitialLoading}
+                      isChatOpen={isChatOpen}
+                      highlightedIds={highlightedItemIds}
+                    />
+                  )}
+                  {activeView === 'list' && (
+                    <ListView
+                      items={filters.filteredItems}
+                      onItemClick={(item) => navigateToDetail(item.id)}
+                      isLoading={isInitialLoading}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isMapView && !isProcessing && (
+              <>
+                <FamilyTreeView
+                  items={allItems}
+                  relationships={allRelationships}
+                  onItemClick={detail.handleItemClick}
+                  onActionRequest={handleGraphCardAction}
+                  actionPromptItemId={pendingCardAction?.sourceGraphItemId ?? null}
+                  graphActionPrompt={pendingCardAction?.sourceGraphItemId
+                    ? {
+                        action: pendingCardAction.action,
+                        contextName: pendingCardAction.contextName,
+                        anchorRect: pendingCardAction.anchorRect,
+                        sourceGraphItemId: pendingCardAction.sourceGraphItemId,
+                        onSubmit: pendingCardAction.onSubmit,
+                      }
+                    : null}
+                  onCloseGraphActionPrompt={() => setPendingCardAction(null)}
+                  pendingCreationForItemId={pendingCreationForItemId}
+                  isExpanded={isMapExpanded}
+                  onToggleExpand={() => setIsMapExpanded(prev => {
+                    if (prev) detail.setIsDetailOpen(false)
+                    return !prev
+                  })}
+                  activeOrgs={activeOrgs}
+                  onOrgsChange={setActiveOrgs}
+                  activeCategory={activeCategory}
+                  onCategoryChange={setActiveCategory}
+                  selectedItemId={detail.isDetailOpen ? detail.detailPath[detail.detailPath.length - 1] ?? null : null}
+                  zoomToItemId={mapZoomTargetId}
+                  searchQuery={filters.searchQuery}
+                  onSearchChange={filters.setSearchQuery}
+                />
+                {isFullscreen && (
+                  <UnifiedTimelineStrip
+                    selectedItem={stripSelectedItem}
+                    distributions={allDistributions}
+                    assetEvents={thorntonAssetTimeline}
+                    getItemById={getItemById}
+                    onViewFullTimeline={navigateToTimeline}
+                    isChatOpen={isChatOpen}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        ))}
+
+        <ItemDetailPanel
+          item={detail.selectedItem}
+          path={detail.detailPath}
+          isOpen={detail.isDetailOpen}
+          onClose={detail.handleCloseDetail}
+          onNavigate={detail.handleNavigate}
+          onBreadcrumbClick={detail.handleBreadcrumbClick}
+          getItemById={getItemById}
+          relationships={allRelationships}
+          onDeleteItem={handleDeleteItem}
+          onUpdateItem={handleUpdateItem}
+          onCreateCollection={handleCreateCollection}
+          onOpenFullRecord={navigateToDetail}
+          onAddRelationship={handleAddRelationship}
+          openInEditMode={detailOpenInEditMode}
+          onEditModeActivated={() => setDetailOpenInEditMode(false)}
+        />
+      </main>
+
+      {pendingCardAction && !pendingCardAction.sourceGraphItemId && !pendingCardAction.sourceTimelineEventId && (
+        <ActionPromptDropdown
+          action={pendingCardAction.action}
+          contextName={pendingCardAction.contextName}
+          anchorRect={pendingCardAction.anchorRect}
+          onSubmit={pendingCardAction.onSubmit}
+          onClose={() => setPendingCardAction(null)}
+        />
+      )}
+
+      {isNewAssetCollectionOpen && createPortal(
+        <div ref={assetCollDropdownRef} className="asset-coll-dropdown w-[424px] bg-white border border-[var(--color-gray-4)] rounded-[var(--radius-2xl)] shadow-[0_24px_80px_rgba(0,0,0,0.10),0_8px_24px_rgba(0,0,0,0.06)] animate-[notif-dropdown-in_0.22s_cubic-bezier(0.16,1,0.3,1)] origin-top-right p-[var(--spacing-5)] flex flex-col gap-[var(--spacing-5)]" style={getAssetCollDropdownStyle()}>
+          <style>{`.asset-coll-dropdown .chat-input::placeholder { color: transparent; }`}</style>
+          <div className="flex items-center gap-4">
+            <img className="w-[52px] h-[52px] rounded-full shrink-0" src={fojoMascotSmall} alt="Fojo" />
+            <div className="flex flex-col gap-[2px]">
+              <span className="text-[15px] font-[var(--font-weight-semibold)] text-[var(--color-gray-12)] leading-[1.4]">Create smart collection</span>
+              <span className="text-sm text-[var(--color-neutral-11)] leading-[1.5]">Describe what to group – Fojo will find and add matching assets automatically.</span>
+            </div>
+          </div>
+          <div className="chat-footer rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] flex w-full pt-[var(--spacing-4)] px-[var(--spacing-3)] pb-[var(--spacing-3)] flex-col bg-[var(--color-white)] focus-within:border-[var(--color-purple)] focus-within:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]" style={{ marginTop: 0 }}>
+            <div className="w-full cursor-text" style={{ position: 'relative' }}>
+              {!assetCollectionPrompt && (
+                <span className={`absolute top-0 left-0 right-0 px-[var(--spacing-2)] text-sm text-[var(--color-neutral-8)] leading-[1.47] pointer-events-none transition-opacity duration-300 ease-in-out whitespace-nowrap overflow-hidden text-ellipsis${assetCollPlaceholder.isVisible ? '' : ' opacity-0'}`}>
+                  {assetCollPlaceholder.text}
+                </span>
+              )}
+              <input
+                ref={assetCollInputRef}
+                type="text"
+                className="chat-input w-full border-none outline-none font-sans text-sm text-[var(--color-gray-12)] bg-transparent px-[var(--spacing-2)] py-0 leading-[1.47] block"
+                value={assetCollectionPrompt}
+                onChange={e => setAssetCollectionPrompt(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateAssetCollection() } }}
+                autoFocus
+              />
+            </div>
+            <div className="flex mt-[var(--spacing-4)] w-full items-center justify-between">
+              <button className="p-[6px] rounded-[var(--radius-md)] flex items-center transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]">
+                <IconAt size={18} stroke={2} color="var(--color-neutral-11)" />
+              </button>
+              <button
+                className="flex items-center justify-center gap-[var(--spacing-1)] rounded-[var(--radius-md)] border border-[var(--color-accent-9)] bg-[var(--color-accent-9)] min-h-[32px] px-[14px] py-[4px] text-[13px] font-[var(--font-weight-semibold)] leading-[1.43] text-[var(--color-accent-contrast)] transition-[background,transform,color,border-color,opacity] duration-150 ease-linear hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={!assetCollectionPrompt.trim()}
+                onClick={handleCreateAssetCollection}
+              >
+                <span>Create</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <SearchOverlay
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onAskFojo={(query) => { setIsSearchOpen(false); setPendingFojoQuery(query); if (fojoVisibility === 'collapsed') setFojoForceOpen(true) }}
+        onItemClick={(id) => { navigateToDetail(id); setIsSearchOpen(false) }}
+        items={allItems}
+      />
+
+      <ToastContainer />
+    </div>
+  )
+}
+
+export default App

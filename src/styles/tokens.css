@@ -1,0 +1,125 @@
+/* ========== DESIGN TOKENS — single source of truth ========== */
+:root {
+  /* Colors */
+  --color-white: #FFF;
+  --color-black: #1C2024;
+  --color-gray-2: #F9F9FB;
+  --color-gray-4: #E8E8EC;
+  --color-gray-5: #E0E1E6;
+  --color-gray-11: #60646C;
+  --color-gray-12: #1C2024;
+  --color-neutral-3: #F0F0F3;
+  --color-neutral-4: #E8E8EC;
+  --color-neutral-5: #E0E1E6;
+  --color-neutral-7: #A9AAB4;
+  --color-neutral-8: #90A0B2;
+  --color-neutral-9: #8B8D98;
+  --color-neutral-10: #80838D;
+  --color-neutral-11: #454950;
+  --color-neutral-12: #1C2024;
+  --color-red-1: #fff5f5;
+  --color-red-9: #e5484d;
+  --color-blue-1: #EBF3FF;
+  --color-blue-3: #EBF3FF;
+  --color-blue-hover: #DCEAFF;
+  --color-blue-9: #3B82F6;
+  --color-blue-dark: #1E3A8A;
+
+  /* Status colors */
+  --color-green-9: #059669;
+  --color-green-1: #e6f6eb;
+  --color-green-bright: #10B981;
+  --color-green-text: #30a46c;
+  --color-red-dark: #b91c1c;
+  --color-orange-1: #FFEDD5;
+  --color-orange-9: #C2410C;
+  --color-orange-hover: #FED7AA;
+
+  /* Neutrals */
+  --color-neutral-2: #F5F5F7;
+  --color-neutral-line: #D0D2DA;
+  --color-neutral-muted: #9CA3AF;
+  --color-neutral-placeholder: #A1A1AA;
+  --color-neutral-text: #64748B;
+
+  /* Card accent palette */
+  --color-card-blue-bg: #EFF6FF;
+  --color-card-blue: #3B82F6;
+  --color-card-green-bg: #D1FAE5;
+  --color-card-green: #059669;
+  --color-card-pink-bg: #FCE7F3;
+  --color-card-pink: #EC4899;
+  --color-card-pink-bold: #DB2777;
+  --color-card-purple-bg: #EDE9FE;
+  --color-card-purple: #8B5CF6;
+  --color-card-red-bg: #FEF2F2;
+  --color-card-red: #F87171;
+  --color-card-orange-bg: #FFF7ED;
+  --color-card-orange: #EA580C;
+  --color-accent-3: #EBF3FF;
+  --color-accent-9: #005BE2;
+  --color-accent-10: #0047b8;
+  --color-accent-contrast: #FFF;
+  --color-purple: #005BE2;
+  --color-purple-text: #0047b8;
+  --color-purple-hover: rgba(0, 91, 226, 0.06);
+  --color-accent-hover: rgba(0, 91, 226, 0.04);
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, Roboto, Helvetica, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  --font-weight-regular: 500;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+
+  /* Spacing */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --spacing-7: 40px;
+  --spacing-8: 56px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 12px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-panel: 0 43px 12px 0 rgba(0, 0, 0, 0.01), 0 20px 8px 0 rgba(0, 0, 0, 0.01), 0 11px 7px 0 rgba(0, 0, 0, 0.02);
+  --shadow-toolbar: 0 20px 8px 0 rgba(0, 0, 0, 0.01), 0 6px 7px 0 rgba(0, 0, 0, 0.01);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-card-elevated: 0 4px 14px rgba(0,0,0,0.11);
+  --shadow-subtle: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-focus: 0 0 0 3px rgba(0,0,0,0.1);
+  --shadow-dropdown: 0 4px 16px rgba(0,0,0,0.10);
+
+  /* Z-index scale */
+  --z-strip: 5;
+  --z-overlay: 10;
+  --z-dropdown: 200;
+  --z-fab: 300;
+  --z-modal: 11000;
+
+  /* Layout */
+  --nav-width: 56px;
+  --fojo-width: 384px;
+  --fojo-min-width: 352px;
+  --fojo-max-width: 400px;
+  --detail-panel-width: 500px;
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --fojo-width: 504px;
+    --fojo-min-width: 472px;
+    --fojo-max-width: 520px;
+  }
+}

@@ -1,0 +1,553 @@
+/* ========== V3 ONBOARDING PAGE ==========
+
+/* ---- Staggered entrance for left-side children ---- */
+.onboarding-content > * {
+  opacity: 0;
+  animation: onb-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.onboarding-content > *:nth-child(1) { animation-delay: 0.05s; }
+.onboarding-content > *:nth-child(2) { animation-delay: 0.15s; }
+.onboarding-content > *:nth-child(3) { animation-delay: 0.25s; }
+.onboarding-content > *:nth-child(4) { animation-delay: 0.35s; }
+.onboarding-content > *:nth-child(5) { animation-delay: 0.40s; }
+.onboarding-content > *:nth-child(6) { animation-delay: 0.45s; }
+
+/* File chips — instant visibility, subtle slide-up, grouped with upload zone */
+.onboarding-content > .onboarding-file-chips {
+  opacity: 1;
+  animation: chips-slide-up 0.25s ease-out both;
+  margin-top: -28px;
+}
+
+.onboarding-left::-webkit-scrollbar {
+  display: none;
+}
+
+.onboarding-headline h1 {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 900;
+  color: var(--color-black);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin-bottom: 16px;
+  -webkit-text-stroke: 0.5px currentColor;
+}
+
+/* Base upload zone styles (used in FojoPanel without Tailwind) */
+.onboarding-upload-zone {
+  border: 1.5px dashed #D0D2DA;
+  border-radius: 8px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: white;
+}
+
+.onboarding-upload-zone--active {
+  border-color: var(--color-accent-9);
+  background: rgba(0, 91, 226, 0.06);
+  box-shadow: 0 0 0 4px rgba(0, 91, 226, 0.12);
+}
+
+.onboarding-upload-zone:hover {
+  border-color: var(--color-accent-9);
+  background: rgba(0, 91, 226, 0.04);
+  box-shadow: 0 0 0 4px rgba(0, 91, 226, 0.08);
+}
+
+.onboarding-file-chips {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  scrollbar-width: none;
+}
+
+.onboarding-file-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.onboarding-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 8px;
+  border-radius: 4px;
+  background: white;
+  border: 1px solid var(--color-neutral-4);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-neutral-11);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.onboarding-file-chip:hover {
+  border-color: var(--color-neutral-5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.onboarding-file-chip__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #EBF3FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.onboarding-cta:hover:not(:disabled) {
+  background: var(--color-accent-10);
+}
+
+.onboarding-cta:active:not(:disabled) {
+  background: var(--color-accent-10);
+}
+
+.onboarding-cta:disabled {
+  background: var(--color-neutral-5);
+  color: var(--color-neutral-11);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.onboarding-file-chip__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-neutral-11);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  margin-left: 2px;
+}
+
+.onboarding-file-chip__remove:hover {
+  background: var(--color-neutral-4);
+  color: var(--color-neutral-11);
+}
+
+/* Decorative orb removed */
+.onboarding-right::before {
+  display: none;
+}
+
+/* ---- Onboarding upload zone (used in FojoPanel without Tailwind) ---- */
+.onboarding-upload-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  margin-bottom: 4px;
+}
+
+.onboarding-upload-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-neutral-12);
+  letter-spacing: -0.01em;
+}
+
+.onboarding-upload-hint {
+  font-size: 13px;
+  color: var(--color-neutral-11);
+  letter-spacing: -0.005em;
+}
+
+/* ——— Home adaptive grid — media query ——— */
+@media (max-width: 1099px) {
+  .home-grid,
+  .home-grid--narrow {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+}
+
+/* ========== SHARED GLASSMORPHISM CARDS ========== */
+.glass-card {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 8px;
+  padding: 1px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  animation: border-rotate 8s linear infinite;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.glass-card--visible {
+  animation: widget-appear 0.4s ease-out forwards, border-rotate 8s linear infinite;
+}
+
+.glass-card--link { cursor: pointer; }
+
+.glass-card--link:hover {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 8px 28px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Color variants */
+.glass-card--blue,
+.glass-card--purple,
+.glass-card--teal,
+.glass-card--amber,
+.glass-card--rose,
+.glass-card--emerald { background: #fff; }
+
+/* Tabler icon in header — prevent shrink */
+.glass-card__header > .tabler-icon:last-child {
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* ========== HOME DOCUMENT DROP ZONE ========== */
+.doc-drop {
+  position: relative;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  background: white;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: widget-appear 0.4s ease-out both;
+}
+
+/* ---- SVG dashed border (consistent across browsers) ---- */
+.doc-drop__border rect {
+  fill: none;
+  stroke: #D0D2DA;
+  stroke-width: 1.5;
+  stroke-dasharray: 8 5;
+  transition: stroke 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.doc-drop:hover:not(.doc-drop--processing) {
+  background: rgba(0, 91, 226, 0.04);
+  box-shadow: 0 0 0 4px rgba(0, 91, 226, 0.08);
+}
+.doc-drop:hover:not(.doc-drop--processing) .doc-drop__border rect {
+  stroke: var(--color-accent-9);
+}
+
+.doc-drop--dragover {
+  background: rgba(0, 91, 226, 0.06);
+  box-shadow: 0 0 0 4px rgba(0, 91, 226, 0.12);
+  transform: scale(1.01);
+}
+.doc-drop--dragover .doc-drop__border rect {
+  stroke: var(--color-accent-9);
+}
+
+/* ---- Processing morph ---- */
+.doc-drop--processing .doc-drop__border {
+  display: none;
+}
+
+.doc-drop--processing {
+  border: 1.5px solid rgba(0, 91, 226, 0.15);
+  background: rgba(0, 91, 226, 0.05);
+  box-shadow: none;
+  padding: 12px 16px;
+  cursor: default;
+  animation: widget-appear 0.4s ease-out both;
+}
+
+/* ---- Zone content (drop mode) ---- */
+.doc-drop--processing .doc-drop__zone {
+  opacity: 0;
+  transform: translateY(-8px);
+  position: absolute;
+  pointer-events: none;
+}
+
+/* ---- Strip content (processing mode) ---- */
+.doc-drop__strip {
+  opacity: 0;
+  transform: translateY(8px);
+  position: absolute;
+  pointer-events: none;
+  transition: opacity 0.15s ease 0.08s, transform 0.15s ease 0.08s;
+  width: 100%;
+}
+
+.doc-drop--processing .doc-drop__strip {
+  opacity: 1;
+  transform: translateY(0);
+  position: relative;
+  pointer-events: auto;
+}
+
+.doc-drop__avatar {
+  animation: avatar-glow 2s ease-in-out infinite;
+}
+
+.doc-drop__step {
+  animation: step-fade-in 0.3s ease-out both;
+}
+
+.doc-drop__bar-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--color-purple);
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-drop__bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.15);
+  animation: bar-shimmer-sweep 1.5s linear infinite;
+}
+
+/* ---- Mini file cards ---- */
+.doc-drop__mini-card {
+  position: absolute;
+  width: 100px;
+  background: var(--color-white);
+  border: 1px solid var(--color-neutral-4);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  will-change: transform;
+}
+
+.doc-drop__mini-card--1 {
+  left: 0;
+  top: 8px;
+  z-index: 1;
+  transform: rotate(-4deg);
+  animation: float-1 3.5s ease-in-out infinite;
+}
+
+.doc-drop__mini-card--2 {
+  left: 94px;
+  top: 2px;
+  z-index: 2;
+  transform: rotate(-1deg);
+  animation: float-2 3.5s ease-in-out -1.17s infinite;
+}
+
+.doc-drop__mini-card--3 {
+  left: 188px;
+  top: 10px;
+  z-index: 3;
+  transform: rotate(3deg);
+  animation: float-3 3.5s ease-in-out -2.33s infinite;
+}
+
+/* Thumbnail — fixed height, fills width, no letterboxing */
+.doc-drop__mini-thumb {
+  width: 100%;
+  height: 78px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: block;
+  line-height: 0;
+  border-bottom: 1px solid var(--color-neutral-4);
+}
+
+.doc-drop__mini-thumb img,
+.doc-drop__mini-thumb svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ========== V3 EMPTY STATE ========== */
+.v3-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  padding: 40px;
+  animation: v3-empty-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.v3-empty-state--leaving {
+  animation: v3-empty-exit 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.v3-empty-state__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  animation: v3-pulse 2s ease-in-out infinite;
+}
+
+.v3-empty-state__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-neutral-11);
+}
+
+.v3-empty-state__sub {
+  font-size: 13px;
+  color: var(--color-neutral-11);
+  margin-top: -6px;
+}
+
+/* ========== ONBOARDING POLISHED PREVIEW CARDS ========== */
+
+/* Rotating gradient border animation */
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 135deg;
+  inherits: false;
+}
+
+.onboarding-preview-card {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 8px;
+  padding: 1px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  animation: card-slide-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both, border-rotate 8s linear infinite;
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+/* Inner content wrapper for the white inset */
+.onboarding-preview-card__inner {
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 7px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+}
+
+/* Card backgrounds */
+.onboarding-preview-card--blue,
+.onboarding-preview-card--purple,
+.onboarding-preview-card--teal {
+  background: #fff;
+}
+
+.onboarding-previews .onboarding-preview-card:nth-child(1) { animation-delay: 0.15s; }
+.onboarding-previews .onboarding-preview-card:nth-child(2) { animation-delay: 0.3s; }
+.onboarding-previews .onboarding-preview-card:nth-child(3) { animation-delay: 0.45s; }
+
+.onboarding-preview-card:hover {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 8px 28px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- Mini Entity Graph — SVG ---- */
+.onboarding-mini-graph-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.onb-svg-node {
+  opacity: 0;
+  animation: onb-svg-node-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.onb-svg-node--1 { animation: onb-svg-node-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both, node-glow 4s ease-in-out 1.5s infinite; }
+.onb-svg-node--2 { animation: onb-svg-node-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both, node-glow 4s ease-in-out 2.5s infinite; }
+.onb-svg-node--3 { animation: onb-svg-node-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both, node-glow 4s ease-in-out 3.5s infinite; }
+.onb-svg-node--4 { animation: onb-svg-node-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.75s both, node-glow 4s ease-in-out 4.5s infinite; }
+
+.onb-svg-line {
+  opacity: 0;
+  animation: onb-svg-line-draw 0.4s ease 0.45s both;
+}
+
+/* Traveling dot along the graph branches */
+.onb-svg-dot {
+  offset-path: path('M150 24 L150 37 L51 37 L51 48');
+  animation: dot-travel 3s ease-in-out 1.5s infinite;
+  opacity: 0;
+}
+
+.onb-svg-dot--2 {
+  offset-path: path('M150 24 L150 37 L249 37 L249 48');
+  animation: dot-travel 3s ease-in-out 2.5s infinite;
+  opacity: 0;
+}
+
+/* ---- Mini Timeline ---- */
+.onboarding-mini-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  opacity: 0;
+  animation: timeline-row-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.onboarding-mini-timeline-row:last-child {
+  border-bottom: none;
+}
+
+.onboarding-mini-timeline__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #059669;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+  animation: dot-pulse-wave 3s ease-in-out infinite;
+}
+
+.onboarding-mini-timeline-row:nth-child(1) .onboarding-mini-timeline__dot { animation-delay: 0s; }
+.onboarding-mini-timeline-row:nth-child(2) .onboarding-mini-timeline__dot { animation-delay: 1s; }
+.onboarding-mini-timeline-row:nth-child(3) .onboarding-mini-timeline__dot { animation-delay: 2s; }
+
+/* ---- Mini Valuations Bars ---- */
+.onboarding-mini-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: #DB2777;
+  width: var(--bar-width);
+  transform-origin: left center;
+  animation: bar-grow 0.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+             bar-breathe 4s ease-in-out 1.5s infinite;
+}
+
+.onboarding-mini-bar-row:nth-child(1) .onboarding-mini-bar { animation-delay: 0.6s, 1.8s; }
+.onboarding-mini-bar-row:nth-child(2) .onboarding-mini-bar { animation-delay: 0.7s, 2.4s; }
+.onboarding-mini-bar-row:nth-child(3) .onboarding-mini-bar { animation-delay: 0.8s, 3.0s; }
+.onboarding-mini-bar-row:nth-child(4) .onboarding-mini-bar { animation-delay: 0.9s, 3.6s; }
