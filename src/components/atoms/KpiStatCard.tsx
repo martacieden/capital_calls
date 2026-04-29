@@ -13,7 +13,7 @@ export function KpiStatCard({ label, value, badge, icon: Icon, onClick }: KpiSta
     return (
         <div
             className={cn(
-                'bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-lg)] px-5 py-4.5 flex flex-col gap-2.5 [transition:box-shadow_0.2s,transform_0.15s] hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-px',
+                'bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-lg)] px-5 py-4.5 flex flex-col gap-2.5 h-full [transition:box-shadow_0.2s,transform_0.15s] hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-px',
                 onClick && 'cursor-pointer'
             )}
             onClick={onClick}

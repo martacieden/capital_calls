@@ -161,8 +161,16 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                             hovered === i && 'bg-[var(--color-neutral-2)]'
                         )}
                         style={{ opacity: hovered !== null && hovered !== i ? 0.4 : 1 }}
-                        onMouseEnter={() => setHovered(i)}
-                        onMouseLeave={() => setHovered(null)}
+                        onMouseEnter={(e) => {
+                            setHovered(i)
+                            const rect = containerRef.current?.getBoundingClientRect()
+                            if (rect) setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                        }}
+                        onMouseMove={(e) => {
+                            const rect = containerRef.current?.getBoundingClientRect()
+                            if (rect) setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                        }}
+                        onMouseLeave={() => { setHovered(null); setTooltip(null) }}
                         onClick={() => seg.isClickable && onSliceClick(seg.categoryFilter)}
                     >
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: seg.color }} />
