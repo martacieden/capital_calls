@@ -560,7 +560,15 @@ function AppShell() {
             onGraphExpandChange={setIsDetailGraphExpanded}
           />
         ) : activePage === 'portfolio' ? (
-          <ValuationsPage items={allItems} isV3Processing={isProcessing} isChatOpen={isChatOpen} />
+          <ValuationsPage
+            items={allItems}
+            isV3Processing={isProcessing}
+            isChatOpen={isChatOpen}
+            onNavigateToCatalogCategory={(categories) => {
+              setActiveCategory(categories)
+              setActivePage('catalog')
+            }}
+          />
         ) : activePage === 'documents' ? (
           <DocumentsPage
             onNavigateToTimeline={() => setActivePage('timeline')}

@@ -15,13 +15,17 @@ import {
     PORTFOLIO_PERFORMANCE,
     ESTATE_KPIS,
     GRAND_TOTAL,
+    PORTFOLIO_ALLOCATION,
+    PORTFOLIO_ALLOCATION_TOTAL,
 } from '@/data/thornton/valuations-data'
+import { PortfolioAllocationChart } from '@/components/atoms/PortfolioAllocationChart'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 
 interface ValuationsPageProps {
     items: AnyCatalogItem[]
     isV3Processing?: boolean
     isChatOpen?: boolean
+    onNavigateToCatalogCategory: (categories: string[]) => void
 }
 
 function formatValue(value: number): string {
@@ -30,7 +34,7 @@ function formatValue(value: number): string {
     return `$${value.toLocaleString()}`
 }
 
-export function ValuationsPage({ isV3Processing, isChatOpen }: ValuationsPageProps) {
+export function ValuationsPage({ isV3Processing, isChatOpen, onNavigateToCatalogCategory }: ValuationsPageProps) {
     if (isV3Processing) {
         return (
             <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
@@ -52,6 +56,21 @@ export function ValuationsPage({ isV3Processing, isChatOpen }: ValuationsPagePro
                 <ContentHeader title="Portfolio" />
             </div>
 
+            {/* Portfolio Allocation Overview */}
+            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Portfolio Allocation</h2>
+                    <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(PORTFOLIO_ALLOCATION_TOTAL)}</span>
+                </div>
+                <PortfolioAllocationChart
+                    data={PORTFOLIO_ALLOCATION}
+                    totalValue={PORTFOLIO_ALLOCATION_TOTAL}
+                    onSliceClick={(categoryFilter) => {
+                        if (categoryFilter.length > 0) onNavigateToCatalogCategory(categoryFilter)
+                    }}
+                />
+            </div>
+
             {/* KPI Stat Row — 2x2 grid */}
             <div className={cn(
                 'grid grid-cols-2 gap-3',
@@ -66,6 +85,7 @@ export function ValuationsPage({ isV3Processing, isChatOpen }: ValuationsPagePro
                     label="Total Assets"
                     value={String(ESTATE_KPIS.totalAssets)}
                     icon={IconListDetails}
+                    onClick={() => onNavigateToCatalogCategory([])}
                 />
                 <KpiStatCard
                     label="Active Entities"

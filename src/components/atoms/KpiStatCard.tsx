@@ -6,11 +6,18 @@ interface KpiStatCardProps {
     value: string
     badge?: { text: string; positive?: boolean }
     icon?: ComponentType<{ size?: number; stroke?: number }>
+    onClick?: () => void
 }
 
-export function KpiStatCard({ label, value, badge, icon: Icon }: KpiStatCardProps) {
+export function KpiStatCard({ label, value, badge, icon: Icon, onClick }: KpiStatCardProps) {
     return (
-        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-lg)] px-5 py-4.5 flex flex-col gap-2.5 [transition:box-shadow_0.2s,transform_0.15s] hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-px">
+        <div
+            className={cn(
+                'bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-lg)] px-5 py-4.5 flex flex-col gap-2.5 [transition:box-shadow_0.2s,transform_0.15s] hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-px',
+                onClick && 'cursor-pointer'
+            )}
+            onClick={onClick}
+        >
             {Icon && (
                 <div className="w-8 h-8 rounded-[4px] bg-[var(--color-card-blue-bg)] flex items-center justify-center text-[var(--color-card-blue)] mb-1">
                     <Icon size={18} stroke={1.5} />

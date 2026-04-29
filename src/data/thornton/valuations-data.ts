@@ -2,12 +2,12 @@ import { thorntonAssets } from './assets'
 
 /** Consistent color for asset allocation bars */
 export const CATEGORY_COLORS: Record<string, string> = {
-    property: '#DB2777',
-    investment: '#DB2777',
-    vehicle: '#DB2777',
-    maritime: '#DB2777',
-    art: '#DB2777',
-    insurance: '#DB2777',
+    property:   '#4B7BE5',
+    investment: '#2E5FA8',
+    maritime:   '#6B9EF0',
+    vehicle:    '#8BB5F5',
+    art:        '#A8C8F8',
+    insurance:  '#3B6ED4',
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -52,6 +52,50 @@ function computeAllocation(): AssetAllocation[] {
 
 export const ASSET_ALLOCATION = computeAllocation()
 export const GRAND_TOTAL = ASSET_ALLOCATION.reduce((s, a) => s + a.value, 0)
+
+/**
+ * Grouped allocation — merges maritime + vehicle + art into "Lifestyle Assets"
+ * and aligns colors with the pie chart slices.
+ */
+const LIFESTYLE_KEYS = ['maritime', 'vehicle', 'art'] as const
+
+const BAR_COLORS: Record<string, string> = {
+    property:   '#4B7BE5',
+    investment: '#2E5FA8',
+    insurance:  '#6B9EF0',
+    lifestyle:  '#8BB5F5',
+}
+
+function computeGroupedAllocation(): AssetAllocation[] {
+    const raw = computeAllocation()
+    const grandTotal = raw.reduce((s, a) => s + a.value, 0)
+
+    const lifestyleItems = raw.filter(a => (LIFESTYLE_KEYS as readonly string[]).includes(a.categoryKey))
+    const lifestyleValue = lifestyleItems.reduce((s, a) => s + a.value, 0)
+    const lifestyleCount = lifestyleItems.reduce((s, a) => s + a.count, 0)
+
+    const rest = raw.filter(a => !(LIFESTYLE_KEYS as readonly string[]).includes(a.categoryKey))
+
+    const grouped: AssetAllocation[] = [
+        ...rest.map(a => ({
+            ...a,
+            color: BAR_COLORS[a.categoryKey] ?? a.color,
+            label: a.categoryKey === 'property' ? 'Real Estate' : a.label,
+        })),
+        ...(lifestyleValue > 0 ? [{
+            categoryKey: 'lifestyle',
+            label: 'Lifestyle Assets',
+            value: lifestyleValue,
+            percentage: Math.round((lifestyleValue / grandTotal) * 100),
+            color: BAR_COLORS.lifestyle,
+            count: lifestyleCount,
+        }] : []),
+    ]
+
+    return grouped.sort((a, b) => b.value - a.value)
+}
+
+export const GROUPED_ASSET_ALLOCATION = computeGroupedAllocation()
 
 /** Portfolio performance — 12-month mock time series (Jul 2025 – Jun 2026) */
 export interface PerformancePoint {
@@ -211,3 +255,49 @@ export const COVERAGE_GAPS: CoverageGap[] = [
     { asset: 'Ferrari Collection', value: 62_000_000, gap: 'No collector vehicle policy' },
     { asset: 'Yacht Fleet', value: 156_500_000, gap: 'No P&I / hull coverage found' },
 ]
+
+/** High-level portfolio allocation — 4 slices for the Portfolio overview pie chart */
+export interface PortfolioAllocationSlice {
+    key: string
+    label: string
+    value: number
+    percentage: number
+    color: string
+    isClickable: boolean
+    categoryFilter: string[]
+    breakdown?: { label: string; value: number; color: string }[]
+}
+
+function sumByCategory(key: string): number {
+    return thorntonAssets
+        .filter(a => a.categoryKey === key)
+        .reduce((sum, a) => sum + (a.value ?? 0), 0)
+}
+
+function computePortfolioAllocation(): PortfolioAllocationSlice[] {
+    const realEstateValue = sumByCategory('property')
+    const maritimeValue   = sumByCategory('maritime')
+    const vehicleValue    = sumByCategory('vehicle')
+    const artValue        = sumByCategory('art')
+    const lifestyleValue  = maritimeValue + vehicleValue + artValue
+
+    // Real estate is anchored at 20% — derive the total portfolio size from it
+    const portfolioTotal = realEstateValue / 0.20
+    return [
+        { key: 'private',     label: 'Private Investments',       value: portfolioTotal * 0.50, percentage: 50, color: '#1B3C6E', isClickable: false, categoryFilter: [] },
+        { key: 'public',      label: 'Public Market',             value: portfolioTotal * 0.20, percentage: 20, color: '#2E5FA8', isClickable: false, categoryFilter: [] },
+        { key: 'real-estate', label: 'Real Estate (Investment)',  value: realEstateValue,        percentage: 20, color: '#4B7BE5', isClickable: true,  categoryFilter: ['property'] },
+        {
+            key: 'lifestyle', label: 'Lifestyle Assets', value: lifestyleValue, percentage: 10,
+            color: '#8BB5F5', isClickable: true, categoryFilter: ['maritime', 'vehicle', 'art'],
+            breakdown: [
+                { label: 'Maritime',  value: maritimeValue, color: CATEGORY_COLORS.maritime },
+                { label: 'Vehicles',  value: vehicleValue,  color: CATEGORY_COLORS.vehicle },
+                { label: 'Art',       value: artValue,      color: CATEGORY_COLORS.art },
+            ].filter(b => b.value > 0),
+        },
+    ]
+}
+
+export const PORTFOLIO_ALLOCATION = computePortfolioAllocation()
+export const PORTFOLIO_ALLOCATION_TOTAL = PORTFOLIO_ALLOCATION.reduce((s, a) => s + a.value, 0)
