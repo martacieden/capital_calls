@@ -4,8 +4,6 @@ import {
     IconListDetails,
     IconTrendingUp,
     IconBuildingBank,
-    IconEye,
-    IconEyeOff,
 } from '@tabler/icons-react'
 import type { AnyCatalogItem } from '@/data/types'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
@@ -15,7 +13,6 @@ import { KpiStatCard } from '@/components/atoms/KpiStatCard'
 import {
     PORTFOLIO_PERFORMANCE,
     ESTATE_KPIS,
-    GRAND_TOTAL,
     PORTFOLIO_ALLOCATION_TOTAL,
     CHART_THEMES,
     getPortfolioAllocation,
@@ -39,7 +36,6 @@ function formatValue(value: number): string {
 }
 
 export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: ValuationsPageProps) {
-    const [allocationVisible, setAllocationVisible] = useState(true)
     const [colorTheme, setColorTheme] = useState<ChartTheme>('blue')
     const portfolioAllocation = getPortfolioAllocation(colorTheme)
     const assetAllocation = getAssetAllocation(colorTheme)
@@ -120,25 +116,11 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
             </div>
 
             {/* Asset Allocation — Nivo horizontal bar chart */}
-            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] overflow-visible">
-                <button
-                    className="flex items-center justify-between w-full px-6 py-5 hover:bg-[var(--color-neutral-2)] transition-colors duration-150 rounded-[var(--radius-xl)]"
-                    onClick={() => setAllocationVisible(v => !v)}
-                >
+            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 overflow-visible">
+                <div className="mb-4">
                     <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Asset Allocation</h2>
-                    <div className="flex items-center gap-3">
-                        <span className="text-[13px] font-medium text-[var(--color-neutral-11)] tracking-[-0.01em]">{formatValue(GRAND_TOTAL)}</span>
-                        {allocationVisible
-                            ? <IconEye size={16} stroke={1.5} color="var(--color-neutral-11)" />
-                            : <IconEyeOff size={16} stroke={1.5} color="var(--color-neutral-11)" />
-                        }
-                    </div>
-                </button>
-                {allocationVisible && (
-                    <div className="px-6 pb-6">
-                        <BarChart data={assetAllocation} />
-                    </div>
-                )}
+                </div>
+                <BarChart data={assetAllocation} />
             </div>
 
             {/* Portfolio Performance */}
