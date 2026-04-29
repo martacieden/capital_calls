@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import {
     IconCurrencyDollar,
     IconListDetails,
     IconTrendingUp,
     IconBuildingBank,
+    IconEye,
+    IconEyeOff,
 } from '@tabler/icons-react'
 import type { AnyCatalogItem } from '@/data/types'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
@@ -10,12 +13,14 @@ import { LineChart } from '@/components/atoms/LineChart'
 import { BarChart } from '@/components/atoms/BarChart'
 import { KpiStatCard } from '@/components/atoms/KpiStatCard'
 import {
-    ASSET_ALLOCATION,
     PORTFOLIO_PERFORMANCE,
     ESTATE_KPIS,
     GRAND_TOTAL,
-    PORTFOLIO_ALLOCATION,
     PORTFOLIO_ALLOCATION_TOTAL,
+    CHART_THEMES,
+    getPortfolioAllocation,
+    getAssetAllocation,
+    type ChartTheme,
 } from '@/data/thornton/valuations-data'
 import { PortfolioAllocationChart } from '@/components/atoms/PortfolioAllocationChart'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
@@ -34,6 +39,10 @@ function formatValue(value: number): string {
 }
 
 export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: ValuationsPageProps) {
+    const [allocationVisible, setAllocationVisible] = useState(true)
+    const [colorTheme, setColorTheme] = useState<ChartTheme>('blue')
+    const portfolioAllocation = getPortfolioAllocation(colorTheme)
+    const assetAllocation = getAssetAllocation(colorTheme)
     if (isV3Processing) {
         return (
             <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
@@ -51,8 +60,19 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
 
     return (
         <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
-            <div className="flex w-full flex-col p-0">
+            <div className="flex w-full items-center justify-between p-0">
                 <ContentHeader title="Portfolio" />
+                <div className="flex items-center gap-1.5">
+                    {(Object.keys(CHART_THEMES) as ChartTheme[]).map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setColorTheme(t)}
+                            title={t === 'blue' ? 'Blue palette' : 'Pink palette'}
+                            style={{ background: CHART_THEMES[t].swatch }}
+                            className={`w-3 h-3 rounded-full transition-all duration-150 ${colorTheme === t ? 'ring-2 ring-offset-1 ring-[var(--color-neutral-9)] scale-110' : 'opacity-50 hover:opacity-80'}`}
+                        />
+                    ))}
+                </div>
             </div>
 
             {/* Portfolio Allocation + KPIs — side by side */}
@@ -64,7 +84,7 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
                         <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(PORTFOLIO_ALLOCATION_TOTAL)}</span>
                     </div>
                     <PortfolioAllocationChart
-                        data={PORTFOLIO_ALLOCATION}
+                        data={portfolioAllocation}
                         totalValue={PORTFOLIO_ALLOCATION_TOTAL}
                         onSliceClick={(categoryFilter) => {
                             if (categoryFilter.length > 0) onNavigateToCatalogCategory(categoryFilter)
@@ -100,12 +120,25 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
             </div>
 
             {/* Asset Allocation — Nivo horizontal bar chart */}
-            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 overflow-visible">
-                <div className="flex items-start justify-between mb-2">
+            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] overflow-visible">
+                <button
+                    className="flex items-center justify-between w-full px-6 py-5 hover:bg-[var(--color-neutral-2)] transition-colors duration-150 rounded-[var(--radius-xl)]"
+                    onClick={() => setAllocationVisible(v => !v)}
+                >
                     <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Asset Allocation</h2>
-                    <span className="text-[13px] font-medium text-[var(--color-neutral-11)] tracking-[-0.01em]">{formatValue(GRAND_TOTAL)}</span>
-                </div>
-                <BarChart data={ASSET_ALLOCATION} />
+                    <div className="flex items-center gap-3">
+                        <span className="text-[13px] font-medium text-[var(--color-neutral-11)] tracking-[-0.01em]">{formatValue(GRAND_TOTAL)}</span>
+                        {allocationVisible
+                            ? <IconEye size={16} stroke={1.5} color="var(--color-neutral-11)" />
+                            : <IconEyeOff size={16} stroke={1.5} color="var(--color-neutral-11)" />
+                        }
+                    </div>
+                </button>
+                {allocationVisible && (
+                    <div className="px-6 pb-6">
+                        <BarChart data={assetAllocation} />
+                    </div>
+                )}
             </div>
 
             {/* Portfolio Performance */}

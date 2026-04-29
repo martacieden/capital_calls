@@ -1,14 +1,26 @@
 import { thorntonAssets } from './assets'
 
-/** Consistent color for asset allocation bars */
-export const CATEGORY_COLORS: Record<string, string> = {
-    property:   '#4B7BE5',
-    investment: '#2E5FA8',
-    maritime:   '#6B9EF0',
-    vehicle:    '#8BB5F5',
-    art:        '#A8C8F8',
-    insurance:  '#3B6ED4',
+export type ChartTheme = 'blue' | 'pink'
+
+export const CHART_THEMES: Record<ChartTheme, {
+    pie: [string, string, string, string]
+    bar: Record<string, string>
+    swatch: string
+}> = {
+    blue: {
+        swatch: '#4B7BE5',
+        pie: ['#1B3C6E', '#2E5FA8', '#4B7BE5', '#8BB5F5'],
+        bar: { property: '#4B7BE5', investment: '#2E5FA8', maritime: '#8BB5F5', vehicle: '#8BB5F5', art: '#8BB5F5', insurance: '#3B6ED4' },
+    },
+    pink: {
+        swatch: '#DB2777',
+        pie: ['#7B1244', '#AD1457', '#DB2777', '#F472B6'],
+        bar: { property: '#DB2777', investment: '#AD1457', maritime: '#F472B6', vehicle: '#F472B6', art: '#F472B6', insurance: '#BE185D' },
+    },
 }
+
+/** Consistent color for asset allocation bars */
+export const CATEGORY_COLORS: Record<string, string> = CHART_THEMES.blue.bar
 
 export const CATEGORY_LABELS: Record<string, string> = {
     property: 'Real Estate',
@@ -28,7 +40,8 @@ export interface AssetAllocation {
     count: number
 }
 
-function computeAllocation(): AssetAllocation[] {
+function computeAllocation(theme: ChartTheme = 'blue'): AssetAllocation[] {
+    const colors = CHART_THEMES[theme].bar
     const totals: Record<string, { value: number; count: number }> = {}
     for (const asset of thorntonAssets) {
         const key = asset.categoryKey
@@ -45,13 +58,16 @@ function computeAllocation(): AssetAllocation[] {
             label: CATEGORY_LABELS[key] || key,
             value,
             percentage: Math.round((value / grandTotal) * 100),
-            color: CATEGORY_COLORS[key] || '#94A3B8',
+            color: colors[key] || '#94A3B8',
             count,
         }))
 }
 
-export const ASSET_ALLOCATION = computeAllocation()
+export const ASSET_ALLOCATION = computeAllocation('blue')
 export const GRAND_TOTAL = ASSET_ALLOCATION.reduce((s, a) => s + a.value, 0)
+export function getAssetAllocation(theme: ChartTheme): AssetAllocation[] {
+    return computeAllocation(theme)
+}
 
 /**
  * Grouped allocation — merges maritime + vehicle + art into "Lifestyle Assets"
@@ -274,30 +290,33 @@ function sumByCategory(key: string): number {
         .reduce((sum, a) => sum + (a.value ?? 0), 0)
 }
 
-function computePortfolioAllocation(): PortfolioAllocationSlice[] {
+function computePortfolioAllocation(theme: ChartTheme = 'blue'): PortfolioAllocationSlice[] {
+    const [c0, c1, c2, c3] = CHART_THEMES[theme].pie
+    const barColors = CHART_THEMES[theme].bar
     const realEstateValue = sumByCategory('property')
     const maritimeValue   = sumByCategory('maritime')
     const vehicleValue    = sumByCategory('vehicle')
     const artValue        = sumByCategory('art')
     const lifestyleValue  = maritimeValue + vehicleValue + artValue
-
-    // Real estate is anchored at 20% — derive the total portfolio size from it
-    const portfolioTotal = realEstateValue / 0.20
+    const portfolioTotal  = realEstateValue / 0.20
     return [
-        { key: 'private',     label: 'Private Investments',       value: portfolioTotal * 0.50, percentage: 50, color: '#1B3C6E', isClickable: false, categoryFilter: [] },
-        { key: 'public',      label: 'Public Market',             value: portfolioTotal * 0.20, percentage: 20, color: '#2E5FA8', isClickable: false, categoryFilter: [] },
-        { key: 'real-estate', label: 'Real Estate (Investment)',  value: realEstateValue,        percentage: 20, color: '#4B7BE5', isClickable: true,  categoryFilter: ['property'] },
+        { key: 'private',     label: 'Private Investments',      value: portfolioTotal * 0.50, percentage: 50, color: c0, isClickable: false, categoryFilter: [] },
+        { key: 'public',      label: 'Public Market',            value: portfolioTotal * 0.20, percentage: 20, color: c1, isClickable: false, categoryFilter: [] },
+        { key: 'real-estate', label: 'Real Estate (Investment)', value: realEstateValue,        percentage: 20, color: c2, isClickable: true,  categoryFilter: ['property'] },
         {
             key: 'lifestyle', label: 'Lifestyle Assets', value: lifestyleValue, percentage: 10,
-            color: '#8BB5F5', isClickable: true, categoryFilter: ['maritime', 'vehicle', 'art'],
+            color: c3, isClickable: true, categoryFilter: ['maritime', 'vehicle', 'art'],
             breakdown: [
-                { label: 'Maritime',  value: maritimeValue, color: CATEGORY_COLORS.maritime },
-                { label: 'Vehicles',  value: vehicleValue,  color: CATEGORY_COLORS.vehicle },
-                { label: 'Art',       value: artValue,      color: CATEGORY_COLORS.art },
+                { label: 'Maritime', value: maritimeValue, color: barColors.maritime },
+                { label: 'Vehicles', value: vehicleValue,  color: barColors.vehicle },
+                { label: 'Art',      value: artValue,      color: barColors.art },
             ].filter(b => b.value > 0),
         },
     ]
 }
 
-export const PORTFOLIO_ALLOCATION = computePortfolioAllocation()
+export const PORTFOLIO_ALLOCATION = computePortfolioAllocation('blue')
 export const PORTFOLIO_ALLOCATION_TOTAL = PORTFOLIO_ALLOCATION.reduce((s, a) => s + a.value, 0)
+export function getPortfolioAllocation(theme: ChartTheme): PortfolioAllocationSlice[] {
+    return computePortfolioAllocation(theme)
+}
