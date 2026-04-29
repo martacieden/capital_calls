@@ -141,7 +141,11 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                             </div>
                         )}
                         {hoveredSlice.isClickable && (
-                            <div className="text-white/50 mt-1.5">Click to explore</div>
+                            <div className="text-white/50 mt-1.5">
+                                {hoveredSlice.key === 'lifestyle'
+                                    ? 'View Maritime, Vehicles & Art →'
+                                    : 'View Real Estate assets →'}
+                            </div>
                         )}
                     </div>
                 )}

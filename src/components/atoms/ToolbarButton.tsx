@@ -7,13 +7,19 @@ interface ToolbarButtonProps {
     label?: string
     icon?: ReactNode
     isActive?: boolean
+    variant?: 'default' | 'accent'
     className?: string
     onClick?: () => void
 }
 
-export function ToolbarButton({ label, icon, isActive, className, onClick }: ToolbarButtonProps) {
+export function ToolbarButton({ label, icon, isActive, variant = 'default', className, onClick }: ToolbarButtonProps) {
     return (
-        <button className={cn(BASE, isActive && 'bg-[var(--color-neutral-3)]', className)} onClick={onClick}>
+        <button className={cn(
+            BASE,
+            variant === 'default' && isActive && 'bg-[var(--color-neutral-3)]',
+            variant === 'accent' && 'bg-[var(--color-accent-9)] text-white hover:bg-[var(--color-accent-10)]',
+            className
+        )} onClick={onClick}>
             {icon}
             {label && <span>{label}</span>}
         </button>
