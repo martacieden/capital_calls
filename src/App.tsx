@@ -740,6 +740,40 @@ function AppShell() {
           onClose={handleClosePortfolioPanel}
           onNavigateToAsset={handleNavigateFromPortfolioPanel}
           onOpenFullDetail={handleOpenPortfolioFullDetail}
+          onShare={(categoryId) => {
+            setContactModalState({
+              type: 'lawyer',
+              event: { assetName: categoryId, assetType: 'Portfolio category' },
+              session: {
+                flow: 'contact-lawyer',
+                contextName: categoryId,
+                contextEventId: categoryId,
+              },
+            })
+          }}
+          onContactAction={(categoryId) => {
+            const typeMap: Record<string, 'lawyer' | 'cpa'> = {
+              'private-investments': 'lawyer',
+              'real-estate': 'lawyer',
+              'lifestyle-assets': 'lawyer',
+              'cash-equivalents': 'cpa',
+            }
+            const labelMap: Record<string, string> = {
+              'real-estate': 'Real Estate',
+              'lifestyle-assets': 'Lifestyle Assets',
+              'private-investments': 'Private Investments',
+              'cash-equivalents': 'Cash & Equivalents',
+            }
+            setContactModalState({
+              type: typeMap[categoryId] ?? 'lawyer',
+              event: { assetName: labelMap[categoryId] ?? categoryId, assetType: 'Portfolio category' },
+              session: {
+                flow: typeMap[categoryId] === 'cpa' ? 'contact-cpa' : 'contact-lawyer',
+                contextName: labelMap[categoryId] ?? categoryId,
+                contextEventId: categoryId,
+              },
+            })
+          }}
         />
       )}
 

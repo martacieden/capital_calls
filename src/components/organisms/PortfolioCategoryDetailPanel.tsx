@@ -1,10 +1,22 @@
-import { IconArrowsMaximize, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
+import {
+    IconArrowsMaximize,
+    IconChevronDown,
+    IconChevronUp,
+    IconTableExport,
+    IconSend,
+    IconBuildingSkyscraper,
+    IconPalette,
+    IconScale,
+    IconReceipt,
+    IconBriefcase,
+} from '@tabler/icons-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GeoExposureChart } from '@/components/atoms/GeoExposureChart'
 import { PortfolioHoldingsTable } from '@/components/atoms/PortfolioHoldingsTable'
 import { DetailPanelShell } from '@/components/molecules/DetailPanelShell'
 import { useClickOutside } from '@/lib/hooks/useClickOutside'
+import { showToast } from '@/components/atoms/Toast'
 import {
     getDrilldownData,
     getCategoryLabel,
@@ -14,6 +26,13 @@ import {
     type PortfolioHolding,
     type PortfolioSector,
 } from '@/data/thornton/portfolio-data'
+
+const CONTACT_META: Record<string, { label: string; Icon: typeof IconScale }> = {
+    'real-estate':         { label: 'Contact Property Manager', Icon: IconBuildingSkyscraper },
+    'lifestyle-assets':    { label: 'Contact Art Director',     Icon: IconPalette },
+    'private-investments': { label: 'Contact Investment Team',  Icon: IconBriefcase },
+    'cash-equivalents':    { label: 'Contact CPA',              Icon: IconReceipt },
+}
 
 /** Один рядок: «Portfolio / Назва» без detail-breadcrumb стилів. */
 export function PortfolioSimpleBreadcrumb({
@@ -222,6 +241,7 @@ function holdingSearchHaystack(h: PortfolioHolding, categoryId: string): string 
 export function PortfolioCategoryDetailContent({
     categoryId,
     onNavigateToAsset,
+    onContactAction,
     geoLegendColumns = 2,
     variant = 'panel',
     subcategoryKeys: controlledSubKeys,
@@ -229,6 +249,7 @@ export function PortfolioCategoryDetailContent({
 }: {
     categoryId: string
     onNavigateToAsset?: (id: string) => void
+    onContactAction?: (categoryId: string) => void
     /** Geographic exposure list: 1 column in narrow panel, 2 on full-width pages. */
     geoLegendColumns?: 1 | 2
     variant?: 'panel' | 'page'
@@ -329,6 +350,20 @@ export function PortfolioCategoryDetailContent({
                 <KpiCard label="Holdings" value={String(filteredHoldings.length)} />
             </div>
 
+            {onContactAction && CONTACT_META[categoryId] && (() => {
+                const { label, Icon } = CONTACT_META[categoryId]
+                return (
+                    <button
+                        type="button"
+                        onClick={() => onContactAction(categoryId)}
+                        className="flex items-center gap-2 w-full rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-4 py-2.5 text-sm font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-3)] hover:text-[var(--color-black)] transition-colors"
+                    >
+                        <Icon size={15} />
+                        {label}
+                    </button>
+                )
+            })()}
+
             {filteredHoldings.length === 0 && effectiveSubKeys.length > 0 && (
                 <p className="text-sm text-[var(--color-neutral-10)]">No holdings in this slice.</p>
             )}
@@ -402,6 +437,8 @@ export interface PortfolioCategoryDetailPanelProps {
     onClose: () => void
     onNavigateToAsset?: (id: string) => void
     onOpenFullDetail?: (portfolioCategoryId: string) => void
+    onShare?: (categoryId: string) => void
+    onContactAction?: (categoryId: string) => void
 }
 
 export function PortfolioCategoryDetailPanel({
@@ -410,6 +447,8 @@ export function PortfolioCategoryDetailPanel({
     onClose,
     onNavigateToAsset,
     onOpenFullDetail,
+    onShare,
+    onContactAction,
 }: PortfolioCategoryDetailPanelProps) {
     const closeBtnRef = useRef<HTMLButtonElement>(null)
     const label = categoryId ? getCategoryLabel(categoryId) : ''
@@ -421,6 +460,8 @@ export function PortfolioCategoryDetailPanel({
 
     if (!categoryId || !isOpen) return null
 
+    const iconBtnClass = 'detail-close-btn p-2 rounded-[var(--radius-md)] text-[var(--color-neutral-11)] transition-[background,color] duration-150 hover:bg-[var(--color-neutral-3)] hover:text-[var(--color-gray-12)]'
+
     return createPortal(
         <DetailPanelShell
             isOpen={isOpen}
@@ -428,17 +469,39 @@ export function PortfolioCategoryDetailPanel({
             ariaLabel={`Portfolio category: ${label}`}
             closeButtonRef={closeBtnRef}
             headerActions={
-                onOpenFullDetail && categoryId ? (
+                <div className="flex items-center gap-1">
                     <button
                         type="button"
-                        className="detail-close-btn p-2 rounded-[var(--radius-md)] text-[var(--color-neutral-11)] transition-[background,color] duration-150 hover:bg-[var(--color-neutral-3)] hover:text-[var(--color-gray-12)]"
-                        onClick={() => onOpenFullDetail(categoryId)}
-                        aria-label="Open full view"
-                        title="Open full view"
+                        className={iconBtnClass}
+                        onClick={() => showToast(`${label} allocation exported`, 'success')}
+                        aria-label="Export to Excel"
+                        title="Export to Excel"
                     >
-                        <IconArrowsMaximize size={20} stroke={2} aria-hidden />
+                        <IconTableExport size={20} stroke={2} aria-hidden />
                     </button>
-                ) : undefined
+                    {onShare && (
+                        <button
+                            type="button"
+                            className={iconBtnClass}
+                            onClick={() => onShare(categoryId)}
+                            aria-label="Share"
+                            title="Share"
+                        >
+                            <IconSend size={20} stroke={2} aria-hidden />
+                        </button>
+                    )}
+                    {onOpenFullDetail && (
+                        <button
+                            type="button"
+                            className={iconBtnClass}
+                            onClick={() => onOpenFullDetail(categoryId)}
+                            aria-label="Open full view"
+                            title="Open full view"
+                        >
+                            <IconArrowsMaximize size={20} stroke={2} aria-hidden />
+                        </button>
+                    )}
+                </div>
             }
             breadcrumbs={(
                 <PortfolioSimpleBreadcrumb
@@ -451,6 +514,7 @@ export function PortfolioCategoryDetailPanel({
             <PortfolioCategoryDetailContent
                 categoryId={categoryId}
                 onNavigateToAsset={onNavigateToAsset}
+                onContactAction={onContactAction}
                 geoLegendColumns={1}
             />
         </DetailPanelShell>,
