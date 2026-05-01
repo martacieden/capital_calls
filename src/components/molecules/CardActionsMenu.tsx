@@ -12,6 +12,8 @@ import {
     IconPencil,
     IconExternalLink,
     IconFileText,
+    IconUserCheck,
+    IconCalculator,
 } from '@tabler/icons-react'
 import fojoMascot from '@/assets/fojo-mascot-small.svg'
 
@@ -25,6 +27,8 @@ export type CardActionType =
     | 'open-detail'
     | 'edit-distribution'
     | 'view-source'
+    | 'contact-lawyer'
+    | 'contact-cpa'
 
 interface ActionDef {
     type: CardActionType
@@ -43,19 +47,29 @@ const GRAPH_ACTIONS: ActionDef[] = [
 ]
 
 const TIMELINE_ACTIONS: ActionDef[] = [
-    { type: 'create-task',       label: 'Create new task', icon: IconCheckbox, isAi: true },
-    { type: 'edit-distribution', label: 'Edit details',    icon: IconPencil,   isAi: false },
-    { type: 'view-source',       label: 'View sources',    icon: IconFileText, isAi: false },
+    { type: 'create-task',    label: 'Create new task',          icon: IconCheckbox,   isAi: true },
+    { type: 'contact-lawyer', label: 'Contact lawyer',           icon: IconUserCheck,  isAi: false },
+    { type: 'contact-cpa',    label: 'Contact CPA / Accountant', icon: IconCalculator, isAi: false },
+    { type: 'edit-distribution', label: 'Edit details',          icon: IconPencil,     isAi: false },
+    { type: 'view-source',    label: 'View sources',             icon: IconFileText,   isAi: false },
+]
+
+export const ASSET_TIMELINE_ACTIONS: ActionDef[] = [
+    { type: 'create-task',    label: 'Create new task',          icon: IconCheckbox,   isAi: true },
+    { type: 'contact-lawyer', label: 'Contact lawyer',           icon: IconUserCheck,  isAi: false },
+    { type: 'contact-cpa',    label: 'Contact CPA / Accountant', icon: IconCalculator, isAi: false },
 ]
 
 /* ── Props ───────────────────────────────────────────────────────── */
 
 export interface CardActionsMenuProps {
-    itemContext: 'graph' | 'timeline'
+    itemContext: 'graph' | 'timeline' | 'asset-timeline'
     /** Card (or other element) to follow in screen space while the menu is open — required for map pan/zoom and timeline scroll. */
     anchorRef: RefObject<HTMLElement | null>
     onClose: () => void
     onAction: (action: CardActionType) => void
+    /** When provided, only actions whose type is in this set are rendered. Omit to show all. */
+    visibleActions?: CardActionType[]
 }
 
 /* ── Positioning helper ──────────────────────────────────────────── */
@@ -113,9 +127,12 @@ function useMenuFollowAnchor(anchorRef: RefObject<HTMLElement | null>) {
 
 /* ── Component ───────────────────────────────────────────────────── */
 
-export function CardActionsMenu({ itemContext, anchorRef, onClose, onAction }: CardActionsMenuProps) {
+export function CardActionsMenu({ itemContext, anchorRef, onClose, onAction, visibleActions }: CardActionsMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null)
-    const actions = itemContext === 'timeline' ? TIMELINE_ACTIONS : GRAPH_ACTIONS
+    const allActions = itemContext === 'timeline' ? TIMELINE_ACTIONS : itemContext === 'asset-timeline' ? ASSET_TIMELINE_ACTIONS : GRAPH_ACTIONS
+    const actions = visibleActions && visibleActions.length > 0
+        ? allActions.filter(a => visibleActions.includes(a.type))
+        : allActions
     const menuStyle = useMenuFollowAnchor(anchorRef)
 
     // Close on Escape

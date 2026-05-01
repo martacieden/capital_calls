@@ -131,6 +131,10 @@ export interface Asset extends CatalogItem {
     value?: number           // in USD
     holderId?: string        // id of Trust or BusinessEntity holding this asset
     address?: string         // for real estate
+    sector?: string          // e.g. 'Financial Services', 'Technology', 'Real Estate'
+    country?: string         // e.g. 'United States', 'Canada'
+    usState?: string         // US state name for US-based assets, e.g. 'New York', 'Florida'
+    caProvince?: string      // Canadian province or territory name, e.g. 'Ontario', 'British Columbia'
 }
 
 export type AssetType =
@@ -193,6 +197,11 @@ export type RelationshipType =
 export interface DistributionEvent {
     id: string
     beneficiaryId: string    // Person id
+    /** Contact-action hints for the three-dots menu */
+    suggestedActions?: string[]
+    suggestedTaskTitle?: string
+    suggestedLawyerSpecialization?: string
+    suggestedDescription?: string
     trustId: string          // Trust id
     /** Age-based: triggers when beneficiary reaches this age */
     triggerAge?: number
@@ -211,6 +220,8 @@ export interface DistributionEvent {
     status: 'Pending' | 'Completed' | 'Waived'
     /** ID of the catalog item whose citations apply (usually the trust) */
     citationItemId?: string
+    /** Whether this is a recurring scheduled event (shows badge on card) */
+    recurring?: boolean
 }
 
 // ─────────────────────────────────────────────
@@ -221,9 +232,18 @@ export interface AssetTimelineEvent {
     id: string
     assetId: string
     year: number
+    /** Month within the year (1–12), used to sort multiple events in same year */
+    month?: number
     label: string
     value?: number
     description?: string
+    /** Whether this is a recurring scheduled event */
+    recurring?: boolean
+    /** Contact-action hints for the three-dots menu */
+    suggestedActions?: string[]
+    suggestedTaskTitle?: string
+    suggestedLawyerSpecialization?: string
+    suggestedDescription?: string
 }
 
 // ─────────────────────────────────────────────

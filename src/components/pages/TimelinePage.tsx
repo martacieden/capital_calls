@@ -95,6 +95,7 @@ interface TimelinePageProps {
     isExpanded?: boolean
     onToggleExpand?: () => void
     onActionRequest?: (event: DistributionEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => void
+    onAssetActionRequest?: (event: AssetTimelineEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => void
     actionPromptEventId?: string | null
     timelineActionPrompt?: TimelineActionPromptPayload | null
     onCloseTimelineActionPrompt?: () => void
@@ -113,6 +114,7 @@ export function TimelinePage({
     isExpanded,
     onToggleExpand,
     onActionRequest,
+    onAssetActionRequest,
     actionPromptEventId = null,
     timelineActionPrompt = null,
     onCloseTimelineActionPrompt = () => {},
@@ -249,7 +251,7 @@ export function TimelinePage({
         if (!isAssetMode || !currentActiveId) return []
         return [...assetTimeline]
             .filter(e => e.assetId === currentActiveId)
-            .sort((a, b) => a.year - b.year)
+            .sort((a, b) => a.year - b.year || (a.month ?? 6) - (b.month ?? 6))
     }, [isAssetMode, currentActiveId, assetTimeline])
 
     // Determine year-first set for asset events (for year labels)
@@ -440,6 +442,7 @@ export function TimelinePage({
                                                 position={i % 2 === 0 ? 'above' : 'below'}
                                                 showYearLabel={assetYearFirstIds.has(evt.id)}
                                                 isCurrentYear={evt.year === currentYear}
+                                                onAction={onAssetActionRequest}
                                             /></>
                                         )
                                     })}

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
     IconCurrencyDollar,
     IconListDetails,
@@ -10,16 +9,19 @@ import { ContentHeader } from '@/components/molecules/ContentHeader'
 import { LineChart } from '@/components/atoms/LineChart'
 import { BarChart } from '@/components/atoms/BarChart'
 import { KpiStatCard } from '@/components/atoms/KpiStatCard'
+import { TopHoldingsChart } from '@/components/atoms/TopHoldingsChart'
+import { TopSectorsChart } from '@/components/atoms/TopSectorsChart'
+import { GeoExposureChart } from '@/components/atoms/GeoExposureChart'
 import {
     PORTFOLIO_PERFORMANCE,
     ESTATE_KPIS,
-    PORTFOLIO_ALLOCATION_TOTAL,
-    CHART_THEMES,
-    getPortfolioAllocation,
     getAssetAllocation,
-    type ChartTheme,
+    getTopHoldings,
+    getTopSectors,
+    getGeoExposure,
 } from '@/data/thornton/valuations-data'
-import { PortfolioAllocationChart } from '@/components/atoms/PortfolioAllocationChart'
+import { PortfolioAllocationChart, type PortfolioAllocationSlice } from '@/components/atoms/PortfolioAllocationChart'
+import { portfolioAllocationItems, PORTFOLIO_TOTAL } from '@/data/thornton/portfolio-data'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 
 interface ValuationsPageProps {
@@ -27,6 +29,7 @@ interface ValuationsPageProps {
     isV3Processing?: boolean
     isChatOpen?: boolean
     onNavigateToCatalogCategory: (categories: string[]) => void
+    onNavigateToPortfolioDrilldown?: (categoryId: string) => void
 }
 
 function formatValue(value: number): string {
@@ -35,10 +38,20 @@ function formatValue(value: number): string {
     return `$${value.toLocaleString()}`
 }
 
-export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: ValuationsPageProps) {
-    const [colorTheme, setColorTheme] = useState<ChartTheme>('blue')
-    const portfolioAllocation = getPortfolioAllocation(colorTheme)
-    const assetAllocation = getAssetAllocation(colorTheme)
+export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory, onNavigateToPortfolioDrilldown }: ValuationsPageProps) {
+    const drilldownSlices: PortfolioAllocationSlice[] = portfolioAllocationItems.map(item => ({
+        key: item.id,
+        label: item.label,
+        value: item.value,
+        percentage: item.percentage,
+        color: item.color,
+        isClickable: item.hasDrillDown,
+        categoryFilter: [item.id],
+    }))
+    const assetAllocation = getAssetAllocation('blue')
+    const topHoldings = getTopHoldings([], 10)
+    const topSectors = getTopSectors([])
+    const geoExposure = getGeoExposure([])
     if (isV3Processing) {
         return (
             <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
@@ -56,19 +69,8 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
 
     return (
         <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
-            <div className="flex w-full items-center justify-between p-0">
+            <div className="flex w-full flex-col p-0">
                 <ContentHeader title="Portfolio" />
-                <div className="flex items-center gap-1.5">
-                    {(Object.keys(CHART_THEMES) as ChartTheme[]).map(t => (
-                        <button
-                            key={t}
-                            onClick={() => setColorTheme(t)}
-                            title={t === 'blue' ? 'Blue palette' : 'Pink palette'}
-                            style={{ background: CHART_THEMES[t].swatch }}
-                            className={`w-3 h-3 rounded-full transition-all duration-150 ${colorTheme === t ? 'ring-2 ring-offset-1 ring-[var(--color-neutral-9)] scale-110' : 'opacity-50 hover:opacity-80'}`}
-                        />
-                    ))}
-                </div>
             </div>
 
             {/* Portfolio Allocation + KPIs — side by side */}
@@ -77,13 +79,16 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
                 <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Portfolio Allocation</h2>
-                        <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(PORTFOLIO_ALLOCATION_TOTAL)}</span>
+                        <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(PORTFOLIO_TOTAL)}</span>
                     </div>
                     <PortfolioAllocationChart
-                        data={portfolioAllocation}
-                        totalValue={PORTFOLIO_ALLOCATION_TOTAL}
+                        data={drilldownSlices}
+                        totalValue={PORTFOLIO_TOTAL}
                         onSliceClick={(categoryFilter) => {
-                            if (categoryFilter.length > 0) onNavigateToCatalogCategory(categoryFilter)
+                            const categoryId = categoryFilter[0]
+                            if (categoryId && onNavigateToPortfolioDrilldown) {
+                                onNavigateToPortfolioDrilldown(categoryId)
+                            }
                         }}
                     />
                 </div>
@@ -121,6 +126,31 @@ export function ValuationsPage({ isV3Processing, onNavigateToCatalogCategory }: 
                     <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Asset Allocation</h2>
                 </div>
                 <BarChart data={assetAllocation} />
+            </div>
+
+            {/* Top Holdings */}
+            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6">
+                <div className="mb-4">
+                    <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Top Holdings</h2>
+                    <p className="text-sm text-[var(--color-neutral-10)] mt-0.5">Largest positions by value across all categories</p>
+                </div>
+                <TopHoldingsChart items={topHoldings} />
+            </div>
+
+            {/* Top Sectors — full width (same rhythm as Top Holdings) */}
+            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 w-full">
+                <div className="mb-4">
+                    <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Top Sectors</h2>
+                    <p className="text-sm text-[var(--color-neutral-10)] mt-0.5">Portfolio exposure by sector</p>
+                </div>
+                <TopSectorsChart data={topSectors} />
+            </div>
+
+            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 w-full overflow-visible">
+                <div className="mb-4">
+                    <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Geographic Exposure</h2>
+                </div>
+                <GeoExposureChart data={geoExposure} />
             </div>
 
             {/* Portfolio Performance */}

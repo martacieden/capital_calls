@@ -19,13 +19,17 @@ import { TimelinePage } from '@/components/pages/TimelinePage'
 import { HomePage } from '@/components/pages/HomePage'
 import { OnboardingPage } from '@/components/pages/OnboardingPage'
 import { ValuationsPage } from '@/components/pages/ValuationsPage'
+import { CategoryHoldingsPage } from '@/components/pages/CategoryHoldingsPage'
+import { PortfolioDrilldownPage } from '@/components/pages/PortfolioDrilldownPage'
 import { DocumentsPage } from '@/components/pages/DocumentsPage'
 import { AssetDetailPage } from '@/components/pages/AssetDetailPage'
+import { TasksPage } from '@/components/pages/TasksPage'
+import { TaskDetailPage } from '@/components/pages/TaskDetailPage'
 import { ToastContainer, showToast, updateToast } from '@/components/atoms/Toast'
 import { SearchOverlay } from '@/components/organisms/SearchOverlay'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 import { FojoMascot } from '@/components/atoms/FojoMascot'
-import type { AnyCatalogItem, DistributionEvent, QuickFilterKey } from '@/data/types'
+import type { AnyCatalogItem, DistributionEvent, AssetTimelineEvent, QuickFilterKey } from '@/data/types'
 import type { CardActionType } from '@/components/molecules/CardActionsMenu'
 import { ActionPromptDropdown } from '@/components/molecules/ActionPromptDropdown'
 import type { PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
@@ -41,6 +45,8 @@ import { usePlaceholderRotation } from '@/lib/hooks/usePlaceholderRotation'
 import { useClickOutside } from '@/lib/hooks/useClickOutside'
 import { createPortal } from 'react-dom'
 import { sortByPriority } from '@/lib/helpers/priority-sort'
+import { ContactModal } from '@/components/molecules/ContactModal'
+import type { Task } from '@/data/thornton/tasks-data'
 
 function App() {
   return (
@@ -76,8 +82,13 @@ function AppShell() {
 
   // ── Local navigation state ──
   const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
-  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'documents' | 'detail'>('home')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'portfolio-drilldown'>('home')
+  const [holdingsCategoryKeys, setHoldingsCategoryKeys] = useState<string[]>([])
+  const [holdingsCategoryLabel, setHoldingsCategoryLabel] = useState('')
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
+  const [portfolioDrilldownCategory, setPortfolioDrilldownCategory] = useState<string | null>(null)
+  const [previousPage, setPreviousPage] = useState<typeof activePage>('catalog')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [mapZoomTargetId, setMapZoomTargetId] = useState<string | null>(null)
@@ -85,6 +96,15 @@ function AppShell() {
   const [highlightedItemIds, setHighlightedItemIds] = useState<Set<string>>(new Set())
   const [isDetailGraphExpanded, setIsDetailGraphExpanded] = useState(false)
   const pickTemplate = useRandomTemplate(MOCK_COLLECTION_TEMPLATES)
+
+  // ── Contact modal & externally-created tasks ──
+  const [externalTasks, setExternalTasks] = useState<Task[]>([])
+  const [dynamicDistributions, setDynamicDistributions] = useState<DistributionEvent[]>([])
+  const [contactModalState, setContactModalState] = useState<{
+    type: 'lawyer' | 'cpa'
+    event: { id: string; title: string; suggestedTaskTitle?: string; suggestedLawyerSpecialization?: string; suggestedDescription?: string; eventDescription?: string }
+    sourceDistributionEvent?: DistributionEvent | null
+  } | null>(null)
 
   // ── Asset collections state ──
   const [assetCollections, setAssetCollections] = useState<AssetCollection[]>(defaultAssetCollections)
@@ -282,6 +302,7 @@ function AppShell() {
     // Navigate to full detail page (collapse any expanded view so LeftNav is visible)
     if (action === 'open-detail') {
       detail.setIsDetailOpen(false)
+      setActivePage(cur => { if (cur !== 'detail' && cur !== 'task-detail') setPreviousPage(cur); return cur })
       setDetailItemId(item.id)
       setActivePage('detail')
       setIsMapExpanded(false)
@@ -328,7 +349,25 @@ function AppShell() {
 
   // Handle actions from timeline cards
   const handleTimelineCardAction = useCallback((event: DistributionEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => {
-    const eventLabel = event.description ?? event.triggerCategory ?? 'distribution'
+    const eventLabel = event.triggerCategory ?? event.description ?? 'distribution'
+
+    // Contact Lawyer / CPA → open modal directly (no Fojo)
+    if (action === 'contact-lawyer' || action === 'contact-cpa') {
+      setContactModalState({
+        type: action === 'contact-lawyer' ? 'lawyer' : 'cpa',
+        event: {
+          id: event.id,
+          title: eventLabel,
+          suggestedTaskTitle: event.suggestedTaskTitle,
+          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+          suggestedDescription: event.suggestedDescription,
+          eventDescription: event.description,
+        },
+        sourceDistributionEvent: event,
+      })
+      return
+    }
+
     if (AI_ACTIONS.has(action)) {
       detail.handleCloseDetail()
       const actionTypeMap: Record<string, 'asset' | 'task' | 'relation'> = {
@@ -344,11 +383,56 @@ function AppShell() {
           setPendingCardAction(null)
           const basePrompt = `I'd like help creating a task related to this distribution: "${eventLabel}".`
           const prompt = buildPromptFromInput(basePrompt, text)
-          triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action])
+          triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action] ?? 'task')
         },
       })
     }
   }, [detail, AI_ACTIONS, buildPromptFromInput, triggerCreationWithFiles])
+
+  // Handle actions from asset timeline cards
+  const handleAssetTimelineAction = useCallback((event: AssetTimelineEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => {
+    const assetItem = getItemById(event.assetId)
+    const assetName = assetItem?.name ?? event.assetId
+    const eventLabel = `${event.label} — ${assetName}`
+
+    // Contact Lawyer / CPA → open modal directly (no Fojo)
+    if (action === 'contact-lawyer' || action === 'contact-cpa') {
+      setContactModalState({
+        type: action === 'contact-lawyer' ? 'lawyer' : 'cpa',
+        event: {
+          id: event.id,
+          title: eventLabel,
+          suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
+          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+          suggestedDescription: event.suggestedDescription,
+          eventDescription: event.description,
+        },
+        sourceDistributionEvent: null,
+      })
+      return
+    }
+
+    detail.handleCloseDetail()
+    const actionTypeMap: Record<string, 'asset' | 'task' | 'relation'> = {
+      'create-task': 'task',
+    }
+    const basePromptMap: Record<string, string> = {
+      'create-task': `I'd like help creating a task for the upcoming "${event.label}" event for ${assetName} in ${event.year}.`,
+    }
+    setPendingCardAction({
+      action,
+      contextName: eventLabel,
+      anchorRect: anchor ?? null,
+      sourceGraphItemId: null,
+      sourceTimelineEventId: null,
+      onSubmit: (text, hasFiles) => {
+        setPendingCardAction(null)
+        const basePrompt = basePromptMap[action] ?? `I'd like help with the "${event.label}" event for ${assetName}.`
+        const prompt = buildPromptFromInput(basePrompt, text)
+        triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action] ?? 'task')
+      },
+    })
+  }, [detail, getItemById, buildPromptFromInput, triggerCreationWithFiles])
 
   // Handle "Add relationship" from detail panel
   const handleAddRelationship = useCallback((item: AnyCatalogItem) => {
@@ -404,11 +488,22 @@ function AppShell() {
 
   // ── Navigation helpers ──
   const navigateToDetail = useCallback((id: string) => {
-    if (!getItemById(id)) return // guard: item not in catalog (e.g. task/relation summary cards)
-    setDetailItemId(id)
-    setActivePage('detail')
+    const item = getItemById(id)
+    if (!item) return // guard: item not in catalog (e.g. task/relation summary cards)
+    // Only capture previousPage when not already in a detail view (so nested navigation keeps original origin)
+    setActivePage(cur => {
+      if (cur !== 'detail' && cur !== 'task-detail') setPreviousPage(cur)
+      return cur
+    })
     setIsMapExpanded(false)
     setIsTimelineExpanded(false)
+    if (item.categoryKey === 'task') {
+      setDetailTaskId(id)
+      setActivePage('task-detail')
+      return
+    }
+    setDetailItemId(id)
+    setActivePage('detail')
   }, [getItemById, setIsMapExpanded, setIsTimelineExpanded])
 
   const navigateToTimeline = useCallback((itemId: string) => {
@@ -445,12 +540,19 @@ function AppShell() {
     } else if (nav === 'detail' && items[0]) {
       // Bypass navigateToDetail's getItemById guard — the item was just created and
       // the state update may not have propagated yet, so we set page state directly.
-      setDetailItemId(items[0].id)
-      setActivePage('detail')
+      const created = items[0]
+      setActivePage(cur => { if (cur !== 'detail' && cur !== 'task-detail') setPreviousPage(cur); return cur })
       setIsMapExpanded(false)
       setIsTimelineExpanded(false)
+      if (created.categoryKey === 'task') {
+        setDetailTaskId(created.id)
+        setActivePage('task-detail')
+      } else {
+        setDetailItemId(created.id)
+        setActivePage('detail')
+      }
     }
-  }, [navigateToDetail, setFojoForceOpen, keepFojoOpenForNextExpand, setIsMapExpanded, setIsTimelineExpanded])
+  }, [setFojoForceOpen, keepFojoOpenForNextExpand, setIsMapExpanded, setIsTimelineExpanded])
 
   // ── Layout flags ──
   const isMapView = activeView === 'map'
@@ -467,7 +569,7 @@ function AppShell() {
   return (
     <div className={`app-shell${(isFullscreen || isDetailGraphExpanded) ? ' app-shell--map-fullscreen' : ''}${isTimelineExpanded ? ' app-shell--tl-fullscreen' : ''}${isFullscreenDetail ? ' app-shell--map-detail' : ''}${isTimelineDetail ? ' app-shell--tl-detail' : ''}${hasStrip ? ' app-shell--has-strip' : ''}${hasStripContent ? ' app-shell--strip-active' : ''}`}>
       <LeftNav
-          activeItem={activePage}
+          activeItem={activePage === 'task-detail' ? 'tasks' : activePage === 'detail' ? 'catalog' : activePage === 'portfolio-drilldown' ? 'portfolio' : activePage}
           navBadges={navBadges}
           onNavItemClick={(id) => {
               clearBadge(id)
@@ -477,6 +579,7 @@ function AppShell() {
               else if (id === 'home') setActivePage('home')
               else if (id === 'portfolio') setActivePage('portfolio')
               else if (id === 'documents') setActivePage('documents')
+              else if (id === 'tasks') setActivePage('tasks')
           }}
           onFojoToggle={() => setFojoForceOpen(!fojoForceOpen)}
           fojoUnreadCount={fojoUnreadCount}
@@ -548,25 +651,67 @@ function AppShell() {
           />
         </div>
 
-        {activePage !== 'home' && (activePage === 'detail' && detailItemId ? (
+        {activePage !== 'home' && (activePage === 'task-detail' && detailTaskId ? (
+          <TaskDetailPage
+            taskId={detailTaskId}
+            catalogFallback={getItemById(detailTaskId)}
+            getItemById={getItemById}
+            onBack={() => setActivePage(previousPage)}
+            onNavigateToAsset={(id) => { setDetailItemId(id); setActivePage('detail') }}
+          />
+        ) : activePage === 'tasks' ? (
+          <TasksPage
+            onTaskClick={(taskId) => { setPreviousPage('tasks'); setDetailTaskId(taskId); setActivePage('task-detail') }}
+            isChatOpen={isChatOpen}
+            externalTasks={externalTasks}
+          />
+        ) : activePage === 'detail' && detailItemId ? (
           <AssetDetailPage
             item={getItemById(detailItemId)!}
             relationships={allRelationships}
             getItemById={getItemById}
-            onBack={() => { setIsDetailGraphExpanded(false); setActivePage('catalog') }}
+            onBack={() => { setIsDetailGraphExpanded(false); setActivePage(previousPage) }}
             onNavigate={(id) => { setIsDetailGraphExpanded(false); navigateToDetail(id) }}
             onActionRequest={handleGraphCardAction}
             isGraphExpanded={isDetailGraphExpanded}
             onGraphExpandChange={setIsDetailGraphExpanded}
+          />
+        ) : activePage === 'portfolio-drilldown' && portfolioDrilldownCategory ? (
+          <PortfolioDrilldownPage
+            categoryId={portfolioDrilldownCategory}
+            onBack={() => setActivePage('portfolio')}
+            onNavigateToAsset={(id) => navigateToDetail(id)}
           />
         ) : activePage === 'portfolio' ? (
           <ValuationsPage
             items={allItems}
             isV3Processing={isProcessing}
             isChatOpen={isChatOpen}
+            onNavigateToPortfolioDrilldown={(categoryId) => {
+              setPortfolioDrilldownCategory(categoryId)
+              setActivePage('portfolio-drilldown')
+            }}
             onNavigateToCatalogCategory={(categories) => {
-              setActiveCategory(categories)
-              setActivePage('catalog')
+              const labelMap: Record<string, string> = {
+                'investment': 'Private Investments',
+                'public-market': 'Public Market',
+                'property': 'Real Estate',
+                'maritime,vehicle,art': 'Lifestyle Assets',
+              }
+              const key = categories.join(',')
+              setHoldingsCategoryKeys(categories)
+              setHoldingsCategoryLabel(labelMap[key] ?? categories.map(c => c[0].toUpperCase() + c.slice(1)).join(' & '))
+              setActivePage('category-holdings')
+            }}
+          />
+        ) : activePage === 'category-holdings' ? (
+          <CategoryHoldingsPage
+            categoryKeys={holdingsCategoryKeys}
+            categoryLabel={holdingsCategoryLabel}
+            onBack={() => setActivePage('portfolio')}
+            onNavigateToAsset={(id) => {
+              setDetailItemId(id)
+              setActivePage('detail')
             }}
           />
         ) : activePage === 'documents' ? (
@@ -578,7 +723,7 @@ function AppShell() {
           />
         ) : activePage === 'timeline' ? (
           <TimelinePage
-            distributions={allDistributions}
+            distributions={[...allDistributions, ...dynamicDistributions]}
             assetTimeline={thorntonAssetTimeline}
             getItemById={getItemById}
             activeOrgs={activeOrgs}
@@ -589,6 +734,7 @@ function AppShell() {
             isExpanded={isTimelineExpanded}
             onToggleExpand={() => setIsTimelineExpanded(v => !v)}
             onActionRequest={handleTimelineCardAction}
+            onAssetActionRequest={handleAssetTimelineAction}
             actionPromptEventId={pendingCardAction?.sourceTimelineEventId ?? null}
             timelineActionPrompt={pendingCardAction?.sourceTimelineEventId
               ? {
@@ -893,6 +1039,67 @@ function AppShell() {
         onItemClick={(id) => { navigateToDetail(id); setIsSearchOpen(false) }}
         items={allItems}
       />
+
+      {contactModalState && (
+        <ContactModal
+          type={contactModalState.type}
+          event={contactModalState.event}
+          onClose={() => setContactModalState(null)}
+          onCreateTask={(task) => {
+            setExternalTasks(prev => [task, ...prev])
+            // Add the task as a distribution-event card on the timeline
+            const srcEvent = contactModalState.sourceDistributionEvent
+            const dueYear = new Date(task.dueDate).getFullYear()
+            const newDist: DistributionEvent = {
+              id: `dyn-dist-${task.id}`,
+              beneficiaryId: srcEvent?.beneficiaryId ?? 'thn-p1',
+              trustId: srcEvent?.trustId ?? 'thn-t1',
+              triggerType: 'Condition',
+              triggerCategory: task.type,
+              triggerYear: dueYear,
+              amount: 0,
+              description: `${task.title} — Assigned to ${task.assignee}`,
+              status: 'Pending',
+              suggestedActions: [],
+            }
+            const allDists: DistributionEvent[] = [newDist]
+            // Generate additional recurring instances
+            if (task.recurring && task.recurrenceInterval) {
+              const monthMap: Record<string, number> = {
+                'Every 3 months': 3,
+                'Every 6 months': 6,
+                'Every 12 months': 12,
+              }
+              const months = monthMap[task.recurrenceInterval] ?? 12
+              let cur = new Date(task.dueDate)
+              for (let i = 1; i <= 4; i++) {
+                cur = new Date(cur)
+                cur.setMonth(cur.getMonth() + months)
+                allDists.push({
+                  id: `dyn-dist-${task.id}-r${i}`,
+                  beneficiaryId: srcEvent?.beneficiaryId ?? 'thn-p1',
+                  trustId: srcEvent?.trustId ?? 'thn-t1',
+                  triggerType: 'Condition',
+                  triggerCategory: task.type,
+                  triggerYear: cur.getFullYear(),
+                  amount: 0,
+                  description: `${task.title} — ${task.recurrenceInterval} (occurrence ${i + 1})`,
+                  status: 'Pending',
+                  suggestedActions: [],
+                })
+              }
+            }
+            setDynamicDistributions(prev => [...prev, ...allDists])
+            // Do NOT close modal here — ContactModal shows a preview step first
+          }}
+          onNavigateToTask={(taskId) => {
+            setPreviousPage('timeline')
+            setDetailTaskId(taskId)
+            setActivePage('task-detail')
+            setContactModalState(null)
+          }}
+        />
+      )}
 
       <ToastContainer />
     </div>

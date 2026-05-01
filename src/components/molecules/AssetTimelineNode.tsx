@@ -1,7 +1,11 @@
-import { useRef } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { motion, useInView } from 'motion/react'
+import { IconDots } from '@tabler/icons-react'
 import type { AssetTimelineEvent } from '@/data/types'
+import { CardActionsMenu, type CardActionType } from '@/components/molecules/CardActionsMenu'
+import { getAssetEventContactActions } from '@/lib/utils/contactActionUtils'
+import { snapshotPromptAnchor, type PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
 
 function formatValue(value?: number): string {
     if (value == null) return ''
@@ -15,11 +19,23 @@ interface AssetTimelineNodeProps {
     position: 'above' | 'below'
     showYearLabel: boolean
     isCurrentYear: boolean
+    onAction?: (event: AssetTimelineEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => void
+    pinActionsButtonVisible?: boolean
 }
 
-export function AssetTimelineNode({ event, position, showYearLabel, isCurrentYear }: AssetTimelineNodeProps) {
+export function AssetTimelineNode({ event, position, showYearLabel, isCurrentYear, onAction, pinActionsButtonVisible }: AssetTimelineNodeProps) {
     const ref = useRef<HTMLDivElement>(null)
+    const cardRef = useRef<HTMLDivElement>(null)
+    const actionsBtnRef = useRef<HTMLButtonElement>(null)
     const isInView = useInView(ref, { once: true, amount: 0.3 })
+    const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
+
+    const openMenu = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation()
+        setActionsMenuOpen(true)
+    }, [])
+
+    const showActionsPin = actionsMenuOpen || pinActionsButtonVisible
 
     return (
         <motion.div
@@ -40,9 +56,35 @@ export function AssetTimelineNode({ event, position, showYearLabel, isCurrentYea
                 transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
             >
                 {/* Asset event card */}
-                <div className="min-w-[256px] max-w-[256px] shrink-0 rounded-[var(--radius-lg)] relative z-[2] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.03)] bg-[var(--color-white)] border border-[var(--color-gray-4)] overflow-hidden hover:-translate-y-px hover:shadow-[var(--shadow-card-hover)] hover:border-[var(--color-gray-5)] [transition:box-shadow_0.2s,transform_0.15s,border-color_0.15s]">
+                <div
+                    ref={cardRef}
+                    className="group min-w-[256px] max-w-[256px] shrink-0 rounded-[var(--radius-lg)] relative z-[2] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_14px_rgba(0,0,0,0.03)] bg-[var(--color-white)] border border-[var(--color-gray-4)] overflow-hidden hover:-translate-y-px hover:shadow-[var(--shadow-card-hover)] hover:border-[var(--color-gray-5)] [transition:box-shadow_0.2s,transform_0.15s,border-color_0.15s]"
+                >
+                    {/* Three-dots action button */}
+                    {onAction && (
+                        <button
+                            ref={actionsBtnRef}
+                            className={cn(
+                                'absolute top-[8px] right-[8px] z-10 flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border-none bg-transparent p-0 transition-opacity duration-100 hover:bg-[var(--color-neutral-3)] cursor-pointer',
+                                showActionsPin ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                            )}
+                            onClick={openMenu}
+                            title="Actions"
+                            aria-label="Card actions"
+                        >
+                            <IconDots size={16} stroke={2} color="var(--color-neutral-11)" />
+                        </button>
+                    )}
+
                     <div className="flex flex-col gap-0.5 px-4 py-3.5">
-                        <div className="text-[17px] font-[800] text-[var(--color-gray-12)] leading-[1.2] tracking-[-0.022em] mb-0.5">{event.label}</div>
+                        <div className="flex items-start gap-2 mb-0.5">
+                            <div className="text-[17px] font-[800] text-[var(--color-gray-12)] leading-[1.2] tracking-[-0.022em] flex-1">{event.label}</div>
+                            {event.recurring && (
+                                <span className="shrink-0 mt-0.5 inline-flex items-center h-[18px] px-1.5 rounded-[4px] bg-[var(--color-neutral-3)] text-[10px] font-[600] text-[var(--color-neutral-10)] leading-none whitespace-nowrap">
+                                    Recurring
+                                </span>
+                            )}
+                        </div>
                         {formatValue(event.value) && (
                             <div className="font-display text-[14px] font-semibold text-[var(--color-accent-9)] tracking-[-0.02em] leading-[1.3]">
                                 {formatValue(event.value)}
@@ -72,6 +114,24 @@ export function AssetTimelineNode({ event, position, showYearLabel, isCurrentYea
                     </div>
                 )}
             </div>
+
+            {actionsMenuOpen && onAction && (
+                <CardActionsMenu
+                    itemContext="asset-timeline"
+                    anchorRef={cardRef}
+                    onClose={() => setActionsMenuOpen(false)}
+                    visibleActions={[
+                        'create-task',
+                        ...getAssetEventContactActions(event),
+                    ]}
+                    onAction={(action) => {
+                        const el = actionsBtnRef.current ?? cardRef.current
+                        const anchor = el ? snapshotPromptAnchor(el.getBoundingClientRect()) : null
+                        onAction(event, action, anchor)
+                        setActionsMenuOpen(false)
+                    }}
+                />
+            )}
         </motion.div>
     )
 }

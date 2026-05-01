@@ -1,3 +1,4 @@
+import type { Asset } from '@/data/types'
 import { thorntonAssets } from './assets'
 
 export type ChartTheme = 'blue' | 'pink'
@@ -300,8 +301,8 @@ function computePortfolioAllocation(theme: ChartTheme = 'blue'): PortfolioAlloca
     const lifestyleValue  = maritimeValue + vehicleValue + artValue
     const portfolioTotal  = realEstateValue / 0.20
     return [
-        { key: 'private',     label: 'Private Investments',      value: portfolioTotal * 0.50, percentage: 50, color: c0, isClickable: false, categoryFilter: [] },
-        { key: 'public',      label: 'Public Market',            value: portfolioTotal * 0.20, percentage: 20, color: c1, isClickable: false, categoryFilter: [] },
+        { key: 'private',     label: 'Private Investments',      value: portfolioTotal * 0.50, percentage: 50, color: c0, isClickable: true, categoryFilter: ['investment'] },
+        { key: 'public',      label: 'Public Market',            value: portfolioTotal * 0.20, percentage: 20, color: c1, isClickable: true, categoryFilter: ['public-market'] },
         { key: 'real-estate', label: 'Real Estate (Investment)', value: realEstateValue,        percentage: 20, color: c2, isClickable: true,  categoryFilter: ['property'] },
         {
             key: 'lifestyle', label: 'Lifestyle Assets', value: lifestyleValue, percentage: 10,
@@ -313,6 +314,231 @@ function computePortfolioAllocation(theme: ChartTheme = 'blue'): PortfolioAlloca
             ].filter(b => b.value > 0),
         },
     ]
+}
+
+// ─────────────────────────────────────────────
+// HOLDINGS / SECTORS / GEO HELPERS
+// ─────────────────────────────────────────────
+
+export interface HoldingItem {
+    id: string
+    name: string
+    imageUrl?: string
+    categoryKey: string
+    assetType: string
+    value: number
+    portfolioPercent: number
+}
+
+export interface SectorItem {
+    sector: string
+    value: number
+    percentage: number
+    count: number
+}
+
+/** Stable id for tooltips, filters, and map rows (US|State, CA|Province, …) */
+export interface GeoItem {
+    geoKey: string
+    /** Legend / chip label, e.g. "New York" or "Ontario, Canada" */
+    label: string
+    country: string
+    /** US state or Canadian province when applicable */
+    region?: string
+    value: number
+    percentage: number
+    count: number
+}
+
+/** Returns true when the asset belongs to the selected geographic bucket. */
+export function assetMatchesGeoKey(asset: Asset, geoKey: string | null): boolean {
+    if (!geoKey) return true
+
+    const country = asset.country ?? 'Unknown'
+
+    if (geoKey.startsWith('US|')) {
+        const st = geoKey.slice(3)
+        if (!st || st === '__')
+            return country === 'United States'
+        return country === 'United States' && asset.usState === st
+    }
+
+    if (geoKey.startsWith('CA|')) {
+        const p = geoKey.slice(3)
+        if (!p || p === '__')
+            return country === 'Canada'
+        return country === 'Canada' && asset.caProvince === p
+    }
+
+    if (geoKey.startsWith('ROW|'))
+        return country === geoKey.slice(4)
+
+    if (geoKey === 'UNKNOWN')
+        return country === 'Unknown'
+
+    return false
+}
+
+/** Assets sorted by value desc, with portfolio % computed against GRAND_TOTAL. */
+export function getTopHoldings(categoryKeys: string[], limit = 10): HoldingItem[] {
+    const filtered = categoryKeys.length === 0
+        ? thorntonAssets.filter(a => a.categoryKey !== 'insurance')
+        : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey))
+
+    return filtered
+        .filter(a => (a.value ?? 0) > 0)
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+        .slice(0, limit)
+        .map(a => ({
+            id: a.id,
+            name: a.name,
+            imageUrl: a.imageUrl,
+            categoryKey: a.categoryKey,
+            assetType: a.assetType,
+            value: a.value ?? 0,
+            portfolioPercent: Math.round(((a.value ?? 0) / GRAND_TOTAL) * 1000) / 10,
+        }))
+}
+
+/** All holdings (no limit), for use in the full list below the top-N section. */
+export function getAllHoldings(categoryKeys: string[]): HoldingItem[] {
+    const filtered = categoryKeys.length === 0
+        ? thorntonAssets.filter(a => a.categoryKey !== 'insurance')
+        : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey))
+
+    return filtered
+        .filter(a => (a.value ?? 0) > 0)
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+        .map(a => ({
+            id: a.id,
+            name: a.name,
+            imageUrl: a.imageUrl,
+            categoryKey: a.categoryKey,
+            assetType: a.assetType,
+            value: a.value ?? 0,
+            portfolioPercent: Math.round(((a.value ?? 0) / GRAND_TOTAL) * 1000) / 10,
+        }))
+}
+
+/** Sector breakdown for a set of category keys (empty = all non-insurance). */
+export function getTopSectors(categoryKeys: string[]): SectorItem[] {
+    const filtered = categoryKeys.length === 0
+        ? thorntonAssets.filter(a => a.categoryKey !== 'insurance')
+        : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey))
+
+    const totals: Record<string, { value: number; count: number }> = {}
+    for (const a of filtered) {
+        const s = a.sector ?? 'Other'
+        if (!totals[s]) totals[s] = { value: 0, count: 0 }
+        totals[s].value += a.value ?? 0
+        totals[s].count += 1
+    }
+    const grand = Object.values(totals).reduce((s, t) => s + t.value, 0)
+    return Object.entries(totals)
+        .sort(([, a], [, b]) => b.value - a.value)
+        .map(([sector, { value, count }]) => ({
+            sector,
+            value,
+            percentage: grand > 0 ? Math.round((value / grand) * 100) : 0,
+            count,
+        }))
+}
+
+function geoBucket(asset: Asset): { geoKey: string; label: string; country: string; region?: string } {
+    const country = asset.country ?? 'Unknown'
+
+    if (country === 'United States') {
+        if (asset.usState)
+            return { geoKey: `US|${asset.usState}`, label: asset.usState, country, region: asset.usState }
+        return {
+            geoKey: 'US|__',
+            label: 'United States (unspecified)',
+            country,
+        }
+    }
+
+    if (country === 'Canada') {
+        if (asset.caProvince)
+            return {
+                geoKey: `CA|${asset.caProvince}`,
+                label: `${asset.caProvince}, Canada`,
+                country,
+                region: asset.caProvince,
+            }
+        return { geoKey: 'CA|__', label: 'Canada (unspecified)', country }
+    }
+
+    if (country === 'Unknown')
+        return { geoKey: 'UNKNOWN', label: 'Unknown', country: 'Unknown' }
+
+    return { geoKey: `ROW|${country}`, label: country, country }
+}
+
+/** Geographic exposure for a set of category keys (empty = all non-insurance). Aggregates by US state or Canadian province. */
+export function getGeoExposure(categoryKeys: string[]): GeoItem[] {
+    const filtered = categoryKeys.length === 0
+        ? thorntonAssets.filter(a => a.categoryKey !== 'insurance')
+        : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey))
+
+    const totals: Record<string, {
+        label: string
+        country: string
+        region?: string
+        value: number
+        count: number
+    }> = {}
+
+    for (const a of filtered) {
+        const { geoKey, label, country, region } = geoBucket(a)
+        if (!totals[geoKey])
+            totals[geoKey] = { label, country, region, value: 0, count: 0 }
+        totals[geoKey].value += a.value ?? 0
+        totals[geoKey].count += 1
+    }
+
+    const grand = Object.values(totals).reduce((s, t) => s + t.value, 0)
+    return Object.entries(totals)
+        .sort(([, a], [, b]) => b.value - a.value)
+        .map(([geoKey, meta]) => ({
+            geoKey,
+            label: meta.label,
+            country: meta.country,
+            region: meta.region,
+            value: meta.value,
+            percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
+            count: meta.count,
+        }))
+}
+
+export interface USStateItem {
+    state: string
+    value: number
+    percentage: number
+    count: number
+}
+
+/** US state-level exposure for a set of category keys (empty = all non-insurance US assets). */
+export function getUSStateExposure(categoryKeys: string[]): USStateItem[] {
+    const filtered = categoryKeys.length === 0
+        ? thorntonAssets.filter(a => a.categoryKey !== 'insurance' && a.usState)
+        : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey) && a.usState)
+
+    const totals: Record<string, { value: number; count: number }> = {}
+    for (const a of filtered) {
+        const s = a.usState!
+        if (!totals[s]) totals[s] = { value: 0, count: 0 }
+        totals[s].value += a.value ?? 0
+        totals[s].count += 1
+    }
+    const grand = Object.values(totals).reduce((s, t) => s + t.value, 0)
+    return Object.entries(totals)
+        .sort(([, a], [, b]) => b.value - a.value)
+        .map(([state, { value, count }]) => ({
+            state,
+            value,
+            percentage: grand > 0 ? Math.round((value / grand) * 100) : 0,
+            count,
+        }))
 }
 
 export const PORTFOLIO_ALLOCATION = computePortfolioAllocation('blue')

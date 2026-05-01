@@ -6,6 +6,7 @@ import type { DistributionEvent, AnyCatalogItem } from '@/data/types'
 import { getSourceDocsForItem } from '@/data/citations'
 import { formatAmount, getTypeLabel, shouldShowAmount } from '@/lib/helpers/timeline'
 import { CardActionsMenu, type CardActionType } from '@/components/molecules/CardActionsMenu'
+import { getDistributionContactActions } from '@/lib/utils/contactActionUtils'
 import { snapshotPromptAnchor, type PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
 
 export interface TimelineCardProps {
@@ -87,7 +88,14 @@ export function TimelineCard({ event, beneficiary, trust: _trust, onClick, onDou
                         <div className="text-[13px] font-medium text-[var(--color-neutral-11)] leading-[1.3] whitespace-nowrap overflow-hidden text-ellipsis">{beneficiary?.name ?? 'Unknown'}</div>
                     </div>
 
-                    <div className="text-[20px] font-[800] text-[var(--color-gray-12)] leading-[1.15] tracking-[-0.025em] mb-0.5">{getTypeLabel(event)}</div>
+                    <div className="flex items-start gap-2 mb-0.5">
+                        <div className="text-[20px] font-[800] text-[var(--color-gray-12)] leading-[1.15] tracking-[-0.025em] flex-1">{getTypeLabel(event)}</div>
+                        {event.recurring && (
+                            <span className="shrink-0 mt-1 inline-flex items-center h-[18px] px-1.5 rounded-[4px] bg-[var(--color-neutral-3)] text-[10px] font-[600] text-[var(--color-neutral-10)] leading-none whitespace-nowrap">
+                                Recurring
+                            </span>
+                        )}
+                    </div>
 
                     {shouldShowAmount(event.amount) && (
                         <div className={cn(
@@ -121,6 +129,12 @@ export function TimelineCard({ event, beneficiary, trust: _trust, onClick, onDou
                     itemContext="timeline"
                     anchorRef={cardRef}
                     onClose={() => setActionsMenuOpen(false)}
+                    visibleActions={[
+                        'create-task',
+                        ...getDistributionContactActions(event),
+                        'edit-distribution',
+                        'view-source',
+                    ]}
                     onAction={(action) => {
                         const el = actionsBtnRef.current ?? cardRef.current
                         const anchor = el ? snapshotPromptAnchor(el.getBoundingClientRect()) : null

@@ -87,7 +87,7 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                             style={{
                                 transition: 'opacity 0.15s ease',
                                 opacity: hovered !== null && hovered !== index ? 0.35 : 1,
-                                cursor: slice.isClickable ? 'pointer' : 'default',
+                                cursor: slice.isClickable ? 'pointer' : 'not-allowed',
                             }}
                             onMouseEnter={(e) => {
                                 setHovered(index)
@@ -140,12 +140,10 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                                 ))}
                             </div>
                         )}
-                        {hoveredSlice.isClickable && (
-                            <div className="text-white/50 mt-1.5">
-                                {hoveredSlice.key === 'lifestyle'
-                                    ? 'View Maritime, Vehicles & Art →'
-                                    : 'View Real Estate assets →'}
-                            </div>
+                        {hoveredSlice.isClickable ? (
+                            <div className="text-white/50 mt-1.5">Click to explore holdings →</div>
+                        ) : (
+                            <div className="text-white/40 mt-1.5">Breakdown not available for this category</div>
                         )}
                     </div>
                 )}

@@ -204,12 +204,9 @@ export function useFojoCreation({ onItemsCreated, onPostNavigation }: UseFojoCre
 
         // Done — create items and show summary
         timersRef.current.push(setTimeout(() => {
-            const isAsset = actionTypeRef.current === 'asset'
             const items = buildItems(scenario, false)
-            if (isAsset) {
-                setCreatedItems(items)
-                onItemsCreated?.(items)
-            }
+            setCreatedItems(items)
+            onItemsCreated?.(items)
             addMessage({
                 id: nextId(),
                 type: 'fojo-summary',
@@ -390,12 +387,9 @@ export function useFojoCreation({ onItemsCreated, onPostNavigation }: UseFojoCre
                 }
 
                 timersRef.current.push(setTimeout(() => {
-                    const isAsset = actionTypeRef.current === 'asset'
                     const items = buildItems(scenario, includeAdditional)
-                    if (isAsset) {
-                        setCreatedItems(items)
-                        onItemsCreated?.(items)
-                    }
+                    setCreatedItems(items)
+                    onItemsCreated?.(items)
                     addMessage({
                         id: nextId(),
                         type: 'fojo-summary',
@@ -412,12 +406,9 @@ export function useFojoCreation({ onItemsCreated, onPostNavigation }: UseFojoCre
         } else {
             timersRef.current.push(setTimeout(() => {
                 setIsTyping(false)
-                const isAsset = actionTypeRef.current === 'asset'
                 const items = buildItems(scenario, includeAdditional)
-                if (isAsset) {
-                    setCreatedItems(items)
-                    onItemsCreated?.(items)
-                }
+                setCreatedItems(items)
+                onItemsCreated?.(items)
                 addMessage({
                     id: nextId(),
                     type: 'fojo-summary',

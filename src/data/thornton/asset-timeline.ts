@@ -43,6 +43,9 @@ export const thorntonAssetTimeline: AssetTimelineEvent[] = [
         label: 'Tax Reassessment',
         description:
             'NYC Department of Finance triennial reassessment scheduled.',
+        suggestedActions: ['contact-cpa'],
+        suggestedTaskTitle: 'Review property tax assessment — Fifth Avenue Penthouse',
+        suggestedDescription: 'Review the annual property tax assessment for the Fifth Avenue Penthouse and consult with CPA on any appeals or adjustment opportunities.',
     },
     {
         id: 'at-thn-a1-5',
@@ -51,6 +54,21 @@ export const thorntonAssetTimeline: AssetTimelineEvent[] = [
         label: 'Insurance Renewal',
         description:
             'All-risk policy renewal. Current coverage: $50M replacement value. AIG underwriter.',
+        suggestedActions: ['contact-lawyer'],
+        suggestedTaskTitle: 'Renew penthouse insurance',
+        suggestedDescription: 'Review and renew the property insurance policy for the Fifth Avenue Penthouse. Confirm coverage limits, liability coverage, and any changes in property value before renewal.',
+    },
+    {
+        id: 'at-thn-a1-6',
+        assetId: 'thn-a1',
+        year: 2026,
+        month: 6,
+        label: 'Bi-Annual Maintenance',
+        recurring: true,
+        description:
+            'HVAC, plumbing, and general inspection scheduled. Arrange service provider and confirm all systems are operational.',
+        suggestedActions: [],
+        suggestedTaskTitle: 'Schedule bi-annual maintenance — Fifth Avenue Penthouse',
     },
 
     // ── thn-a2 · Hamptons Estate ($38M) — Real Estate ──
@@ -1540,5 +1558,71 @@ export const thorntonAssetTimeline: AssetTimelineEvent[] = [
         label: 'Coverage Review',
         description:
             'Annual review of blanket limits vs. current real estate portfolio replacement values.',
+    },
+
+    // ── Azimut 72 — Recurring Engine Service (5 instances, every 6 months) ──
+    {
+        id: 'at-azimut72-1',
+        assetId: 'thn-a-azimut72',
+        year: 2024,
+        month: 6,
+        label: 'Acquired',
+        value: 4_200_000,
+        description: 'Azimut 72 acquired at $4.2M. Registered under Maritime LLC (thn-e5). Home port Fort Lauderdale.',
+    },
+    {
+        id: 'at-azimut72-2',
+        assetId: 'thn-a-azimut72',
+        year: 2026,
+        month: 6,
+        label: 'Scheduled Engine Service',
+        description: 'Bi-annual engine service & antifouling. Oil change, impeller replacement, zincs, and bottom paint. Lauderdale Marine Center.',
+        recurring: true,
+        suggestedActions: [],
+        suggestedTaskTitle: 'Scheduled Engine Service — Azimut 72',
+    },
+    {
+        id: 'at-azimut72-3',
+        assetId: 'thn-a-azimut72',
+        year: 2026,
+        month: 12,
+        label: 'Scheduled Engine Service',
+        description: 'Bi-annual engine service & antifouling (Dec 2026 occurrence). Recurring every 6 months.',
+        recurring: true,
+        suggestedActions: [],
+        suggestedTaskTitle: 'Scheduled Engine Service — Azimut 72',
+    },
+    {
+        id: 'at-azimut72-4',
+        assetId: 'thn-a-azimut72',
+        year: 2027,
+        month: 6,
+        label: 'Scheduled Engine Service',
+        description: 'Bi-annual engine service & antifouling (Jun 2027 occurrence). Recurring every 6 months.',
+        recurring: true,
+        suggestedActions: [],
+        suggestedTaskTitle: 'Scheduled Engine Service — Azimut 72',
+    },
+    {
+        id: 'at-azimut72-5',
+        assetId: 'thn-a-azimut72',
+        year: 2027,
+        month: 12,
+        label: 'Scheduled Engine Service',
+        description: 'Bi-annual engine service & antifouling (Dec 2027 occurrence). Recurring every 6 months.',
+        recurring: true,
+        suggestedActions: [],
+        suggestedTaskTitle: 'Scheduled Engine Service — Azimut 72',
+    },
+    {
+        id: 'at-azimut72-6',
+        assetId: 'thn-a-azimut72',
+        year: 2028,
+        month: 6,
+        label: 'Scheduled Engine Service',
+        description: 'Bi-annual engine service & antifouling (Jun 2028 occurrence). Recurring every 6 months.',
+        recurring: true,
+        suggestedActions: [],
+        suggestedTaskTitle: 'Scheduled Engine Service — Azimut 72',
     },
 ]
