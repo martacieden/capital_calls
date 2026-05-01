@@ -362,11 +362,11 @@ export function ValuationsPage({
         <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
             <div className="flex w-full items-center justify-between p-0">
                 <ContentHeader title="Portfolio" />
-                <div className="flex items-center gap-0.5 p-1 bg-[var(--color-neutral-3)] rounded-[var(--radius-lg)]">
+                <div className="flex items-center gap-0.5 p-0.5 bg-[var(--color-neutral-3)] rounded-[var(--radius-md)]">
                     <button
                         type="button"
                         onClick={() => { setPortfolioMode('all'); setActiveSector(null) }}
-                        className={`px-3 py-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all ${
+                        className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium leading-4 transition-all ${
                             portfolioMode === 'all'
                                 ? 'bg-white text-[var(--color-black)] shadow-sm'
                                 : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
@@ -377,7 +377,7 @@ export function ValuationsPage({
                     <button
                         type="button"
                         onClick={() => { setPortfolioMode('private'); setActiveSector(null) }}
-                        className={`px-3 py-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all ${
+                        className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium leading-4 transition-all ${
                             portfolioMode === 'private'
                                 ? 'bg-white text-[var(--color-black)] shadow-sm'
                                 : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
