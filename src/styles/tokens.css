@@ -110,6 +110,7 @@
 
   /* Layout */
   --nav-width: 56px;
+  --fojo-preview-width: 72px;
   --fojo-width: 384px;
   --fojo-min-width: 352px;
   --fojo-max-width: 400px;

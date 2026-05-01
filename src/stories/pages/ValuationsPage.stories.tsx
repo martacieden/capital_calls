@@ -53,6 +53,8 @@ export const Default: Story = {
     items: allItems,
     isV3Processing: false,
     isChatOpen: false,
+    onNavigateToCatalogCategory: () => {},
+    onOpenPortfolioCategory: () => {},
   },
 }
 
@@ -61,6 +63,8 @@ export const Processing: Story = {
     items: [],
     isV3Processing: true,
     isChatOpen: false,
+    onNavigateToCatalogCategory: () => {},
+    onOpenPortfolioCategory: () => {},
   },
 }
 

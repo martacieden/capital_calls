@@ -52,6 +52,8 @@ interface CatalogToolbarProps {
     onQuickFilterChange?: (key: QuickFilterKey) => void
     dropdownItems?: DropdownItem[]
     dropdownLabel?: string
+    /** First row in the dropdown clears filters; empty button shows `label · value` (e.g. Type · All). */
+    dropdownAllLabel?: string
     viewOptions?: CatalogView[] | null
     quickFilterItems?: QuickFilterItem[]
     primaryAction?: React.ReactNode
@@ -83,6 +85,7 @@ export function CatalogToolbar({
     activeQuickFilters, onQuickFilterChange,
     dropdownItems,
     dropdownLabel = 'Category',
+    dropdownAllLabel,
     viewOptions,
     quickFilterItems,
     primaryAction,
@@ -117,6 +120,7 @@ export function CatalogToolbar({
                         onSelect={onCategoryChange}
                         multiSelect
                         showClear={showDropdownClear}
+                        allOptionLabel={dropdownAllLabel}
                         footer={onAddCategory ? (
                             <div className="border-t border-[var(--color-gray-4)] mt-0.5 pt-0.5">
                                 <button

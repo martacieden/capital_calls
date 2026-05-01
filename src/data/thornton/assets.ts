@@ -195,7 +195,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Aircraft',
         value: 75_000_000,
         holderId: 'thn-e4',
-        sector: 'Consumer',
+        sector: 'Aviation',
         country: 'United States',
         usState: 'New Jersey',
         description:
@@ -215,7 +215,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Aircraft',
         value: 18_000_000,
         holderId: 'thn-e4',
-        sector: 'Consumer',
+        sector: 'Aviation',
         country: 'United States',
         usState: 'New York',
         description:
@@ -236,7 +236,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Vehicle',
         value: 62_000_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Vehicles',
         country: 'United States',
         usState: 'Connecticut',
         description:
@@ -289,7 +289,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Vehicle',
         value: 22_000_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Vehicles',
         country: 'United States',
         usState: 'Massachusetts',
         description:
@@ -307,7 +307,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Vehicle',
         value: 14_500_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Vehicles',
         country: 'United States',
         usState: 'Michigan',
         description:
@@ -325,7 +325,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Vehicle',
         value: 6_200_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Vehicles',
         country: 'United States',
         usState: 'Vermont',
         description:
@@ -346,11 +346,10 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Yacht / Watercraft',
         value: 120_000_000,
         holderId: 'thn-e5',
-        sector: 'Consumer',
-        country: 'United States',
-        usState: 'Florida',
+        sector: 'Maritime',
+        country: 'France',
         description:
-            '65-meter Lürssen 2021. Cayman Islands flag. 10 guest staterooms, crew of 22. Home port Fort Lauderdale. Annual operating cost ~$12M.',
+            '65-meter Lürssen 2021. Cayman Islands flag. 10 guest staterooms, crew of 22. Mediterranean season home port Antibes. Annual operating cost ~$12M.',
         createdAt: '2024-03-01',
         createdBy: BY_AI,
         treeParentId: 'thn-e5',
@@ -365,11 +364,10 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Yacht / Watercraft',
         value: 32_000_000,
         holderId: 'thn-e5',
-        sector: 'Consumer',
-        country: 'United States',
-        usState: 'Florida',
+        sector: 'Maritime',
+        country: 'United Kingdom',
         description:
-            '42-meter sailing yacht berthed Miami / Palm Beach winters. Fully crewed offshore-capable cruiser with charter income.',
+            '42-meter sailing yacht home port Falmouth, Cornwall. Fully crewed offshore-capable cruiser with Atlantic charter income.',
         createdAt: '2024-03-01',
         createdBy: BY_AI,
         treeParentId: 'thn-e5',
@@ -382,7 +380,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Yacht / Watercraft',
         value: 4_500_000,
         holderId: 'thn-e5',
-        sector: 'Consumer',
+        sector: 'Maritime',
         country: 'United States',
         usState: 'Florida',
         description:
@@ -400,7 +398,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Yacht / Watercraft',
         value: 8_500_000,
         holderId: 'thn-e5',
-        sector: 'Consumer',
+        sector: 'Maritime',
         country: 'United States',
         usState: 'Rhode Island',
         description:
@@ -418,7 +416,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Yacht / Watercraft',
         value: 6_200_000,
         holderId: 'thn-e5',
-        sector: 'Consumer',
+        sector: 'Maritime',
         country: 'United States',
         usState: 'Florida',
         description:
@@ -435,7 +433,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Yacht / Watercraft',
         value: 1_200_000,
         holderId: 'thn-e5',
-        sector: 'Consumer',
+        sector: 'Maritime',
         country: 'United States',
         usState: 'Washington',
         description:
@@ -456,7 +454,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 28_000_000,
         holderId: 'thn-e6',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'New York',
         description:
@@ -476,7 +474,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 42_000_000,
         holderId: 'thn-e6',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'New York',
         description:
@@ -494,7 +492,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 18_000_000,
         holderId: 'thn-e6',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'New York',
         description:
@@ -512,7 +510,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 35_000_000,
         holderId: 'thn-e6',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'Illinois',
         description:
@@ -530,7 +528,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 9_500_000,
         holderId: 'thn-e6',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'Connecticut',
         description:
@@ -548,7 +546,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 22_000_000,
         holderId: 'thn-e6',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'California',
         description:
@@ -567,11 +565,10 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 12_000_000,
         holderId: 'thn-e12',
-        sector: 'Consumer',
-        country: 'United States',
-        usState: 'New York',
+        sector: 'Art & Collectibles',
+        country: 'Switzerland',
         description:
-            'Permanent collection of 85 works on long-term loan to MoMA and Whitney Museum. Focus on contemporary American art.',
+            'Permanent collection of 85 works on rotating loan to Kunsthaus Zürich and Art Basel. Focus on contemporary American and European art.',
         createdAt: '2024-03-01',
         createdBy: BY_AI,
         treeParentId: 'thn-e12',
@@ -586,7 +583,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 8_500_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'New York',
         description:
@@ -603,7 +600,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 4_200_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'Canada',
         caProvince: 'Ontario',
         description:
@@ -620,7 +617,7 @@ export const thorntonAssets: Asset[] = [
         assetType: 'Art & Collectibles',
         value: 3_800_000,
         holderId: 'thn-e2',
-        sector: 'Consumer',
+        sector: 'Art & Collectibles',
         country: 'United States',
         usState: 'New York',
         description:
@@ -693,10 +690,9 @@ export const thorntonAssets: Asset[] = [
         value: 22_000_000,
         holderId: 'thn-e7',
         sector: 'Real Estate',
-        country: 'United States',
-        usState: 'New York',
+        country: 'United Kingdom',
         description:
-            '$20M committed, current NAV $22M. Vintage 2021. Global opportunistic real estate.',
+            '$20M committed, current NAV $22M. Vintage 2021. Global opportunistic real estate. GP offices London.',
         createdAt: '2024-03-01',
         createdBy: BY_AI,
         treeParentId: 'thn-e7',

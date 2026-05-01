@@ -124,6 +124,8 @@ interface TaskDetailPageProps {
     taskId: string
     /** Catalog row when the task was just created in Fojo (not in static mockTasks). */
     catalogFallback?: AnyCatalogItem | null
+    /** Tasks created in-session (e.g. timeline assist) — same id as taskId. */
+    externalTask?: Task | null
     /** Resolve catalog items for Related record snapshot — same fields as Asset detail. */
     getItemById?: (id: string) => AnyCatalogItem | null
     onBack: () => void
@@ -133,11 +135,13 @@ interface TaskDetailPageProps {
 export function TaskDetailPage({
     taskId,
     catalogFallback,
+    externalTask,
     getItemById,
     onBack,
     onNavigateToAsset,
 }: TaskDetailPageProps) {
     const task = (() => {
+        if (externalTask && externalTask.id === taskId) return externalTask
         const staticTask = mockTasks.find(t => t.id === taskId)
         if (staticTask) return staticTask
         if (catalogFallback?.id === taskId) return taskFromCatalogItem(catalogFallback) ?? undefined

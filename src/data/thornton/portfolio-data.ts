@@ -1,4 +1,13 @@
-import type { GeoItem } from '@/data/thornton/valuations-data'
+import type { Asset } from '@/data/types'
+import type { AssetAllocation } from '@/data/thornton/valuations-data'
+import { thorntonAssets } from './assets'
+import {
+    getGeoExposure,
+    getCountryExposure,
+    getTopSectors,
+    INVESTABLE_CATALOG_TOTAL,
+    CATEGORY_LABELS,
+} from './valuations-data'
 
 export type PortfolioCategoryId =
     | 'lifestyle-assets'
@@ -37,7 +46,7 @@ export interface PortfolioSector {
 }
 
 /** Same shape as valuations `GeoItem` for the drill-down choropleth legend. */
-export type PortfolioGeoItem = GeoItem
+export type PortfolioGeoItem = ReturnType<typeof getGeoExposure>[number]
 
 export interface PortfolioCategoryData {
     totalValue: number
@@ -47,440 +56,370 @@ export interface PortfolioCategoryData {
     geographicExposure: PortfolioGeoItem[]
 }
 
-export const PORTFOLIO_TOTAL = 606_000_000
+const LIFESTYLE_KEYS = ['maritime', 'vehicle', 'art'] as const
+const DRILLDOWN_SECTOR_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#94A3B8']
 
-export const portfolioAllocationItems: PortfolioAllocationItem[] = [
-    {
-        id: 'lifestyle-assets',
+/** Total portfolio value = sum of non-insurance catalog assets (single source of truth). */
+export const PORTFOLIO_TOTAL = INVESTABLE_CATALOG_TOTAL
+
+/** Ліквідність поза каталогом активів — окремий сегмент allocation (mock). */
+const CASH_AND_EQUIVALENTS_SHARE = 0.075
+export const CASH_AND_EQUIVALENTS_VALUE = Math.round(PORTFOLIO_TOTAL * CASH_AND_EQUIVALENTS_SHARE)
+
+/** Знаменник для pie allocation та підписів «% of total portfolio» у drilldown (активи + cash). */
+export const PORTFOLIO_ALLOCATION_DISPLAY_TOTAL = PORTFOLIO_TOTAL + CASH_AND_EQUIVALENTS_VALUE
+
+const CATEGORY_META: Record<PortfolioCategoryId, { label: string; color: string; catalogKeys: string[] }> = {
+    'lifestyle-assets': {
         label: 'Lifestyle Assets',
-        value: 231_500_000,
-        percentage: 38.2,
-        color: '#6366F1',
-        subcategories: ['Art & Collectibles', 'Maritime', 'Aviation', 'Vehicles'],
-        hasDrillDown: true,
+        color: '#8B5CF6',
+        catalogKeys: [...LIFESTYLE_KEYS],
     },
-    {
-        id: 'private-investments',
+    'private-investments': {
         label: 'Private Investments',
-        value: 192_000_000,
-        percentage: 31.7,
-        color: '#10B981',
-        subcategories: ['Fund I', 'Fund II', 'Fund III'],
-        hasDrillDown: true,
+        color: '#059669',
+        catalogKeys: ['investment'],
     },
-    {
-        id: 'real-estate',
+    'real-estate': {
         label: 'Real Estate',
-        value: 134_000_000,
-        percentage: 22.1,
-        color: '#F59E0B',
-        subcategories: ['Residential', 'Commercial', 'US & Canada'],
-        hasDrillDown: true,
+        color: '#005BE2',
+        catalogKeys: ['property'],
     },
-    {
-        id: 'cash-equivalents',
+    'cash-equivalents': {
         label: 'Cash & Equivalents',
-        value: 48_500_000,
-        percentage: 8.0,
-        color: '#94A3B8',
-        subcategories: [],
-        hasDrillDown: false,
+        color: '#64748B',
+        catalogKeys: [],
     },
-]
-
-const lifestyleAssets: PortfolioCategoryData = {
-    totalValue: 231_500_000,
-    portfolioPercentage: 38.2,
-    topHoldings: [
-        {
-            id: 'asset-001',
-            name: 'Basquiat – Untitled 1982',
-            type: 'Art',
-            sector: 'Art & Collectibles',
-            image: 'https://placehold.co/80x80/6366F1/white?text=ART',
-            value: 42_000_000,
-            portfolioPercentage: 18.2,
-            location: 'New York, USA',
-        },
-        {
-            id: 'asset-002',
-            name: 'Azimut 72 – Sea Breeze',
-            type: 'Maritime',
-            sector: 'Maritime',
-            image: 'https://placehold.co/80x80/0EA5E9/white?text=BOAT',
-            value: 38_500_000,
-            portfolioPercentage: 16.6,
-            location: 'Vancouver, BC, Canada',
-        },
-        {
-            id: 'asset-003',
-            name: 'Gulfstream G650ER – N841TF',
-            type: 'Aviation',
-            sector: 'Aviation',
-            image: 'https://placehold.co/80x80/8B5CF6/white?text=JET',
-            value: 35_000_000,
-            portfolioPercentage: 15.1,
-            location: 'Teterboro, NJ, USA',
-        },
-        {
-            id: 'asset-004',
-            name: 'Monet – Water Lilies Study',
-            type: 'Art',
-            sector: 'Art & Collectibles',
-            image: 'https://placehold.co/80x80/6366F1/white?text=ART',
-            value: 28_000_000,
-            portfolioPercentage: 12.1,
-            location: 'Napa Valley, CA, USA',
-        },
-        {
-            id: 'asset-005',
-            name: 'Patek Philippe Collection (14 pieces)',
-            type: 'Collectibles',
-            sector: 'Art & Collectibles',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=COL',
-            value: 18_400_000,
-            portfolioPercentage: 7.9,
-            location: 'Toronto, ON, Canada',
-        },
-        {
-            id: 'asset-006',
-            name: 'Warhol – Campbell Soup Series',
-            type: 'Art',
-            sector: 'Art & Collectibles',
-            image: 'https://placehold.co/80x80/6366F1/white?text=ART',
-            value: 16_500_000,
-            portfolioPercentage: 7.1,
-            location: 'Los Angeles, CA, USA',
-        },
-        {
-            id: 'asset-007',
-            name: 'Rolls-Royce Spectre Collection (3 cars)',
-            type: 'Vehicles',
-            sector: 'Vehicles',
-            image: 'https://placehold.co/80x80/10B981/white?text=CAR',
-            value: 14_200_000,
-            portfolioPercentage: 6.1,
-            location: 'Palm Beach, FL, USA',
-        },
-        {
-            id: 'asset-008',
-            name: 'Burgess 112 – Solaris',
-            type: 'Maritime',
-            sector: 'Maritime',
-            image: 'https://placehold.co/80x80/0EA5E9/white?text=YACHT',
-            value: 12_800_000,
-            portfolioPercentage: 5.5,
-            location: 'Newport, RI, USA',
-        },
-        {
-            id: 'asset-009',
-            name: 'Burgundy Wine Collection (480 bottles)',
-            type: 'Collectibles',
-            sector: 'Art & Collectibles',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=WINE',
-            value: 3_800_000,
-            portfolioPercentage: 1.6,
-            location: 'Portland, OR, USA',
-        },
-        {
-            id: 'asset-010',
-            name: 'Bell 429 Helicopter – N992WH',
-            type: 'Aviation',
-            sector: 'Aviation',
-            image: 'https://placehold.co/80x80/8B5CF6/white?text=HELI',
-            value: 2_300_000,
-            portfolioPercentage: 1.0,
-            location: 'Seattle, WA, USA',
-        },
-    ],
-    topSectors: [
-        { label: 'Art & Collectibles', percentage: 48, value: 111_120_000, color: '#6366F1' },
-        { label: 'Maritime',           percentage: 28, value: 64_820_000,  color: '#0EA5E9' },
-        { label: 'Aviation',           percentage: 18, value: 41_670_000,  color: '#8B5CF6' },
-        { label: 'Vehicles',           percentage: 6,  value: 13_890_000,  color: '#10B981' },
-    ],
-    geographicExposure: [
-        {
-            geoKey: 'US|New York',
-            label: 'New York',
-            country: 'United States',
-            region: 'New York',
-            value: 52_000_000,
-            percentage: 22,
-            count: 0,
-        },
-        {
-            geoKey: 'US|California',
-            label: 'California',
-            country: 'United States',
-            region: 'California',
-            value: 45_000_000,
-            percentage: 19,
-            count: 0,
-        },
-        {
-            geoKey: 'US|Florida',
-            label: 'Florida',
-            country: 'United States',
-            region: 'Florida',
-            value: 38_500_000,
-            percentage: 17,
-            count: 0,
-        },
-        {
-            geoKey: 'CA|Ontario',
-            label: 'Ontario, Canada',
-            country: 'Canada',
-            region: 'Ontario',
-            value: 32_300_000,
-            percentage: 14,
-            count: 0,
-        },
-        {
-            geoKey: 'CA|British Columbia',
-            label: 'British Columbia, Canada',
-            country: 'Canada',
-            region: 'British Columbia',
-            value: 27_900_000,
-            percentage: 12,
-            count: 0,
-        },
-        {
-            geoKey: 'US|Texas',
-            label: 'Texas',
-            country: 'United States',
-            region: 'Texas',
-            value: 22_900_000,
-            percentage: 10,
-            count: 0,
-        },
-        {
-            geoKey: 'US|Washington',
-            label: 'Washington',
-            country: 'United States',
-            region: 'Washington',
-            value: 12_900_000,
-            percentage: 6,
-            count: 0,
-        },
-    ],
 }
 
-const privateInvestments: PortfolioCategoryData = {
-    totalValue: 192_000_000,
-    portfolioPercentage: 31.7,
-    topHoldings: [
-        {
-            id: 'fund-001',
-            name: 'Whitmore Capital Fund I',
-            type: 'Private Equity',
-            sector: 'Technology',
-            image: 'https://placehold.co/80x80/10B981/white?text=F1',
-            value: 85_000_000,
-            portfolioPercentage: 34.0,
-            vintage: '2018',
-            manager: 'Whitmore Capital Partners · New York, NY',
-        },
-        {
-            id: 'fund-002',
-            name: 'Whitmore Ventures Fund II',
-            type: 'Venture Capital',
-            sector: 'Technology',
-            image: 'https://placehold.co/80x80/6366F1/white?text=F2',
-            value: 62_000_000,
-            portfolioPercentage: 25.0,
-            vintage: '2020',
-            manager: 'Whitmore Ventures GP · Palo Alto, CA',
-        },
-        {
-            id: 'fund-003',
-            name: 'Whitmore Real Assets Fund III',
-            type: 'Real Assets',
-            sector: 'Real Estate',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=F3',
-            value: 45_000_000,
-            portfolioPercentage: 18.0,
-            vintage: '2022',
-            manager: 'Whitmore Asset Management · Houston, TX / Toronto, ON',
-        },
-    ],
-    topSectors: [
-        { label: 'Technology',     percentage: 35, value: 67_200_000, color: '#6366F1' },
-        { label: 'Healthcare',     percentage: 24, value: 46_080_000, color: '#10B981' },
-        { label: 'Real Estate',    percentage: 18, value: 34_560_000, color: '#F59E0B' },
-        { label: 'Energy',         percentage: 14, value: 26_880_000, color: '#EF4444' },
-        { label: 'Consumer Goods', percentage: 9,  value: 17_280_000, color: '#94A3B8' },
-    ],
-    geographicExposure: [
-        {
-            geoKey: 'US|New York',
-            label: 'New York',
-            country: 'United States',
-            region: 'New York',
-            value: 72_000_000,
-            percentage: 38,
-            count: 0,
-        },
-        {
-            geoKey: 'US|California',
-            label: 'California',
-            country: 'United States',
-            region: 'California',
-            value: 48_000_000,
-            percentage: 25,
-            count: 0,
-        },
-        {
-            geoKey: 'US|Texas',
-            label: 'Texas',
-            country: 'United States',
-            region: 'Texas',
-            value: 42_000_000,
-            percentage: 22,
-            count: 0,
-        },
-        {
-            geoKey: 'CA|Ontario',
-            label: 'Ontario, Canada',
-            country: 'Canada',
-            region: 'Ontario',
-            value: 30_000_000,
-            percentage: 15,
-            count: 0,
-        },
-    ],
+/** Maps catalog category keys to their portfolio allocation color. Single source of truth. */
+export const CATALOG_KEY_PORTFOLIO_COLOR: Record<string, string> =
+    (Object.keys(CATEGORY_META) as PortfolioCategoryId[]).reduce<Record<string, string>>((acc, id) => {
+        const { color, catalogKeys } = CATEGORY_META[id]
+        for (const key of catalogKeys) acc[key] = color
+        return acc
+    }, {})
+
+function sumValueForKeys(keys: readonly string[]): number {
+    return thorntonAssets
+        .filter(a => keys.includes(a.categoryKey))
+        .reduce((s, a) => s + (a.value ?? 0), 0)
 }
 
-const realEstate: PortfolioCategoryData = {
-    totalValue: 134_000_000,
-    portfolioPercentage: 22.1,
-    topHoldings: [
-        {
-            id: 're-001',
-            name: 'Miami Oceanfront Compound',
-            type: 'Residential',
-            sector: 'Residential',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=VILLA',
-            value: 48_000_000,
-            portfolioPercentage: 35.8,
-            location: 'Key Biscayne, FL, USA',
-        },
-        {
-            id: 're-002',
-            name: 'Park Avenue Penthouse',
-            type: 'Residential',
-            sector: 'Residential',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=APT',
-            value: 32_000_000,
-            portfolioPercentage: 23.9,
-            location: 'New York, NY, USA',
-        },
-        {
-            id: 're-003',
-            name: 'West Vancouver Waterfront',
-            type: 'Residential',
-            sector: 'Residential',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=TOWN',
-            value: 24_500_000,
-            portfolioPercentage: 18.3,
-            location: 'West Vancouver, BC, Canada',
-        },
-        {
-            id: 're-004',
-            name: 'Tahoe Lakefront Estate',
-            type: 'Residential',
-            sector: 'Residential',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=EST',
-            value: 18_000_000,
-            portfolioPercentage: 13.4,
-            location: 'Incline Village, NV, USA',
-        },
-        {
-            id: 're-005',
-            name: 'Jackson Hole Ranch',
-            type: 'Residential',
-            sector: 'Residential',
-            image: 'https://placehold.co/80x80/F59E0B/white?text=LAKE',
-            value: 11_500_000,
-            portfolioPercentage: 8.6,
-            location: 'Jackson Hole, WY, USA',
-        },
-    ],
-    topSectors: [
-        { label: 'Residential',        percentage: 62, value: 83_080_000, color: '#F59E0B' },
-        { label: 'Commercial',         percentage: 24, value: 32_160_000, color: '#6366F1' },
-        { label: 'Land & Development', percentage: 14, value: 18_760_000, color: '#10B981' },
-    ],
-    geographicExposure: [
-        {
-            geoKey: 'US|Florida',
-            label: 'Florida',
-            country: 'United States',
-            region: 'Florida',
-            value: 40_000_000,
-            percentage: 30,
-            count: 0,
-        },
-        {
-            geoKey: 'US|New York',
-            label: 'New York',
-            country: 'United States',
-            region: 'New York',
-            value: 38_000_000,
-            percentage: 28,
-            count: 0,
-        },
-        {
-            geoKey: 'CA|British Columbia',
-            label: 'British Columbia, Canada',
-            country: 'Canada',
-            region: 'British Columbia',
-            value: 26_000_000,
-            percentage: 19,
-            count: 0,
-        },
-        {
-            geoKey: 'US|Nevada',
-            label: 'Nevada',
-            country: 'United States',
-            region: 'Nevada',
-            value: 21_000_000,
-            percentage: 16,
-            count: 0,
-        },
-        {
-            geoKey: 'US|Wyoming',
-            label: 'Wyoming',
-            country: 'United States',
-            region: 'Wyoming',
-            value: 9_000_000,
-            percentage: 7,
-            count: 0,
-        },
-    ],
+/** Підрозділи cash для drilldown / тултипа (не окремі активи каталогу). */
+const CASH_LIQUIDITY_BUCKETS = [
+    { label: 'Operating accounts & demand deposits', detail: 'Same-day liquidity', weight: 42 },
+    { label: 'Money market & ultra-short funds', detail: '< 90 days', weight: 33 },
+    { label: 'U.S. Treasuries & government money funds', detail: 'Risk-free bucket', weight: 25 },
+] as const
+
+function allocateCashSubvalues(total: number): number[] {
+    const wsum = CASH_LIQUIDITY_BUCKETS.reduce((s, b) => s + b.weight, 0)
+    const parts = CASH_LIQUIDITY_BUCKETS.map(b => Math.round((total * b.weight) / wsum))
+    const drift = total - parts.reduce((a, b) => a + b, 0)
+    parts[parts.length - 1] += drift
+    return parts
 }
 
-const CATEGORY_DATA: Record<string, PortfolioCategoryData> = {
-    'lifestyle-assets': lifestyleAssets,
-    'private-investments': privateInvestments,
-    'real-estate': realEstate,
+function sliceValueForCategory(id: PortfolioCategoryId): number {
+    if (id === 'cash-equivalents') return CASH_AND_EQUIVALENTS_VALUE
+    return sumValueForKeys(CATEGORY_META[id].catalogKeys)
+}
+
+/** Прикладові фонди для тултипа Private Investments; суми масштабуються до фактичного total категорії. */
+const WHITMORE_FUNDS_TOOLTIP_TEMPLATE = [
+    { name: 'Whitmore Capital Fund I', fundType: 'Private Equity', weight: 85 },
+    { name: 'Whitmore Ventures Fund II', fundType: 'Venture Capital', weight: 62 },
+    { name: 'Whitmore Real Assets Fund III', fundType: 'Real Assets', weight: 45 },
+] as const
+
+export interface AllocationTooltipRow {
+    label: string
+    value: number
+    /** Другий рядок у тултипі (наприклад, тип фонду) */
+    detail?: string
+}
+
+/** Рядки для тултипа allocation: підкатегорії каталогу або (для private-investments) фонди Whitmore. */
+export function getPortfolioAllocationTooltipBreakdown(
+    portfolioCategoryId: PortfolioCategoryId,
+): AllocationTooltipRow[] {
+    if (portfolioCategoryId === 'private-investments') {
+        const total = sumValueForKeys(['investment'])
+        const wsum = WHITMORE_FUNDS_TOOLTIP_TEMPLATE.reduce((s, f) => s + f.weight, 0)
+        if (total <= 0 || wsum <= 0) return []
+        return WHITMORE_FUNDS_TOOLTIP_TEMPLATE.map(f => ({
+            label: f.name,
+            value: Math.round((total * f.weight) / wsum),
+            detail: f.fundType,
+        }))
+    }
+
+    if (portfolioCategoryId === 'cash-equivalents') {
+        const total = CASH_AND_EQUIVALENTS_VALUE
+        if (total <= 0) return []
+        const amounts = allocateCashSubvalues(total)
+        return CASH_LIQUIDITY_BUCKETS.map((b, i) => ({
+            label: b.label,
+            value: amounts[i]!,
+            detail: b.detail,
+        }))
+    }
+
+    const sub = getCatalogSubcategoryBreakdownForPortfolioSlice(portfolioCategoryId)
+    if (sub.length < 1) return []
+    return sub.map(s => ({
+        label: s.label,
+        value: s.value,
+        detail:
+            s.holdingCount === 1
+                ? '1 holding in catalog'
+                : `${s.holdingCount} holdings in catalog`,
+    }))
+}
+
+/** Короткий контекст над таблицею рядків у тултипі allocation. */
+export function getPortfolioAllocationTooltipIntro(
+    portfolioCategoryId: PortfolioCategoryId,
+): string | undefined {
+    if (portfolioCategoryId === 'cash-equivalents') {
+        return 'Modeled as liquidity buckets (not tied to individual catalog assets).'
+    }
+    if (portfolioCategoryId === 'private-investments') {
+        const n = countForKeys(['investment'])
+        return `${n} underlying holdings in catalog, summarized below as three representative funds.`
+    }
+    if (portfolioCategoryId === 'lifestyle-assets') {
+        const keys = CATEGORY_META['lifestyle-assets'].catalogKeys
+        const n = countForKeys(keys)
+        const k = keys.length
+        return `${k} catalog categories · ${n} total holdings · values by category below.`
+    }
+    if (portfolioCategoryId === 'real-estate') {
+        const n = countForKeys(['property'])
+        return `Single catalog category (real property) · ${n} holdings · value below.`
+    }
+    return undefined
+}
+
+/** Підкатегорії каталогу (vehicle, maritime, …), що входять у слайс портфельної групи, з сумами. */
+export function getCatalogSubcategoryBreakdownForPortfolioSlice(
+    portfolioCategoryId: PortfolioCategoryId,
+): { label: string; value: number; holdingCount: number }[] {
+    const meta = CATEGORY_META[portfolioCategoryId]
+    return meta.catalogKeys
+        .map((key: string) => ({
+            label: CATEGORY_LABELS[key] ?? key,
+            value: sumValueForKeys([key]),
+            holdingCount: countForKeys([key]),
+        }))
+        .filter(row => row.value > 0)
+        .sort((a, b) => b.value - a.value)
+}
+
+function countForKeys(keys: readonly string[]): number {
+    return thorntonAssets.filter(a => keys.includes(a.categoryKey)).length
+}
+
+function uniqueSortedSectors(keys: readonly string[]): string[] {
+    const set = new Set<string>()
+    for (const a of thorntonAssets) {
+        if (keys.includes(a.categoryKey) && a.sector) set.add(a.sector)
+    }
+    return [...set].sort((x, y) => x.localeCompare(y))
+}
+
+function pctOfAllocationTotal(value: number): number {
+    return PORTFOLIO_ALLOCATION_DISPLAY_TOTAL > 0
+        ? Math.round((value / PORTFOLIO_ALLOCATION_DISPLAY_TOTAL) * 1000) / 10
+        : 0
+}
+
+function assetToPortfolioHolding(a: Asset): PortfolioHolding {
+    return {
+        id: a.id,
+        name: a.name,
+        type: a.assetType,
+        sector: a.sector ?? 'Other',
+        image: a.imageUrl ?? '',
+        value: a.value ?? 0,
+        portfolioPercentage:
+            PORTFOLIO_ALLOCATION_DISPLAY_TOTAL > 0
+                ? Math.round(((a.value ?? 0) / PORTFOLIO_ALLOCATION_DISPLAY_TOTAL) * 1000) / 10
+                : 0,
+        location: a.address,
+    }
+}
+
+function buildTopSectorsForKeys(keys: readonly string[]): PortfolioSector[] {
+    const rows = getTopSectors([...keys])
+    return rows.map((row, i) => ({
+        label: row.sector,
+        value: row.value,
+        percentage: row.percentage,
+        color: DRILLDOWN_SECTOR_COLORS[i % DRILLDOWN_SECTOR_COLORS.length],
+    }))
+}
+
+function syntheticCashHolding(
+    id: string,
+    name: string,
+    type: string,
+    sector: string,
+    value: number,
+): PortfolioHolding {
+    return {
+        id,
+        name,
+        type,
+        sector,
+        image: '',
+        value,
+        portfolioPercentage:
+            PORTFOLIO_ALLOCATION_DISPLAY_TOTAL > 0
+                ? Math.round((value / PORTFOLIO_ALLOCATION_DISPLAY_TOTAL) * 1000) / 10
+                : 0,
+    }
+}
+
+function buildCashEquivalentsCategoryData(): PortfolioCategoryData {
+    const totalValue = CASH_AND_EQUIVALENTS_VALUE
+    const amounts = allocateCashSubvalues(totalValue)
+    const topHoldings = CASH_LIQUIDITY_BUCKETS.map((b, i) =>
+        syntheticCashHolding(
+            `cash-synth-${i}`,
+            b.label,
+            'Cash & Equivalents',
+            'Liquidity',
+            amounts[i]!,
+        ),
+    )
+    return {
+        totalValue,
+        portfolioPercentage: pctOfAllocationTotal(totalValue),
+        topHoldings,
+        topSectors: [],
+        geographicExposure: [],
+    }
+}
+
+function buildCategoryData(categoryId: PortfolioCategoryId): PortfolioCategoryData {
+    if (categoryId === 'cash-equivalents') return buildCashEquivalentsCategoryData()
+
+    const { catalogKeys } = CATEGORY_META[categoryId]
+    const assets = thorntonAssets.filter(a => catalogKeys.includes(a.categoryKey))
+    const totalValue = assets.reduce((s, a) => s + (a.value ?? 0), 0)
+
+    const topHoldings = [...assets]
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+        .map(assetToPortfolioHolding)
+
+    return {
+        totalValue,
+        portfolioPercentage: pctOfAllocationTotal(totalValue),
+        topHoldings,
+        topSectors: buildTopSectorsForKeys(catalogKeys),
+        geographicExposure: getGeoExposure([...catalogKeys]),
+    }
+}
+
+function buildPortfolioAllocationItems(): PortfolioAllocationItem[] {
+    return (Object.keys(CATEGORY_META) as PortfolioCategoryId[]).map(id => {
+        const meta = CATEGORY_META[id]
+        const value = sliceValueForCategory(id)
+        return {
+            id,
+            label: meta.label,
+            value,
+            percentage: pctOfAllocationTotal(value),
+            color: meta.color,
+            subcategories: uniqueSortedSectors(meta.catalogKeys),
+            hasDrillDown: true,
+        }
+    })
+}
+
+function buildPortfolioAssetAllocation(): AssetAllocation[] {
+    return (Object.keys(CATEGORY_META) as PortfolioCategoryId[]).map(id => {
+        const meta = CATEGORY_META[id]
+        const value = sliceValueForCategory(id)
+        return {
+            categoryKey: id,
+            label: meta.label,
+            value,
+            percentage: PORTFOLIO_ALLOCATION_DISPLAY_TOTAL > 0
+                ? Math.round((value / PORTFOLIO_ALLOCATION_DISPLAY_TOTAL) * 100)
+                : 0,
+            color: meta.color,
+            count: id === 'cash-equivalents'
+                ? CASH_LIQUIDITY_BUCKETS.length
+                : countForKeys(meta.catalogKeys),
+        }
+    })
+}
+
+export const portfolioAllocationItems: PortfolioAllocationItem[] = buildPortfolioAllocationItems()
+
+export const PORTFOLIO_ASSET_ALLOCATION: AssetAllocation[] = buildPortfolioAssetAllocation()
+
+/** Country-level geographic exposure for the main portfolio page. */
+export const PORTFOLIO_OVERVIEW_GEO: PortfolioGeoItem[] = getCountryExposure([])
+
+const CATEGORY_DATA: Record<PortfolioCategoryId, PortfolioCategoryData> = {
+    'lifestyle-assets': buildCategoryData('lifestyle-assets'),
+    'private-investments': buildCategoryData('private-investments'),
+    'real-estate': buildCategoryData('real-estate'),
+    'cash-equivalents': buildCategoryData('cash-equivalents'),
 }
 
 export function getDrilldownData(categoryId: string): PortfolioCategoryData | null {
-    return CATEGORY_DATA[categoryId] ?? null
+    if (!isPortfolioCategoryId(categoryId)) return null
+    return CATEGORY_DATA[categoryId]
 }
 
-const CATEGORY_META: Record<string, { label: string; color: string }> = {
-    'lifestyle-assets':    { label: 'Lifestyle Assets',    color: '#6366F1' },
-    'private-investments': { label: 'Private Investments', color: '#10B981' },
-    'real-estate':         { label: 'Real Estate',         color: '#F59E0B' },
-    'cash-equivalents':    { label: 'Cash & Equivalents',  color: '#94A3B8' },
+function isPortfolioCategoryId(id: string): id is PortfolioCategoryId {
+    return id in CATEGORY_DATA
 }
 
 export function getCategoryLabel(categoryId: string): string {
-    return CATEGORY_META[categoryId]?.label ?? categoryId
+    return (CATEGORY_META as Record<string, { label: string }>)[categoryId]?.label ?? categoryId
 }
 
 export function getCategoryColor(categoryId: string): string {
-    return CATEGORY_META[categoryId]?.color ?? '#94A3B8'
+    return (CATEGORY_META as Record<string, { color: string }>)[categoryId]?.color ?? '#94A3B8'
+}
+
+/**
+ * Maps high-level portfolio allocation buckets to `Asset.categoryKey` values for the Assets catalog filter.
+ */
+export function getCatalogCategoryKeysForPortfolioCategory(
+    portfolioCategoryId: string,
+): string[] | null {
+    const meta = CATEGORY_META[portfolioCategoryId as PortfolioCategoryId]
+    if (!meta || meta.catalogKeys.length === 0) return null
+    return [...meta.catalogKeys]
+}
+
+/** Підкатегорії (фактичні сектори з каталогу). */
+export function getPortfolioSubcategories(portfolioCategoryId: string): string[] {
+    const item = portfolioAllocationItems.find(i => i.id === portfolioCategoryId)
+    return item?.subcategories ?? []
+}
+
+export function holdingMatchesPortfolioSubcategory(
+    holding: PortfolioHolding,
+    portfolioCategoryId: string,
+    subLabel: string,
+): boolean {
+    if (portfolioCategoryId === 'real-estate' && subLabel === 'US & Canada') {
+        const loc = (holding.location ?? '').toLowerCase()
+        return (
+            loc.includes('usa')
+            || loc.includes('u.s.')
+            || loc.includes('canada')
+            || loc.includes(', bc')
+            || loc.includes(', on')
+        )
+    }
+    return holding.sector === subLabel || holding.type === subLabel
 }

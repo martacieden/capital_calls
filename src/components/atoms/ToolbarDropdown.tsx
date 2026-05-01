@@ -18,17 +18,21 @@ interface ToolbarDropdownProps {
     multiSelect?: boolean
     /** Show "Clear selection" when items are selected */
     showClear?: boolean
+    /** First row: clears selection (e.g. "All" types). Button shows `label · allOptionLabel` when nothing is selected. */
+    allOptionLabel?: string
     /** Extra content at the bottom of the dropdown (e.g., "Add category" button) */
     footer?: ReactNode
 }
 
-export function ToolbarDropdown({ label, items, selectedKeys, onSelect, multiSelect = false, showClear = false, footer }: ToolbarDropdownProps) {
+export function ToolbarDropdown({ label, items, selectedKeys, onSelect, multiSelect = false, showClear = false, allOptionLabel, footer }: ToolbarDropdownProps) {
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
     useClickOutside(ref, () => setOpen(false), open)
 
     const buttonLabel = () => {
-        if (selectedKeys.length === 0) return label
+        if (selectedKeys.length === 0) {
+            return allOptionLabel ? `${label} · ${allOptionLabel}` : label
+        }
         if (selectedKeys.length === 1) return items.find(i => i.key === selectedKeys[0])?.label ?? label
         return `${selectedKeys.length} selected`
     }
@@ -56,7 +60,20 @@ export function ToolbarDropdown({ label, items, selectedKeys, onSelect, multiSel
             />
             {open && (
                 <div className="absolute top-[calc(100%+4px)] left-0 z-[100] flex min-w-[180px] flex-col gap-0.5 rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-white)] p-1 shadow-[var(--shadow-dropdown)]">
-                    {showClear && selectedKeys.length > 0 && (
+                    {allOptionLabel && (
+                        <button
+                            type="button"
+                            className={`flex w-full items-center gap-[var(--spacing-2)] rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-1.5 text-left text-[13px] font-[var(--font-weight-medium)] text-[var(--color-gray-12)] transition-[background] duration-[0.12s] hover:bg-[var(--color-neutral-3)]${selectedKeys.length === 0 ? ' bg-[var(--color-blue-3,#eff6ff)]' : ''} border-b border-[var(--color-gray-4)] mb-0.5`}
+                            onClick={() => {
+                                onSelect([])
+                                if (!multiSelect) setOpen(false)
+                            }}
+                        >
+                            <span className={`flex-1${selectedKeys.length === 0 ? ' text-[var(--color-blue)]' : ''}`}>{allOptionLabel}</span>
+                            {selectedKeys.length === 0 && <IconCheck size={14} stroke={2.5} color="var(--color-blue)" />}
+                        </button>
+                    )}
+                    {showClear && selectedKeys.length > 0 && !allOptionLabel && (
                         <button
                             className="flex w-full items-center justify-between gap-[var(--spacing-2)] rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-1.5 text-left text-[13px] font-[var(--font-weight-medium)] text-[var(--color-red-9)] transition-[background] duration-[0.12s] border-b border-[var(--color-gray-4)] mb-0.5 hover:bg-[var(--color-red-1)] hover:text-[var(--color-red-dark)]"
                             onClick={() => onSelect([])}

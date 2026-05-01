@@ -5,6 +5,8 @@ export interface BreakdownItem {
     label: string
     value: number
     color: string
+    /** Підпис під назвою (тип фонду тощо) */
+    detail?: string
 }
 
 export interface PortfolioAllocationSlice {
@@ -16,6 +18,12 @@ export interface PortfolioAllocationSlice {
     isClickable: boolean
     categoryFilter: string[]
     breakdown?: BreakdownItem[]
+    /** Заголовок блоку в тултипі (наприклад «Funds» vs «Included categories») */
+    breakdownHeading?: string
+    /** Контекст над списком рядків (скільки категорій / позицій тощо). */
+    breakdownIntro?: string
+    /** Скільки позицій не показано в breakdown (короткий список у тултипі) */
+    breakdownMoreCount?: number
 }
 
 interface PortfolioAllocationChartProps {
@@ -120,28 +128,56 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
 
                 {tooltip && hoveredSlice && (
                     <div
-                        className="pointer-events-none absolute z-10 bg-[var(--color-black)] text-white rounded-lg px-3 py-2 text-xs shadow-lg"
+                        className="pointer-events-none absolute z-10 bg-[var(--color-black)] text-white rounded-lg px-3 py-2 text-xs shadow-lg w-72 max-w-[min(320px,85vw)] text-left"
                         style={{
                             left: tooltip.x + 12,
                             top: tooltip.y - 36,
-                            whiteSpace: 'nowrap',
                         }}
                     >
                         <div className="font-semibold">{hoveredSlice.label}</div>
                         <div className="text-white/70">{hoveredSlice.percentage}% · {formatValue(hoveredSlice.value)}</div>
+                        {hoveredSlice.breakdownIntro ? (
+                            <p className="text-[11px] text-white/55 mt-2 leading-snug">{hoveredSlice.breakdownIntro}</p>
+                        ) : null}
                         {hoveredSlice.breakdown && hoveredSlice.breakdown.length > 0 && (
                             <div className="mt-2 flex flex-col gap-1 border-t border-white/20 pt-2">
-                                {hoveredSlice.breakdown.map(item => (
-                                    <div key={item.label} className="flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: item.color }} />
-                                        <span className="text-white/60 flex-1">{item.label}</span>
-                                        <span className="text-white/90 font-medium tabular-nums">{formatValue(item.value)}</span>
+                                <div className="text-[11px] font-medium uppercase tracking-wide text-white/45">
+                                    {hoveredSlice.breakdownHeading ?? 'Breakdown'}
+                                </div>
+                                {hoveredSlice.breakdown.map((item, bi) => {
+                                    const sliceShare =
+                                        hoveredSlice.value > 0
+                                            ? Math.round((item.value / hoveredSlice.value) * 1000) / 10
+                                            : null
+                                    return (
+                                        <div key={`${bi}-${item.label}`} className="flex items-start gap-2 min-w-0">
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1" style={{ background: item.color }} />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-baseline justify-between gap-2 min-w-0">
+                                                    <span className="text-white/70 truncate" title={item.label}>{item.label}</span>
+                                                    <span className="text-white/90 font-medium tabular-nums shrink-0">
+                                                        {formatValue(item.value)}
+                                                        {sliceShare != null && (
+                                                            <span className="text-white/45 font-normal"> · {sliceShare}%</span>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                {item.detail ? (
+                                                    <div className="text-[11px] text-white/45 truncate">{item.detail}</div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                {hoveredSlice.breakdownMoreCount != null && hoveredSlice.breakdownMoreCount > 0 && (
+                                    <div className="text-[11px] text-white/45 pt-0.5">
+                                        +{hoveredSlice.breakdownMoreCount} more
                                     </div>
-                                ))}
+                                )}
                             </div>
                         )}
                         {hoveredSlice.isClickable ? (
-                            <div className="text-white/50 mt-1.5">Click to explore holdings →</div>
+                            <div className="text-white/75 mt-1.5 text-[11px] font-medium tracking-wide">Click to explore →</div>
                         ) : (
                             <div className="text-white/40 mt-1.5">Breakdown not available for this category</div>
                         )}
@@ -154,7 +190,7 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                     <div
                         key={seg.key}
                         className={cn(
-                            'flex items-center gap-2 text-[13px] transition-opacity duration-150 rounded-[4px] px-1 py-0.5 -mx-1 -my-0.5',
+                            'grid grid-cols-[10px_minmax(0,1fr)_88px_48px_14px] items-center gap-2 text-[13px] transition-opacity duration-150 rounded-[4px] px-1 py-0.5 -mx-1 -my-0.5',
                             seg.isClickable && 'cursor-pointer hover:bg-[var(--color-neutral-2)]',
                             hovered === i && 'bg-[var(--color-neutral-2)]'
                         )}
@@ -172,9 +208,14 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                         onClick={() => seg.isClickable && onSliceClick(seg.categoryFilter)}
                     >
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: seg.color }} />
-                        <span className="flex-1 text-[var(--color-neutral-11)] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{seg.label}</span>
-                        <span className="font-semibold text-[var(--color-black)] min-w-[60px] text-right">{formatValue(seg.value)}</span>
-                        <span className="font-medium text-[var(--color-neutral-11)] min-w-[32px] text-right">{seg.percentage}%</span>
+                        <span className="text-[var(--color-neutral-11)] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{seg.label}</span>
+                        <span className="font-semibold text-[var(--color-black)] text-right tabular-nums">{formatValue(seg.value)}</span>
+                        <span className="font-medium text-[var(--color-neutral-11)] text-right tabular-nums">{seg.percentage}%</span>
+                        <span
+                            className="text-xs text-[var(--color-neutral-7)] text-right transition-opacity duration-150 select-none"
+                            style={{ opacity: seg.isClickable && hovered === i ? 1 : 0 }}
+                            aria-hidden
+                        >→</span>
                     </div>
                 ))}
             </div>

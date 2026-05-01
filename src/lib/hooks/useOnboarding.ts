@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 
+const ONBOARDING_STORAGE_KEY = 'v3-onboarding-complete'
+
+function readOnboardingComplete(): boolean {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem(ONBOARDING_STORAGE_KEY) === 'true'
+}
+
 export function useOnboarding() {
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false)
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(readOnboardingComplete)
   const [isProcessing, setIsProcessing] = useState(false)
   const [navBadges, setNavBadges] = useState<Set<string>>(new Set())
 
@@ -16,7 +23,7 @@ export function useOnboarding() {
   }, [isProcessing])
 
   const completeOnboarding = useCallback(() => {
-    localStorage.setItem('v3-onboarding-complete', 'true')
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true')
     setIsOnboardingComplete(true)
     setIsProcessing(true)
   }, [])

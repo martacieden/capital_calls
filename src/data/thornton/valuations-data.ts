@@ -66,6 +66,11 @@ function computeAllocation(theme: ChartTheme = 'blue'): AssetAllocation[] {
 
 export const ASSET_ALLOCATION = computeAllocation('blue')
 export const GRAND_TOTAL = ASSET_ALLOCATION.reduce((s, a) => s + a.value, 0)
+
+/** Sum of catalog asset values excluding insurance (portfolio / allocation view). */
+export const INVESTABLE_CATALOG_TOTAL = thorntonAssets
+    .filter(a => a.categoryKey !== 'insurance')
+    .reduce((s, a) => s + (a.value ?? 0), 0)
 export function getAssetAllocation(theme: ChartTheme): AssetAllocation[] {
     return computeAllocation(theme)
 }
@@ -120,20 +125,28 @@ export interface PerformancePoint {
     value: number
 }
 
-export const PORTFOLIO_PERFORMANCE: PerformancePoint[] = [
-    { month: 'Jul', value: 1_080_000_000 },
-    { month: 'Aug', value: 1_095_000_000 },
-    { month: 'Sep', value: 1_072_000_000 },
-    { month: 'Oct', value: 1_110_000_000 },
-    { month: 'Nov', value: 1_125_000_000 },
-    { month: 'Dec', value: 1_138_000_000 },
-    { month: 'Jan', value: 1_150_000_000 },
-    { month: 'Feb', value: 1_165_000_000 },
-    { month: 'Mar', value: 1_140_000_000 },
-    { month: 'Apr', value: 1_195_000_000 },
-    { month: 'May', value: 1_220_000_000 },
-    { month: 'Jun', value: 1_248_000_000 },
-]
+/** 12-month series with natural volatility, ending exactly at endTotal (consistent with YTD %). */
+export function buildPortfolioPerformanceSeries(endTotal: number, ytdPercent: number): PerformancePoint[] {
+    const start = Math.round(endTotal / (1 + ytdPercent / 100))
+    const labels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    const progress = [0, 0.068, 0.041, 0.118, 0.145, 0.175, 0.143, 0.298, 0.390, 0.361, 0.574, 1.000]
+    return labels.map((month, i) => ({
+        month,
+        value: Math.round(start + (endTotal - start) * progress[i]!),
+    }))
+}
+
+/** Smoother 12-month benchmark series anchored to the same portfolio start value. */
+export function buildBenchmarkSeries(portfolioEndTotal: number, portfolioYtd: number, benchmarkYtd: number): PerformancePoint[] {
+    const start = Math.round(portfolioEndTotal / (1 + portfolioYtd / 100))
+    const end = Math.round(start * (1 + benchmarkYtd / 100))
+    const labels = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    const progress = [0, 0.055, 0.105, 0.19, 0.27, 0.35, 0.41, 0.52, 0.63, 0.73, 0.86, 1.000]
+    return labels.map((month, i) => ({
+        month,
+        value: Math.round(start + (end - start) * progress[i]!),
+    }))
+}
 
 /** Property locations — filtered from Thornton assets, sorted by value desc */
 export interface PropertyLocation {
@@ -222,13 +235,24 @@ export const DOCUMENT_STATUS: DocumentEntity[] = [
     },
 ]
 
-/** Estate KPIs — computed totals */
+/** Estate KPIs — portfolio view aligns with non-insurance investable total */
 export const ESTATE_KPIS = {
-    totalValue: GRAND_TOTAL,
-    totalAssets: thorntonAssets.length,
-    activeEntities: 9,
+    totalValue: INVESTABLE_CATALOG_TOTAL,
+    totalAssets: thorntonAssets.filter(a => a.categoryKey !== 'insurance').length,
+    activeEntities: new Set(thorntonAssets.map(a => a.holderId).filter(Boolean)).size,
     ytdPerformance: 8.2,
 }
+
+export const PORTFOLIO_PERFORMANCE: PerformancePoint[] = buildPortfolioPerformanceSeries(
+    INVESTABLE_CATALOG_TOTAL,
+    ESTATE_KPIS.ytdPerformance,
+)
+
+export const BENCHMARK_PERFORMANCE: PerformancePoint[] = buildBenchmarkSeries(
+    INVESTABLE_CATALOG_TOTAL,
+    ESTATE_KPIS.ytdPerformance,
+    6.1,
+)
 
 /** Category sections for Portfolio page — all non-insurance asset categories */
 export interface CategorySection {
@@ -326,6 +350,7 @@ export interface HoldingItem {
     imageUrl?: string
     categoryKey: string
     assetType: string
+    sector?: string
     value: number
     portfolioPercent: number
 }
@@ -395,8 +420,9 @@ export function getTopHoldings(categoryKeys: string[], limit = 10): HoldingItem[
             imageUrl: a.imageUrl,
             categoryKey: a.categoryKey,
             assetType: a.assetType,
+            sector: a.sector,
             value: a.value ?? 0,
-            portfolioPercent: Math.round(((a.value ?? 0) / GRAND_TOTAL) * 1000) / 10,
+            portfolioPercent: Math.round(((a.value ?? 0) / INVESTABLE_CATALOG_TOTAL) * 1000) / 10,
         }))
 }
 
@@ -415,8 +441,9 @@ export function getAllHoldings(categoryKeys: string[]): HoldingItem[] {
             imageUrl: a.imageUrl,
             categoryKey: a.categoryKey,
             assetType: a.assetType,
+            sector: a.sector,
             value: a.value ?? 0,
-            portfolioPercent: Math.round(((a.value ?? 0) / GRAND_TOTAL) * 1000) / 10,
+            portfolioPercent: Math.round(((a.value ?? 0) / INVESTABLE_CATALOG_TOTAL) * 1000) / 10,
         }))
 }
 
@@ -504,6 +531,42 @@ export function getGeoExposure(categoryKeys: string[]): GeoItem[] {
             label: meta.label,
             country: meta.country,
             region: meta.region,
+            value: meta.value,
+            percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
+            count: meta.count,
+        }))
+}
+
+/** Country-level geographic exposure — collapses US states → single entry, CA provinces → single entry. */
+export function getCountryExposure(categoryKeys: string[]): GeoItem[] {
+    const filtered = categoryKeys.length === 0
+        ? thorntonAssets.filter(a => a.categoryKey !== 'insurance')
+        : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey))
+
+    const totals: Record<string, { label: string; country: string; value: number; count: number }> = {}
+
+    for (const a of filtered) {
+        const country = a.country ?? 'Unknown'
+        let geoKey: string
+        let label: string
+        if (country === 'Unknown') { geoKey = 'UNKNOWN'; label = 'Unknown' }
+        else if (country === 'United States') { geoKey = 'ROW|United States'; label = 'United States' }
+        else if (country === 'Canada') { geoKey = 'CA|__'; label = 'Canada' }
+        else { geoKey = `ROW|${country}`; label = country }
+
+        if (!totals[geoKey]) totals[geoKey] = { label, country, value: 0, count: 0 }
+        totals[geoKey].value += a.value ?? 0
+        totals[geoKey].count += 1
+    }
+
+    const grand = Object.values(totals).reduce((s, t) => s + t.value, 0)
+    return Object.entries(totals)
+        .filter(([, t]) => t.value > 0)
+        .sort(([, a], [, b]) => b.value - a.value)
+        .map(([geoKey, meta]) => ({
+            geoKey,
+            label: meta.label,
+            country: meta.country,
             value: meta.value,
             percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
             count: meta.count,

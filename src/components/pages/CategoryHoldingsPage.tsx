@@ -5,7 +5,7 @@ import {
     getTopSectors,
     getGeoExposure,
     assetMatchesGeoKey,
-    PORTFOLIO_ALLOCATION_TOTAL,
+    INVESTABLE_CATALOG_TOTAL,
     type HoldingItem,
 } from '@/data/thornton/valuations-data'
 import { thorntonAssets } from '@/data/thornton/assets'
@@ -63,8 +63,8 @@ export function CategoryHoldingsPage({ categoryKeys, categoryLabel, onBack, onNa
     }, [allHoldings, activeSector, activeGeoKey])
 
     const totalValue = allHoldings.reduce((s, h) => s + h.value, 0)
-    const portfolioPercent = PORTFOLIO_ALLOCATION_TOTAL > 0
-        ? Math.round((totalValue / PORTFOLIO_ALLOCATION_TOTAL) * 100)
+    const portfolioPercent = INVESTABLE_CATALOG_TOTAL > 0
+        ? Math.round((totalValue / INVESTABLE_CATALOG_TOTAL) * 100)
         : 0
     const assetCount = allHoldings.length
 

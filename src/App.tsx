@@ -19,8 +19,9 @@ import { TimelinePage } from '@/components/pages/TimelinePage'
 import { HomePage } from '@/components/pages/HomePage'
 import { OnboardingPage } from '@/components/pages/OnboardingPage'
 import { ValuationsPage } from '@/components/pages/ValuationsPage'
+import { PortfolioCategoryDetailPanel } from '@/components/organisms/PortfolioCategoryDetailPanel'
+import { PortfolioCategoryDetailPage } from '@/components/pages/PortfolioCategoryDetailPage'
 import { CategoryHoldingsPage } from '@/components/pages/CategoryHoldingsPage'
-import { PortfolioDrilldownPage } from '@/components/pages/PortfolioDrilldownPage'
 import { DocumentsPage } from '@/components/pages/DocumentsPage'
 import { AssetDetailPage } from '@/components/pages/AssetDetailPage'
 import { TasksPage } from '@/components/pages/TasksPage'
@@ -45,9 +46,8 @@ import { usePlaceholderRotation } from '@/lib/hooks/usePlaceholderRotation'
 import { useClickOutside } from '@/lib/hooks/useClickOutside'
 import { createPortal } from 'react-dom'
 import { sortByPriority } from '@/lib/helpers/priority-sort'
-import { ContactModal } from '@/components/molecules/ContactModal'
+import type { TimelineAssistSession } from '@/types/timeline-assist'
 import type { Task } from '@/data/thornton/tasks-data'
-
 function App() {
   return (
     <FojoProvider>
@@ -82,12 +82,13 @@ function AppShell() {
 
   // ── Local navigation state ──
   const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
-  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'portfolio-drilldown'>('home')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail'>('home')
   const [holdingsCategoryKeys, setHoldingsCategoryKeys] = useState<string[]>([])
   const [holdingsCategoryLabel, setHoldingsCategoryLabel] = useState('')
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
-  const [portfolioDrilldownCategory, setPortfolioDrilldownCategory] = useState<string | null>(null)
+  const [portfolioPanelCategoryId, setPortfolioPanelCategoryId] = useState<string | null>(null)
+  const [portfolioDetailCategoryId, setPortfolioDetailCategoryId] = useState<string | null>(null)
   const [previousPage, setPreviousPage] = useState<typeof activePage>('catalog')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
@@ -100,12 +101,8 @@ function AppShell() {
   // ── Contact modal & externally-created tasks ──
   const [externalTasks, setExternalTasks] = useState<Task[]>([])
   const [dynamicDistributions, setDynamicDistributions] = useState<DistributionEvent[]>([])
-  const [contactModalState, setContactModalState] = useState<{
-    type: 'lawyer' | 'cpa'
-    event: { id: string; title: string; suggestedTaskTitle?: string; suggestedLawyerSpecialization?: string; suggestedDescription?: string; eventDescription?: string }
-    sourceDistributionEvent?: DistributionEvent | null
-  } | null>(null)
-
+  /** Меню ⋮ на таймлайні — сценарії тільки всередині Fojo, без модалок. */
+  const [timelineAssistSession, setTimelineAssistSession] = useState<TimelineAssistSession | null>(null)
   // ── Asset collections state ──
   const [assetCollections, setAssetCollections] = useState<AssetCollection[]>(defaultAssetCollections)
   const [catalogSubView, setCatalogSubView] = useState<'home' | 'all-collections' | 'collection-detail'>('home')
@@ -133,6 +130,11 @@ function AppShell() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  useEffect(() => {
+    if (activePage !== 'portfolio') setPortfolioPanelCategoryId(null)
+    if (activePage !== 'portfolio-category-detail') setPortfolioDetailCategoryId(null)
+  }, [activePage])
 
   const v3Empty = useDeferredUnmount(isProcessing, TIMING.v3EmptyUnmount)
 
@@ -185,6 +187,22 @@ function AppShell() {
     setCatalogSubView('home')
     setActiveAssetCollection(null)
   }, [])
+
+  const handleClosePortfolioPanel = useCallback(() => {
+    setPortfolioPanelCategoryId(null)
+  }, [])
+
+  const handlePortfolioCategoryDetailBack = useCallback(() => {
+    setPortfolioDetailCategoryId(null)
+    setActivePage('portfolio')
+  }, [])
+
+  const handleOpenPortfolioFullDetail = useCallback((categoryId: string) => {
+    setPortfolioPanelCategoryId(null)
+    setPortfolioDetailCategoryId(categoryId)
+    setActivePage('portfolio-category-detail')
+    setFojoForceOpen(true)
+  }, [setFojoForceOpen])
 
   const currentAssetCollection = activeAssetCollection
     ? assetCollections.find(c => c.key === activeAssetCollection) ?? null
@@ -297,6 +315,58 @@ function AppShell() {
     return userText ? `${base} Here's more context: ${userText}` : base
   }, [])
 
+  const registerTimelineAssistTask = useCallback((task: Task, session: TimelineAssistSession) => {
+    setExternalTasks(prev => [task, ...prev])
+    const srcEvent = session.sourceDistributionEvent ?? null
+    const dueYear = new Date(task.dueDate).getFullYear()
+    const newDist: DistributionEvent = {
+      id: `dyn-dist-${task.id}`,
+      beneficiaryId: srcEvent?.beneficiaryId ?? 'thn-p1',
+      trustId: srcEvent?.trustId ?? 'thn-t1',
+      triggerType: 'Condition',
+      triggerCategory: task.type,
+      triggerYear: dueYear,
+      amount: 0,
+      description: `${task.title} — Assigned to ${task.assignee}`,
+      status: 'Pending',
+      suggestedActions: [],
+    }
+    const allDists: DistributionEvent[] = [newDist]
+    if (task.recurring && task.recurrenceInterval) {
+      const monthMap: Record<string, number> = {
+        'Every 3 months': 3,
+        'Every 6 months': 6,
+        'Every 12 months': 12,
+      }
+      const months = monthMap[task.recurrenceInterval] ?? 12
+      let cur = new Date(task.dueDate)
+      for (let i = 1; i <= 4; i++) {
+        cur = new Date(cur)
+        cur.setMonth(cur.getMonth() + months)
+        allDists.push({
+          id: `dyn-dist-${task.id}-r${i}`,
+          beneficiaryId: srcEvent?.beneficiaryId ?? 'thn-p1',
+          trustId: srcEvent?.trustId ?? 'thn-t1',
+          triggerType: 'Condition',
+          triggerCategory: task.type,
+          triggerYear: cur.getFullYear(),
+          amount: 0,
+          description: `${task.title} — ${task.recurrenceInterval} (occurrence ${i + 1})`,
+          status: 'Pending',
+          suggestedActions: [],
+        })
+      }
+    }
+    setDynamicDistributions(prev => [...prev, ...allDists])
+  }, [])
+
+  const openTimelineAssist = useCallback((session: TimelineAssistSession) => {
+    if (isTimelineExpanded)
+      keepFojoOpenForNextExpand()
+    setFojoForceOpen(true)
+    setTimelineAssistSession(session)
+  }, [isTimelineExpanded, keepFojoOpenForNextExpand, setFojoForceOpen])
+
   // Handle actions from graph tree cards
   const handleGraphCardAction = useCallback((item: AnyCatalogItem, action: CardActionType, anchor?: PromptAnchorRect | null) => {
     // Navigate to full detail page (collapse any expanded view so LeftNav is visible)
@@ -347,92 +417,93 @@ function AppShell() {
     }
   }, [detail, AI_ACTIONS, buildPromptFromInput, triggerCreationWithFiles, setDetailOpenInEditMode])
 
-  // Handle actions from timeline cards
+  // Handle actions from timeline cards — create-task shows intermediate prompt first
   const handleTimelineCardAction = useCallback((event: DistributionEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => {
     const eventLabel = event.triggerCategory ?? event.description ?? 'distribution'
 
-    // Contact Lawyer / CPA → open modal directly (no Fojo)
     if (action === 'contact-lawyer' || action === 'contact-cpa') {
-      setContactModalState({
-        type: action === 'contact-lawyer' ? 'lawyer' : 'cpa',
-        event: {
-          id: event.id,
-          title: eventLabel,
-          suggestedTaskTitle: event.suggestedTaskTitle,
-          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
-          suggestedDescription: event.suggestedDescription,
-          eventDescription: event.description,
-        },
+      openTimelineAssist({
+        flow: action === 'contact-lawyer' ? 'contact-lawyer' : 'contact-cpa',
+        contextName: eventLabel,
+        contextEventId: event.id,
         sourceDistributionEvent: event,
+        suggestedTaskTitle: event.suggestedTaskTitle,
+        suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+        suggestedDescription: event.suggestedDescription,
+        eventDescription: event.description,
       })
       return
     }
 
-    if (AI_ACTIONS.has(action)) {
+    if (action === 'create-task') {
       detail.handleCloseDetail()
-      const actionTypeMap: Record<string, 'asset' | 'task' | 'relation'> = {
-        'add-new-asset': 'asset', 'create-task': 'task', 'change-relation': 'relation',
-      }
       setPendingCardAction({
         action,
         contextName: eventLabel,
         anchorRect: anchor ?? null,
         sourceGraphItemId: null,
         sourceTimelineEventId: event.id,
-        onSubmit: (text, hasFiles) => {
+        onSubmit: (text) => {
           setPendingCardAction(null)
-          const basePrompt = `I'd like help creating a task related to this distribution: "${eventLabel}".`
-          const prompt = buildPromptFromInput(basePrompt, text)
-          triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action] ?? 'task')
+          openTimelineAssist({
+            flow: 'create-task',
+            contextName: eventLabel,
+            contextEventId: event.id,
+            sourceDistributionEvent: event,
+            suggestedTaskTitle: event.suggestedTaskTitle,
+            suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+            suggestedDescription: text || event.suggestedDescription,
+            eventDescription: event.description,
+          })
         },
       })
     }
-  }, [detail, AI_ACTIONS, buildPromptFromInput, triggerCreationWithFiles])
+  }, [detail, openTimelineAssist, setPendingCardAction])
 
-  // Handle actions from asset timeline cards
+  // Asset timeline ⋮ → create-task також через проміжний крок
   const handleAssetTimelineAction = useCallback((event: AssetTimelineEvent, action: CardActionType, anchor?: PromptAnchorRect | null) => {
     const assetItem = getItemById(event.assetId)
     const assetName = assetItem?.name ?? event.assetId
     const eventLabel = `${event.label} — ${assetName}`
 
-    // Contact Lawyer / CPA → open modal directly (no Fojo)
     if (action === 'contact-lawyer' || action === 'contact-cpa') {
-      setContactModalState({
-        type: action === 'contact-lawyer' ? 'lawyer' : 'cpa',
-        event: {
-          id: event.id,
-          title: eventLabel,
-          suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
-          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
-          suggestedDescription: event.suggestedDescription,
-          eventDescription: event.description,
-        },
+      openTimelineAssist({
+        flow: action === 'contact-lawyer' ? 'contact-lawyer' : 'contact-cpa',
+        contextName: eventLabel,
+        contextEventId: event.id,
         sourceDistributionEvent: null,
+        suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
+        suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+        suggestedDescription: event.suggestedDescription,
+        eventDescription: event.description,
       })
       return
     }
 
-    detail.handleCloseDetail()
-    const actionTypeMap: Record<string, 'asset' | 'task' | 'relation'> = {
-      'create-task': 'task',
+    if (action === 'create-task') {
+      detail.handleCloseDetail()
+      setPendingCardAction({
+        action,
+        contextName: eventLabel,
+        anchorRect: anchor ?? null,
+        sourceGraphItemId: null,
+        sourceTimelineEventId: event.id,
+        onSubmit: (text) => {
+          setPendingCardAction(null)
+          openTimelineAssist({
+            flow: 'create-task',
+            contextName: eventLabel,
+            contextEventId: event.id,
+            sourceDistributionEvent: null,
+            suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
+            suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+            suggestedDescription: text || event.suggestedDescription,
+            eventDescription: event.description,
+          })
+        },
+      })
     }
-    const basePromptMap: Record<string, string> = {
-      'create-task': `I'd like help creating a task for the upcoming "${event.label}" event for ${assetName} in ${event.year}.`,
-    }
-    setPendingCardAction({
-      action,
-      contextName: eventLabel,
-      anchorRect: anchor ?? null,
-      sourceGraphItemId: null,
-      sourceTimelineEventId: null,
-      onSubmit: (text, hasFiles) => {
-        setPendingCardAction(null)
-        const basePrompt = basePromptMap[action] ?? `I'd like help with the "${event.label}" event for ${assetName}.`
-        const prompt = buildPromptFromInput(basePrompt, text)
-        triggerCreationWithFiles(prompt, hasFiles, actionTypeMap[action] ?? 'task')
-      },
-    })
-  }, [detail, getItemById, buildPromptFromInput, triggerCreationWithFiles])
+  }, [detail, getItemById, openTimelineAssist, setPendingCardAction])
 
   // Handle "Add relationship" from detail panel
   const handleAddRelationship = useCallback((item: AnyCatalogItem) => {
@@ -506,6 +577,11 @@ function AppShell() {
     setActivePage('detail')
   }, [getItemById, setIsMapExpanded, setIsTimelineExpanded])
 
+  const handleNavigateFromPortfolioPanel = useCallback((id: string) => {
+    setPortfolioPanelCategoryId(null)
+    navigateToDetail(id)
+  }, [navigateToDetail])
+
   const navigateToTimeline = useCallback((itemId: string) => {
     setSelectedItemId(itemId)
     setIsMapExpanded(false)
@@ -569,7 +645,7 @@ function AppShell() {
   return (
     <div className={`app-shell${(isFullscreen || isDetailGraphExpanded) ? ' app-shell--map-fullscreen' : ''}${isTimelineExpanded ? ' app-shell--tl-fullscreen' : ''}${isFullscreenDetail ? ' app-shell--map-detail' : ''}${isTimelineDetail ? ' app-shell--tl-detail' : ''}${hasStrip ? ' app-shell--has-strip' : ''}${hasStripContent ? ' app-shell--strip-active' : ''}`}>
       <LeftNav
-          activeItem={activePage === 'task-detail' ? 'tasks' : activePage === 'detail' ? 'catalog' : activePage === 'portfolio-drilldown' ? 'portfolio' : activePage}
+          activeItem={activePage === 'task-detail' ? 'tasks' : activePage === 'detail' ? 'catalog' : activePage === 'portfolio-category-detail' ? 'portfolio' : activePage}
           navBadges={navBadges}
           onNavItemClick={(id) => {
               clearBadge(id)
@@ -577,7 +653,11 @@ function AppShell() {
               else if (id === 'timeline') setActivePage('timeline')
               else if (id === 'catalog') setActivePage('catalog')
               else if (id === 'home') setActivePage('home')
-              else if (id === 'portfolio') setActivePage('portfolio')
+              else if (id === 'portfolio') {
+                setPortfolioPanelCategoryId(null)
+                setPortfolioDetailCategoryId(null)
+                setActivePage('portfolio')
+              }
               else if (id === 'documents') setActivePage('documents')
               else if (id === 'tasks') setActivePage('tasks')
           }}
@@ -588,7 +668,12 @@ function AppShell() {
 
       <FojoPanel
         visibility={fojoVisibility}
-        onClose={() => setFojoForceOpen(false)}
+        showCollapsedPreview={Boolean(portfolioPanelCategoryId) && activePage === 'portfolio' && !isSmallScreen}
+        onExpandFromPreview={() => setFojoForceOpen(true)}
+        onClose={() => {
+          setTimelineAssistSession(null)
+          setFojoForceOpen(false)
+        }}
         onUnreadCountChange={setFojoUnreadCount}
         onOpenTimeline={handleOpenTimeline}
         distributionSummary={distributionSummary}
@@ -596,7 +681,7 @@ function AppShell() {
         onCatalogUpdate={noop}
         onItemsCreated={handleItemsCreatedWithPlaceholderClear}
         onItemClick={navigateToDetail}
-        currentPage={activePage}
+        currentPage={activePage === 'portfolio-category-detail' ? 'portfolio' : activePage}
         currentItem={activePage === 'detail' && detailItemId ? getItemById(detailItemId) : null}
         triggerCreation={triggerCreation}
         triggerCreationText={triggerCreationText}
@@ -608,7 +693,27 @@ function AppShell() {
         pendingFojoQuery={pendingFojoQuery}
         onPendingFojoQueryConsumed={consumePendingFojoQuery}
         onPostNavigation={handlePostNavigation}
+        timelineAssistSession={timelineAssistSession}
+        onDismissTimelineAssist={() => setTimelineAssistSession(null)}
+        onTimelineAssistTaskCreated={registerTimelineAssistTask}
+        onTimelineAssistOpenTask={(taskId) => {
+          setPreviousPage('timeline')
+          setDetailTaskId(taskId)
+          setActivePage('task-detail')
+          setTimelineAssistSession(null)
+        }}
+        onClearTimelineAssist={() => setTimelineAssistSession(null)}
       />
+
+      {activePage === 'portfolio' && (
+        <PortfolioCategoryDetailPanel
+          categoryId={portfolioPanelCategoryId}
+          isOpen={portfolioPanelCategoryId != null}
+          onClose={handleClosePortfolioPanel}
+          onNavigateToAsset={handleNavigateFromPortfolioPanel}
+          onOpenFullDetail={handleOpenPortfolioFullDetail}
+        />
+      )}
 
       {/* Floating FAB only shown in fullscreen mode (left nav is hidden there) */}
       {fojoVisibility === 'collapsed' && isAnyFullscreen && (
@@ -655,6 +760,7 @@ function AppShell() {
           <TaskDetailPage
             taskId={detailTaskId}
             catalogFallback={getItemById(detailTaskId)}
+            externalTask={externalTasks.find(t => t.id === detailTaskId) ?? undefined}
             getItemById={getItemById}
             onBack={() => setActivePage(previousPage)}
             onNavigateToAsset={(id) => { setDetailItemId(id); setActivePage('detail') }}
@@ -676,10 +782,10 @@ function AppShell() {
             isGraphExpanded={isDetailGraphExpanded}
             onGraphExpandChange={setIsDetailGraphExpanded}
           />
-        ) : activePage === 'portfolio-drilldown' && portfolioDrilldownCategory ? (
-          <PortfolioDrilldownPage
-            categoryId={portfolioDrilldownCategory}
-            onBack={() => setActivePage('portfolio')}
+        ) : activePage === 'portfolio-category-detail' && portfolioDetailCategoryId ? (
+          <PortfolioCategoryDetailPage
+            categoryId={portfolioDetailCategoryId}
+            onBack={handlePortfolioCategoryDetailBack}
             onNavigateToAsset={(id) => navigateToDetail(id)}
           />
         ) : activePage === 'portfolio' ? (
@@ -687,10 +793,13 @@ function AppShell() {
             items={allItems}
             isV3Processing={isProcessing}
             isChatOpen={isChatOpen}
-            onNavigateToPortfolioDrilldown={(categoryId) => {
-              setPortfolioDrilldownCategory(categoryId)
-              setActivePage('portfolio-drilldown')
+            onOpenPortfolioCategory={(id) => {
+              setPortfolioPanelCategoryId(id)
+              setFojoForceOpen(false)
             }}
+            onNavigateToAsset={(id) => navigateToDetail(id)}
+            onNavigateToTasks={() => setActivePage('tasks')}
+            onNavigateToTimeline={() => setActivePage('timeline')}
             onNavigateToCatalogCategory={(categories) => {
               const labelMap: Record<string, string> = {
                 'investment': 'Private Investments',
@@ -735,17 +844,9 @@ function AppShell() {
             onToggleExpand={() => setIsTimelineExpanded(v => !v)}
             onActionRequest={handleTimelineCardAction}
             onAssetActionRequest={handleAssetTimelineAction}
-            actionPromptEventId={pendingCardAction?.sourceTimelineEventId ?? null}
-            timelineActionPrompt={pendingCardAction?.sourceTimelineEventId
-              ? {
-                  action: pendingCardAction.action,
-                  contextName: pendingCardAction.contextName,
-                  anchorRect: pendingCardAction.anchorRect,
-                  sourceTimelineEventId: pendingCardAction.sourceTimelineEventId,
-                  onSubmit: pendingCardAction.onSubmit,
-                }
-              : null}
-            onCloseTimelineActionPrompt={() => setPendingCardAction(null)}
+            actionPromptEventId={pendingCardAction?.sourceTimelineEventId ?? timelineAssistSession?.contextEventId ?? null}
+            timelineActionPrompt={null}
+            onCloseTimelineActionPrompt={() => {}}
           />
         ) : (
           <div className="flex flex-col flex-1 gap-[var(--spacing-5)] pt-[36px] px-[var(--spacing-6)] pb-0 max-w-[1120px] w-full mx-auto">
@@ -978,7 +1079,7 @@ function AppShell() {
         />
       </main>
 
-      {pendingCardAction && !pendingCardAction.sourceGraphItemId && !pendingCardAction.sourceTimelineEventId && (
+      {pendingCardAction && !pendingCardAction.sourceGraphItemId && (
         <ActionPromptDropdown
           action={pendingCardAction.action}
           contextName={pendingCardAction.contextName}
@@ -1040,66 +1141,7 @@ function AppShell() {
         items={allItems}
       />
 
-      {contactModalState && (
-        <ContactModal
-          type={contactModalState.type}
-          event={contactModalState.event}
-          onClose={() => setContactModalState(null)}
-          onCreateTask={(task) => {
-            setExternalTasks(prev => [task, ...prev])
-            // Add the task as a distribution-event card on the timeline
-            const srcEvent = contactModalState.sourceDistributionEvent
-            const dueYear = new Date(task.dueDate).getFullYear()
-            const newDist: DistributionEvent = {
-              id: `dyn-dist-${task.id}`,
-              beneficiaryId: srcEvent?.beneficiaryId ?? 'thn-p1',
-              trustId: srcEvent?.trustId ?? 'thn-t1',
-              triggerType: 'Condition',
-              triggerCategory: task.type,
-              triggerYear: dueYear,
-              amount: 0,
-              description: `${task.title} — Assigned to ${task.assignee}`,
-              status: 'Pending',
-              suggestedActions: [],
-            }
-            const allDists: DistributionEvent[] = [newDist]
-            // Generate additional recurring instances
-            if (task.recurring && task.recurrenceInterval) {
-              const monthMap: Record<string, number> = {
-                'Every 3 months': 3,
-                'Every 6 months': 6,
-                'Every 12 months': 12,
-              }
-              const months = monthMap[task.recurrenceInterval] ?? 12
-              let cur = new Date(task.dueDate)
-              for (let i = 1; i <= 4; i++) {
-                cur = new Date(cur)
-                cur.setMonth(cur.getMonth() + months)
-                allDists.push({
-                  id: `dyn-dist-${task.id}-r${i}`,
-                  beneficiaryId: srcEvent?.beneficiaryId ?? 'thn-p1',
-                  trustId: srcEvent?.trustId ?? 'thn-t1',
-                  triggerType: 'Condition',
-                  triggerCategory: task.type,
-                  triggerYear: cur.getFullYear(),
-                  amount: 0,
-                  description: `${task.title} — ${task.recurrenceInterval} (occurrence ${i + 1})`,
-                  status: 'Pending',
-                  suggestedActions: [],
-                })
-              }
-            }
-            setDynamicDistributions(prev => [...prev, ...allDists])
-            // Do NOT close modal here — ContactModal shows a preview step first
-          }}
-          onNavigateToTask={(taskId) => {
-            setPreviousPage('timeline')
-            setDetailTaskId(taskId)
-            setActivePage('task-detail')
-            setContactModalState(null)
-          }}
-        />
-      )}
+
 
       <ToastContainer />
     </div>

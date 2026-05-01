@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils'
 interface DetailPanelShellProps {
     isOpen: boolean
     onClose: () => void
+    /** Extra classes on the aside (e.g. fullscreen layout) */
+    sidebarClassName?: string
     /** Breadcrumb navigation rendered in the header left area */
     breadcrumbs: ReactNode
     /** Action buttons (edit, delete, etc.) rendered before the close button */
@@ -21,7 +23,7 @@ interface DetailPanelShellProps {
 }
 
 export function DetailPanelShell({
-    isOpen, onClose, breadcrumbs, headerActions, footer, hideOverlay, ariaLabel, closeButtonRef, children,
+    isOpen, onClose, sidebarClassName, breadcrumbs, headerActions, footer, hideOverlay, ariaLabel, closeButtonRef, children,
 }: DetailPanelShellProps) {
     return (
         <>
@@ -31,7 +33,10 @@ export function DetailPanelShell({
                     onClick={onClose}
                 />
             )}
-            <aside className={cn('detail-sidebar', isOpen && 'detail-sidebar--open')} aria-label={ariaLabel}>
+            <aside
+                className={cn('detail-sidebar', isOpen && 'detail-sidebar--open', sidebarClassName)}
+                aria-label={ariaLabel}
+            >
                 <header className="flex justify-between items-center gap-[var(--spacing-3)] p-[var(--spacing-5)] border-b border-[var(--color-gray-4)]">
                     {breadcrumbs}
                     <div className="flex items-center gap-[var(--spacing-1)]">

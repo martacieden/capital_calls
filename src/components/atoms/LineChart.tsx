@@ -15,6 +15,8 @@ interface LineChartProps {
     showArea?: boolean
     height?: number
     enableTimeRange?: boolean
+    benchmarkData?: LinePoint[]
+    benchmarkLabel?: string
 }
 
 type TimeRange = '3M' | '6M' | 'YTD' | '1Y'
@@ -29,41 +31,48 @@ function formatChange(current: number, previous: number): string {
     return `${sign}${pct.toFixed(1)}%`
 }
 
+const BENCHMARK_COLOR = '#94A3B8'
+
 function CustomTooltip({
     slice,
     color,
     sourceData,
-}: SliceTooltipProps<DefaultSeries> & { color: string; sourceData: LinePoint[] }) {
-    const point = slice.points[0]
-    if (!point) return null
+    benchmarkData,
+    benchmarkLabel,
+}: SliceTooltipProps<DefaultSeries> & { color: string; sourceData: LinePoint[]; benchmarkData?: LinePoint[]; benchmarkLabel?: string }) {
+    const portfolioPoint = slice.points.find(p => p.serieId === 'portfolio') ?? slice.points[0]
+    const benchmarkPoint = slice.points.find(p => p.serieId === 'benchmark')
+    if (!portfolioPoint) return null
 
-    const value = point.data.y as number
-    const index = point.indexInSeries
+    const value = portfolioPoint.data.y as number
+    const index = portfolioPoint.indexInSeries
     const prevValue = index > 0 ? sourceData[index - 1]?.value : undefined
 
     return (
         <div
             className="rounded-lg px-3 py-2 shadow-lg border border-[var(--color-neutral-4)]"
-            style={{ background: 'white', minWidth: 120 }}
+            style={{ background: 'white', minWidth: 140 }}
         >
-            <div className="text-[11px] font-medium text-[var(--color-neutral-10)] mb-0.5">
-                {String(point.data.x)}
+            <div className="text-[11px] font-medium text-[var(--color-neutral-10)] mb-1">
+                {String(portfolioPoint.data.x)}
             </div>
-            <div className="text-[15px] font-semibold text-[var(--color-black)] tabular-nums">
-                {formatBillions(value)}
+            <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                <span className="text-[13px] font-semibold text-[var(--color-black)] tabular-nums">{formatBillions(value)}</span>
+                {prevValue != null && (
+                    <span className="text-[11px] font-semibold tabular-nums" style={{ color: value >= prevValue ? '#10B981' : '#EF4444' }}>
+                        {formatChange(value, prevValue)}
+                    </span>
+                )}
             </div>
-            {prevValue != null && (
-                <div
-                    className="text-[11px] font-semibold mt-0.5 tabular-nums"
-                    style={{ color: value >= prevValue ? '#10B981' : '#EF4444' }}
-                >
-                    {formatChange(value, prevValue)} from prev
+            {benchmarkPoint && benchmarkData && (
+                <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: BENCHMARK_COLOR }} />
+                    <span className="text-[11px] text-[var(--color-neutral-10)] tabular-nums">
+                        {benchmarkLabel ?? 'Benchmark'}: {formatBillions(benchmarkPoint.data.y as number)}
+                    </span>
                 </div>
             )}
-            <div
-                className="w-full h-0.5 rounded-full mt-1.5"
-                style={{ background: color, opacity: 0.3 }}
-            />
         </div>
     )
 }
@@ -90,22 +99,39 @@ export function LineChart({
     showArea = true,
     height = 220,
     enableTimeRange = false,
+    benchmarkData,
+    benchmarkLabel,
 }: LineChartProps) {
     const [activeRange, setActiveRange] = useState<TimeRange>('6M')
 
     const visibleData = enableTimeRange ? sliceData(data, activeRange) : data
+    const visibleBenchmark = benchmarkData
+        ? (enableTimeRange ? sliceData(benchmarkData, activeRange) : benchmarkData)
+        : undefined
 
     const nivoData = useMemo(
-        () => [
-            {
-                id: 'portfolio',
-                data: visibleData.map((d) => ({ x: d.label, y: d.value })),
-            },
-        ],
-        [visibleData],
+        () => {
+            const series = [
+                {
+                    id: 'portfolio',
+                    data: visibleData.map((d) => ({ x: d.label, y: d.value })),
+                },
+            ]
+            if (visibleBenchmark) {
+                series.push({
+                    id: 'benchmark',
+                    data: visibleBenchmark.map((d) => ({ x: d.label, y: d.value })),
+                })
+            }
+            return series
+        },
+        [visibleData, visibleBenchmark],
     )
 
-    const dataMin = Math.min(...visibleData.map((d) => d.value))
+    const dataMin = Math.min(
+        ...visibleData.map((d) => d.value),
+        ...(visibleBenchmark?.map(d => d.value) ?? []),
+    )
 
     const theme: PartialTheme = {
         background: 'transparent',
@@ -141,7 +167,8 @@ export function LineChart({
     return (
         <div>
             {enableTimeRange && (
-                <div className="flex gap-1 mb-3">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex gap-1">
                     {TIME_RANGES.map((range) => (
                         <button
                             key={range}
@@ -161,6 +188,13 @@ export function LineChart({
                             {range}
                         </button>
                     ))}
+                    </div>
+                    {visibleBenchmark && (
+                        <div className="flex items-center gap-3 text-[11px] text-[var(--color-neutral-10)]">
+                            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 rounded" style={{ background: color }} /> Portfolio</span>
+                            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 rounded" style={{ background: BENCHMARK_COLOR }} /> {benchmarkLabel ?? 'Benchmark'}</span>
+                        </div>
+                    )}
                 </div>
             )}
             <div style={{ height }}>
@@ -188,19 +222,19 @@ export function LineChart({
                     axisRight={null}
                     enableGridX={false}
                     enableGridY={true}
-                    colors={[color]}
+                    colors={visibleBenchmark ? [color, BENCHMARK_COLOR] : [color]}
                     lineWidth={2.5}
                     enablePoints={true}
                     pointSize={8}
                     pointColor="white"
                     pointBorderWidth={2}
-                    pointBorderColor={color}
+                    pointBorderColor={{ from: 'serieColor' }}
                     enableArea={showArea}
                     areaOpacity={1}
                     areaBaselineValue={dataMin}
                     enableSlices="x"
                     sliceTooltip={(props) => (
-                        <CustomTooltip {...props} color={color} sourceData={visibleData} />
+                        <CustomTooltip {...props} color={color} sourceData={visibleData} benchmarkData={visibleBenchmark} benchmarkLabel={benchmarkLabel} />
                     )}
                     enableCrosshair={true}
                     crosshairType="x"

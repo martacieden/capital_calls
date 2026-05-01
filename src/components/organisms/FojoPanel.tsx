@@ -18,6 +18,7 @@ import {
     IconSitemap,
     IconLoader2,
     IconCheck,
+    IconChevronsRight,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { getIcon } from '@/lib/icons'
@@ -35,7 +36,10 @@ import { QUICK_PROMPTS } from '@/data/fojo-responses'
 import { getCategoryOrFallback } from '@/data/categories'
 import type { CatalogUpdate } from '@/data/types/fojo'
 import type { AnyCatalogItem } from '@/data/types'
+import type { Task } from '@/data/thornton/tasks-data'
+import type { TimelineAssistSession } from '@/types/timeline-assist'
 import { MockFileBrowser } from '@/components/molecules/MockFileBrowser'
+import { TimelineAssistPanel } from '@/components/organisms/TimelineAssistPanel'
 
 interface FojoPanelProps {
     visibility: 'open' | 'collapsed' | 'hidden'
@@ -61,6 +65,16 @@ interface FojoPanelProps {
     pendingFojoQuery?: string | null
     onPendingFojoQueryConsumed?: () => void
     onPostNavigation?: (nav: string, items: AnyCatalogItem[]) => void
+    /** Контент з меню ⋮ на таймлайн-картці — без модалок, лише в панелі */
+    timelineAssistSession?: TimelineAssistSession | null
+    onDismissTimelineAssist?: () => void
+    onTimelineAssistTaskCreated?: (task: Task, sessionMeta: TimelineAssistSession) => void
+    onTimelineAssistOpenTask?: (taskId: string) => void
+    /** Скинути assist при «нова розмова» в шапці */
+    onClearTimelineAssist?: () => void
+    /** When collapsed, show narrow preview rail (desktop) instead of hiding entirely. */
+    showCollapsedPreview?: boolean
+    onExpandFromPreview?: () => void
 }
 
 /** Render bold **text** and paragraph breaks in creation messages */
@@ -77,7 +91,7 @@ function renderCreationText(text: string) {
     })
 }
 
-export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTimeline, distributionSummary, onCatalogUpdate, onCreateItem, onItemsCreated, onItemClick, currentPage, currentItem, triggerCreation, triggerCreationText, triggerCreationHasFiles, triggerCreationActionType, triggerCreationScenarioId, onTriggerCreationConsumed, isOverlay, pendingFojoQuery, onPendingFojoQueryConsumed, onPostNavigation }: FojoPanelProps) {
+export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTimeline, distributionSummary, onCatalogUpdate, onCreateItem, onItemsCreated, onItemClick, currentPage, currentItem, triggerCreation, triggerCreationText, triggerCreationHasFiles, triggerCreationActionType, triggerCreationScenarioId, onTriggerCreationConsumed, isOverlay, pendingFojoQuery, onPendingFojoQueryConsumed, onPostNavigation, timelineAssistSession, onDismissTimelineAssist, onTimelineAssistTaskCreated, onTimelineAssistOpenTask, onClearTimelineAssist, showCollapsedPreview, onExpandFromPreview }: FojoPanelProps) {
     const chat = useFojoChat({ onUnreadCountChange, onCatalogUpdate, onCreateItem })
     const creation = useFojoCreation({ onItemsCreated, onPostNavigation })
     const [isFileBrowserOpen, setIsFileBrowserOpen] = useState(false)
@@ -114,6 +128,36 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
     }, [creation])
 
     const hasMessages = chat.activeMessages.length > 0
+
+    if (visibility === 'hidden')
+        return null
+
+    if (visibility === 'collapsed' && showCollapsedPreview) {
+        return (
+            <aside className="chat-container chat-container--preview" aria-label="Fojo">
+                <div className="chat-preview-rail">
+                    <div className="relative shrink-0 pt-1">
+                        <FojoMascot size={44} className="block rounded-full" animated />
+                        {chat.unreadCount > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-[4px] bg-[var(--color-red-9)] px-0.5 text-center text-[10px] font-bold leading-[16px] text-white shadow-[0_0_0_2px_var(--color-white)]">
+                                {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                            </span>
+                        )}
+                    </div>
+                    <div className="chat-preview-rail__open">
+                        <button
+                            type="button"
+                            className="chat-preview-rail__open-btn"
+                            onClick={() => onExpandFromPreview?.()}
+                        >
+                            <IconChevronsRight size={18} stroke={2} className="text-[var(--color-neutral-11)]" />
+                            <span>Open</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        )
+    }
 
     if (visibility !== 'open') return null
 
@@ -166,17 +210,38 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                         <button className="flex justify-center items-center aspect-square rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] min-h-[36px] w-9 h-9 overflow-hidden bg-[var(--color-white)] transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]">
                             <IconHistory size={18} stroke={2} color="var(--color-neutral-11)" />
                         </button>
-                        <button className="flex justify-center items-center aspect-square rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] min-h-[36px] w-9 h-9 overflow-hidden bg-[var(--color-white)] transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]" onClick={() => { chat.startNewConversation(); creation.reset(); setWaitingForOther(false) }}>
+                        <button type="button" className="flex justify-center items-center aspect-square rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] min-h-[36px] w-9 h-9 overflow-hidden bg-[var(--color-white)] transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]" onClick={() => { onClearTimelineAssist?.(); chat.startNewConversation(); creation.reset(); setWaitingForOther(false) }}>
                             <IconEdit size={18} stroke={2} color="var(--color-neutral-11)" />
                         </button>
                         {onClose && (
-                            <button className="flex justify-center items-center aspect-square rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] min-h-[36px] w-9 h-9 overflow-hidden bg-[var(--color-white)] transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]" onClick={onClose} aria-label="Close panel">
+                            <button
+                                type="button"
+                                className="flex justify-center items-center aspect-square rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] min-h-[36px] w-9 h-9 overflow-hidden bg-[var(--color-white)] transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]"
+                                onClick={() => {
+                                    onClearTimelineAssist?.()
+                                    onClose?.()
+                                }}
+                                aria-label="Close panel"
+                            >
                                 <IconX size={18} stroke={2} color="var(--color-neutral-11)" />
                             </button>
                         )}
                     </div>
                 </div>
 
+                {timelineAssistSession ? (
+                    <TimelineAssistPanel
+                        session={timelineAssistSession}
+                        onDismiss={() => {
+                            onDismissTimelineAssist?.()
+                        }}
+                        onTaskCreated={(task, sessionMeta) => {
+                            onTimelineAssistTaskCreated?.(task, sessionMeta)
+                        }}
+                        onOpenTask={taskId => onTimelineAssistOpenTask?.(taskId)}
+                    />
+                ) : (
+                <>
                 {/* Contextual summary card — shown when on detail page with no active conversation */}
                 {currentPage === 'detail' && currentItem && creation.phase === 'idle' && !chat.activeConversationId && (
                     <FojoSummaryCard item={currentItem} />
@@ -503,6 +568,8 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                         )}
                     </div>
                 </div>
+                </>
+                )}
             </div>
 
             <p className="ai-disclaimer text-[var(--color-neutral-11)] text-center text-xs font-normal leading-[1.33] mt-[var(--spacing-2)] w-full">AI-generated answers may be inaccurate</p>

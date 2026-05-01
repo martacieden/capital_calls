@@ -82,21 +82,31 @@ export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick,
     }
 
     return (
-        <div className="flex w-full items-center justify-between flex-wrap gap-[var(--spacing-4)]">
-            <div className="flex items-center gap-[var(--spacing-2)]">
+        <div className="flex w-full items-center justify-between gap-4 overflow-hidden">
+            <div className="flex min-w-0 flex-1 items-center gap-2 font-display text-[28px] font-black leading-[1.25] tracking-[-0.02em] [-webkit-text-stroke:0.3px_currentColor]">
                 {breadcrumb && (
                     <>
-                        <button className="font-display text-[28px] font-black leading-[1.25] tracking-[-0.02em] [-webkit-text-stroke:0.3px_currentColor] text-[var(--color-neutral-11)] cursor-pointer bg-transparent border-none p-0 transition-colors duration-150 hover:text-[var(--color-accent-9)]" onClick={breadcrumb.onClick}>
+                        <button
+                            type="button"
+                            className="shrink-0 text-[var(--color-neutral-9)] bg-none border-none font-[inherit] font-black cursor-pointer transition-colors duration-150 p-0 hover:text-[var(--color-gray-12)]"
+                            onClick={breadcrumb.onClick}
+                        >
                             {breadcrumb.label}
                         </button>
-                        <IconChevronRight size={20} stroke={2} color="var(--color-neutral-11)" />
+                        <IconChevronRight size={18} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" aria-hidden />
                     </>
                 )}
-                <h1 className="font-display text-[28px] font-black leading-[1.25] tracking-[-0.02em] text-[var(--color-gray-12)] [-webkit-text-stroke:0.3px_currentColor]">{title}</h1>
-                {itemCount != null && <span className="flex min-w-[24px] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-neutral-3)] px-1.5 py-0.5 text-[13px] font-[var(--font-weight-medium)] leading-[1.54] text-[var(--color-gray-12)]">{itemCount}</span>}
+                <h1 className="min-w-0 truncate font-[inherit] text-[inherit] text-[var(--color-gray-12)] font-black m-0 p-0 border-none">
+                    {title}
+                </h1>
+                {itemCount != null && (
+                    <span className="flex min-w-[24px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-neutral-3)] px-1.5 py-0.5 text-[13px] font-[var(--font-weight-medium)] leading-[1.54] text-[var(--color-gray-12)]">
+                        {itemCount}
+                    </span>
+                )}
             </div>
             {(onNewItemClick || secondaryAction) && (
-                <div className="flex items-center gap-[var(--spacing-2)]">
+                <div className="flex shrink-0 items-center gap-[var(--spacing-2)]">
                     {secondaryAction && (() => {
                         const SecIcon = secondaryAction.icon ?? IconPlus
                         return (

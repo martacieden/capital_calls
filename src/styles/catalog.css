@@ -337,6 +337,16 @@
   transform: translateX(0);
 }
 
+/* Portfolio allocation panel: expand across main content (keeps left nav + shell padding) */
+.detail-sidebar--fullscreen {
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+  bottom: var(--spacing-4);
+  left: calc(var(--nav-width) + var(--spacing-4) * 2);
+  width: auto;
+  max-width: none;
+}
+
 .detail-breadcrumbs {
   flex: 1;
   min-width: 0;

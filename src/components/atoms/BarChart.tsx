@@ -14,6 +14,7 @@ interface AllocationItem {
 interface BarChartProps {
     data: AllocationItem[]
     height?: number
+    onBarClick?: (categoryKey: string) => void
 }
 
 /** Row shape passed to Nivo (`BarDatum` = values are string | number only). */
@@ -80,7 +81,7 @@ const theme: PartialTheme = {
     },
 }
 
-export function BarChart({ data, height = 240 }: BarChartProps) {
+export function BarChart({ data, height = 240, onBarClick }: BarChartProps) {
     const barData = useMemo(
         () =>
             // Nivo renders bottom-to-top for horizontal, so reverse to keep highest first
@@ -100,7 +101,7 @@ export function BarChart({ data, height = 240 }: BarChartProps) {
     )
 
     return (
-        <div style={{ height }}>
+        <div style={{ height }} className={onBarClick ? '[&_rect]:cursor-pointer' : ''}>
             <ResponsiveBar
                 data={barData}
                 keys={['value']}
@@ -128,6 +129,7 @@ export function BarChart({ data, height = 240 }: BarChartProps) {
                 theme={theme}
                 animate={false}
                 labelSkipWidth={999}
+                onClick={(data) => onBarClick?.(String(data.indexValue))}
                 // Value labels on the right
                 layers={[
                     'grid',

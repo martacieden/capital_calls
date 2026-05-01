@@ -39,6 +39,65 @@
   overflow: visible;
 }
 
+/* Narrow rail — portfolio category detail before user expands Fojo */
+.chat-container--preview {
+  opacity: 1;
+  transform: translateX(0);
+  width: var(--fojo-preview-width);
+  min-width: var(--fojo-preview-width);
+  max-width: var(--fojo-preview-width);
+  overflow: visible;
+  align-self: stretch;
+  justify-content: flex-start;
+  padding-top: var(--spacing-2);
+}
+
+.chat-preview-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: var(--spacing-2) var(--spacing-1);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-gray-4);
+  background: var(--color-white);
+  box-shadow: var(--shadow-panel);
+}
+
+.chat-preview-rail__open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  padding-bottom: var(--spacing-2);
+  width: 100%;
+}
+
+.chat-preview-rail__open-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-1);
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-neutral-2);
+  color: var(--color-gray-12);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.chat-preview-rail__open-btn:hover {
+  background: var(--color-neutral-3);
+}
+
 .chat-container--closing {
   opacity: 0;
   transform: translateX(-20px);
@@ -64,6 +123,16 @@
 }
 
 .chat-welcome::-webkit-scrollbar {
+  display: none;
+}
+
+/* Timeline assist (⋮) — scroll без видимого скролбару, як у welcome */
+.chat-timeline-assist-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-timeline-assist-scroll::-webkit-scrollbar {
   display: none;
 }
 

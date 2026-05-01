@@ -15,9 +15,11 @@ interface GeoExposureChartProps {
     data: GeoItem[]
     activeGeoKey?: string | null
     onGeoClick?: (geoKey: string) => void
+    /** 1 — вузькі контейнери (сайдпанель); 2 — повноширинні сторінки (за замовчуванням). */
+    legendColumns?: 1 | 2
 }
 
-const MAP_HEIGHT = 232
+const MAP_HEIGHT = 320
 
 /** Поріг руху перед тим як вважати жест перетягуванням (не кліком по країні). */
 const PAN_DRAG_THRESHOLD_PX = 6
@@ -36,7 +38,7 @@ function clampPanOffsetPx(px: number, py: number, width: number, height: number)
 /** Покласти исключення Antarctic — Natural Earth використовує `010`; `260` — Fr. Antarctic Lands near bottom */
 const ANTARCTIC_FEATURE_IDS = new Set(['010', '260'])
 
-const TOP_REGIONS_VISIBLE = 3
+const TOP_REGIONS_VISIBLE = 5
 
 const MAP_ZOOM_MIN = 1
 const MAP_ZOOM_MAX = 3.75
@@ -56,28 +58,30 @@ function defaultNorthAmericaFramingPanPx(width: number, height: number) {
     }
 }
 
-/** Країни / території без даних у злитті шару */
-const UNKNOWN_COUNTRY_FILL = '#F3F4F6'
+/** Країни / території без даних у злитті шару — --color-neutral-3 */
+const UNKNOWN_COUNTRY_FILL = '#F0F0F3'
 
-/** Стабільний контрастний відтінок на кожен `geoKey` (штати / провінції / ROW-країна). */
-function regionHueHexFromGeoKey(geoKey: string): string {
-    let h = 2166136261 >>> 0
-    for (let i = 0; i < geoKey.length; i++) {
-        h ^= geoKey.charCodeAt(i)
-        h = Math.imul(h, 16777619) >>> 0
-    }
-    const hue = h % 360
-    const sat = 55 + (h % 20)
-    const light = 44 + ((h >>> 8) % 10)
-    return `hsl(${hue}, ${sat}%, ${light}%)`
-}
+/**
+ * Лише кольори з design tokens (tokens.css). Порядок відповідає рангу за value у легенді.
+ */
+const GEO_EXPOSURE_FILL_PALETTE: string[] = [
+    '#003D99',
+    '#005BE2',
+    '#1E70F4',
+    '#3B82F6',
+    '#60A5FA',
+    '#93C5FD',
+    '#BFDBFE',
+    '#DBEAFE',
+]
 
 function choroplethFillForRow(
     row: { geoKey?: string; value?: number } | undefined,
+    fillByGeoKey: Map<string, string>,
 ): string {
     if (!row?.geoKey || !row.value || row.value <= 0)
         return UNKNOWN_COUNTRY_FILL
-    return regionHueHexFromGeoKey(row.geoKey)
+    return fillByGeoKey.get(row.geoKey) ?? UNKNOWN_COUNTRY_FILL
 }
 
 function canadaProvinceTopoId(canonicalProvinceName: string): string {
@@ -129,6 +133,7 @@ type RowProps = {
     maxLegendValue: number
     isActive: boolean
     dimmed: boolean
+    barColor: string
     onGeoClick?: (geoKey: string) => void
 }
 
@@ -137,6 +142,7 @@ const ExposureRow = memo(function ExposureRow({
     maxLegendValue,
     isActive,
     dimmed,
+    barColor,
     onGeoClick,
 }: RowProps) {
     const widthPct =
@@ -156,16 +162,16 @@ const ExposureRow = memo(function ExposureRow({
         >
             <span
                 title={item.label}
-                className={`text-xs min-w-0 flex-[1_1_40%] truncate leading-tight ${isActive ? 'font-semibold text-[var(--color-black)]' : 'text-[var(--color-neutral-11)]'}`}
+                className={`text-xs min-w-0 flex-[1_1_30%] truncate leading-tight ${isActive ? 'font-semibold text-[var(--color-black)]' : 'text-[var(--color-neutral-11)]'}`}
             >
                 {item.label}
             </span>
-            <div className="flex-1 min-w-[40px] h-1.5 bg-[var(--color-neutral-3)] rounded-full overflow-hidden">
+            <div className="flex-[1.45] min-w-[96px] h-2 bg-[var(--color-neutral-3)] rounded-full overflow-hidden">
                 <div
                     className="h-full rounded-full transition-[width] duration-200"
                         style={{
                             width: `${Math.min(widthPct, 100)}%`,
-                            background: regionHueHexFromGeoKey(item.geoKey),
+                            background: barColor,
                         opacity: isActive ? 1 : !dimmed ? 0.82 : 0.45,
                     }}
                 />
@@ -329,7 +335,10 @@ function buildSubnationalChoroplethRows(
             continue
 
         if (item.country === 'United States') {
-            if (item.geoKey === 'US|__') {
+            if (
+                item.geoKey === 'US|__'
+                || item.geoKey === 'ROW|United States'
+            ) {
                 rows.push({
                     id: '840',
                     value: item.value,
@@ -424,6 +433,7 @@ export function GeoExposureChart({
     data,
     activeGeoKey,
     onGeoClick,
+    legendColumns = 2,
 }: GeoExposureChartProps) {
     const [geoFeaturesRaw, setGeoFeaturesRaw] = useState<Feature[]>([])
     const [usStatesRaw, setUsStatesRaw] = useState<Feature[]>([])
@@ -436,6 +446,10 @@ export function GeoExposureChart({
     const [extentMode, setExtentMode] = useState<
         'world' | 'portfolio' | 'europe'
     >('world')
+    /** Після кліку по області списку або полігону — підганяємо fit під цей регіон */
+    const [regionFocusGeoKey, setRegionFocusGeoKey] = useState<string | null>(
+        null,
+    )
     const mapWrapRef = useRef<HTMLDivElement>(null)
 
     /** Піксельне зміщення центру карти поверх базової проєкції */
@@ -517,7 +531,12 @@ export function GeoExposureChart({
     const nameToId = useMemo(() => topoNameLookup(geoFeatures), [geoFeatures])
 
     const needWholeUnitedStatesFallback = useMemo(
-        () => data.some(d => d.geoKey === 'US|__' && d.value > 0),
+        () =>
+            data.some(
+                d =>
+                    d.value > 0
+                    && (d.geoKey === 'US|__' || d.geoKey === 'ROW|United States'),
+            ),
         [data],
     )
 
@@ -558,6 +577,20 @@ export function GeoExposureChart({
         [choroplethData],
     )
 
+    const geoFillByGeoKey = useMemo(() => {
+        const m = new Map<string, string>()
+        const ranked = [...choroplethData]
+            .filter(r => r.value > 0)
+            .sort((a, b) => b.value - a.value)
+        ranked.forEach((r, i) => {
+            m.set(
+                r.geoKey,
+                GEO_EXPOSURE_FILL_PALETTE[i % GEO_EXPOSURE_FILL_PALETTE.length]!,
+            )
+        })
+        return m
+    }, [choroplethData])
+
     const topRegionList = useMemo(() => data.slice(0, TOP_REGIONS_VISIBLE), [data])
 
     const portfolioSubset = useMemo(
@@ -570,16 +603,42 @@ export function GeoExposureChart({
         [geoFeatures],
     )
 
+    const regionZoomSubset = useMemo(() => {
+        if (!regionFocusGeoKey)
+            return null
+        const row = choroplethData.find(r => r.geoKey === regionFocusGeoKey)
+        if (!row)
+            return null
+        const feats = featuresForPortfolioIds(mergedGeoFeatures, [row])
+        return feats.length > 0 ? feats : null
+    }, [choroplethData, mergedGeoFeatures, regionFocusGeoKey])
+
     const projectionFeaturesForFit = useMemo(() => {
+        if (regionZoomSubset != null && regionZoomSubset.length > 0)
+            return regionZoomSubset
         if (extentMode === 'portfolio' && portfolioSubset.length > 0)
             return portfolioSubset
         if (extentMode === 'europe' && europeSubset.length > 0)
             return europeSubset
         return mergedGeoFeatures
-    }, [europeSubset, extentMode, mergedGeoFeatures, portfolioSubset])
+    }, [
+        europeSubset,
+        extentMode,
+        mergedGeoFeatures,
+        portfolioSubset,
+        regionZoomSubset,
+    ])
 
     const fitInsetPx = useMemo(() => {
         const m = Math.min(mapOuterWidth, MAP_HEIGHT)
+        const regionFramed =
+            regionZoomSubset != null
+            && regionZoomSubset.length > 0
+            && projectionFeaturesForFit === regionZoomSubset
+        if (regionFramed)
+            return Math.round(
+                m * Math.min(regionZoomSubset.length <= 4 ? 0.32 : 0.22, 0.42),
+            )
         const portfolioFramed =
             extentMode === 'portfolio' && portfolioSubset.length > 0
             && projectionFeaturesForFit === portfolioSubset
@@ -597,7 +656,39 @@ export function GeoExposureChart({
         mapOuterWidth,
         portfolioSubset.length,
         projectionFeaturesForFit,
+        regionZoomSubset,
     ])
+
+    useEffect(() => {
+        if (!regionFocusGeoKey)
+            return
+        const row = choroplethData.find(r => r.geoKey === regionFocusGeoKey)
+        const feats = row ? featuresForPortfolioIds(mergedGeoFeatures, [row]) : []
+        if (!row || feats.length === 0)
+            setRegionFocusGeoKey(null)
+    }, [choroplethData, mergedGeoFeatures, regionFocusGeoKey])
+
+    const focusGeoOnChart = useCallback(
+        (geoKey: string) => {
+            const row = choroplethData.find(r => r.geoKey === geoKey)
+            const feats = row ? featuresForPortfolioIds(mergedGeoFeatures, [row]) : []
+            if (feats.length > 0) {
+                setRegionFocusGeoKey(geoKey)
+                setZoomMultiplier(z =>
+                    Math.min(MAP_ZOOM_MAX, +(z * ZOOM_STEP).toFixed(4)),
+                )
+                setPanOffsetPx({ x: 0, y: 0 })
+            }
+            onGeoClick?.(geoKey)
+        },
+        [choroplethData, mergedGeoFeatures, onGeoClick],
+    )
+
+    const zoomInOneStep = useCallback(() => {
+        setZoomMultiplier(z =>
+            Math.min(MAP_ZOOM_MAX, +(z * ZOOM_STEP).toFixed(4)),
+        )
+    }, [])
 
     const mapProjection = useMemo(
         () => naturalEarthProjectionForNivo(
@@ -726,6 +817,7 @@ export function GeoExposureChart({
     }
 
     function handleWholeWorld() {
+        setRegionFocusGeoKey(null)
         setExtentMode('world')
         setZoomMultiplier(DEFAULT_CONTEXT_ZOOM)
         setPanOffsetPx(
@@ -735,6 +827,7 @@ export function GeoExposureChart({
 
     function handlePortfolioArea() {
         if (portfolioSubset.length === 0) return
+        setRegionFocusGeoKey(null)
         setExtentMode('portfolio')
         setZoomMultiplier(MAP_ZOOM_MIN)
         setPanOffsetPx({ x: 0, y: 0 })
@@ -742,6 +835,7 @@ export function GeoExposureChart({
 
     function handleEuropeSection() {
         if (europeSubset.length === 0) return
+        setRegionFocusGeoKey(null)
         setExtentMode('europe')
         setZoomMultiplier(MAP_ZOOM_MIN)
         setPanOffsetPx({ x: 0, y: 0 })
@@ -820,9 +914,10 @@ export function GeoExposureChart({
                                 idLookup.get(
                                     String((f as { id?: string }).id ?? ''),
                                 ),
+                                geoFillByGeoKey,
                             )}
                         borderWidth={0.5}
-                        borderColor="#D7D8DC"
+                        borderColor="#E8E8EC"
                         enableGraticule={false}
                         theme={{
                             background: 'transparent',
@@ -832,12 +927,19 @@ export function GeoExposureChart({
                                 suppressNextMapClickRef.current = false
                                 return
                             }
+                            if (mappedFeature == null) {
+                                zoomInOneStep()
+                                return
+                            }
                             const fid = String(
                                 (mappedFeature as { id?: string }).id ?? '',
                             )
                             const row = idLookup.get(fid)
-                            if (row?.geoKey && onGeoClick)
-                                onGeoClick(row.geoKey)
+                            if (row?.geoKey) {
+                                focusGeoOnChart(row.geoKey)
+                                return
+                            }
+                            zoomInOneStep()
                         }}
                         tooltip={({ feature: f }) => {
                             const fid = String((f as { id?: string }).id ?? '')
@@ -872,7 +974,11 @@ export function GeoExposureChart({
             </div>
 
             <div className="flex flex-col gap-2 min-h-0">
-                <ul className="flex flex-col gap-px m-0 p-0 list-none min-h-0">
+                <ul
+                    className={`grid gap-x-[var(--spacing-7)] gap-y-px m-0 p-0 list-none min-h-0 ${
+                        legendColumns === 1 ? 'grid-cols-1' : 'grid-cols-2'
+                    }`}
+                >
                     {topRegionList.map(item => {
                         const isActive = item.geoKey === activeGeoKey
                         const dimmed = !!activeGeoKey && !isActive
@@ -883,7 +989,11 @@ export function GeoExposureChart({
                                     maxLegendValue={maxLegendValue}
                                     isActive={isActive}
                                     dimmed={dimmed}
-                                    onGeoClick={onGeoClick}
+                                    barColor={
+                                        geoFillByGeoKey.get(item.geoKey) ??
+                                        UNKNOWN_COUNTRY_FILL
+                                    }
+                                    onGeoClick={focusGeoOnChart}
                                 />
                             </li>
                         )
