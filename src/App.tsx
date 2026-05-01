@@ -48,6 +48,8 @@ import { createPortal } from 'react-dom'
 import { sortByPriority } from '@/lib/helpers/priority-sort'
 import type { TimelineAssistSession } from '@/types/timeline-assist'
 import type { Task } from '@/data/thornton/tasks-data'
+import { ContactModal, type ContactEventContext } from '@/components/molecules/ContactModal'
+import { mockContacts } from '@/data/thornton/contacts-data'
 function App() {
   return (
     <FojoProvider>
@@ -101,6 +103,7 @@ function AppShell() {
   // ── Contact modal & externally-created tasks ──
   const [externalTasks, setExternalTasks] = useState<Task[]>([])
   const [dynamicDistributions, setDynamicDistributions] = useState<DistributionEvent[]>([])
+  const [contactModalState, setContactModalState] = useState<{ type: 'lawyer' | 'cpa'; event: ContactEventContext; session: Omit<TimelineAssistSession, 'preselectedContactId' | 'prefilledText'> } | null>(null)
   /** Меню ⋮ на таймлайні — сценарії тільки всередині Fojo, без модалок. */
   const [timelineAssistSession, setTimelineAssistSession] = useState<TimelineAssistSession | null>(null)
   // ── Asset collections state ──
@@ -422,15 +425,27 @@ function AppShell() {
     const eventLabel = event.triggerCategory ?? event.description ?? 'distribution'
 
     if (action === 'contact-lawyer' || action === 'contact-cpa') {
-      openTimelineAssist({
-        flow: action === 'contact-lawyer' ? 'contact-lawyer' : 'contact-cpa',
-        contextName: eventLabel,
-        contextEventId: event.id,
-        sourceDistributionEvent: event,
-        suggestedTaskTitle: event.suggestedTaskTitle,
-        suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
-        suggestedDescription: event.suggestedDescription,
-        eventDescription: event.description,
+      const contactType = action === 'contact-lawyer' ? 'lawyer' : 'cpa'
+      setContactModalState({
+        type: contactType,
+        event: {
+          id: event.id,
+          title: eventLabel,
+          suggestedTaskTitle: event.suggestedTaskTitle,
+          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+          suggestedDescription: event.suggestedDescription,
+          eventDescription: event.description,
+        },
+        session: {
+          flow: action === 'contact-lawyer' ? 'contact-lawyer' : 'contact-cpa',
+          contextName: eventLabel,
+          contextEventId: event.id,
+          sourceDistributionEvent: event,
+          suggestedTaskTitle: event.suggestedTaskTitle,
+          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+          suggestedDescription: event.suggestedDescription,
+          eventDescription: event.description,
+        },
       })
       return
     }
@@ -467,15 +482,26 @@ function AppShell() {
     const eventLabel = `${event.label} — ${assetName}`
 
     if (action === 'contact-lawyer' || action === 'contact-cpa') {
-      openTimelineAssist({
-        flow: action === 'contact-lawyer' ? 'contact-lawyer' : 'contact-cpa',
-        contextName: eventLabel,
-        contextEventId: event.id,
-        sourceDistributionEvent: null,
-        suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
-        suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
-        suggestedDescription: event.suggestedDescription,
-        eventDescription: event.description,
+      setContactModalState({
+        type: action === 'contact-lawyer' ? 'lawyer' : 'cpa',
+        event: {
+          id: event.id,
+          title: eventLabel,
+          suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
+          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+          suggestedDescription: event.suggestedDescription,
+          eventDescription: event.description,
+        },
+        session: {
+          flow: action === 'contact-lawyer' ? 'contact-lawyer' : 'contact-cpa',
+          contextName: eventLabel,
+          contextEventId: event.id,
+          sourceDistributionEvent: null,
+          suggestedTaskTitle: event.suggestedTaskTitle ?? `${event.label} — ${assetName}`,
+          suggestedLawyerSpecialization: event.suggestedLawyerSpecialization,
+          suggestedDescription: event.suggestedDescription,
+          eventDescription: event.description,
+        },
       })
       return
     }
@@ -714,6 +740,26 @@ function AppShell() {
           onClose={handleClosePortfolioPanel}
           onNavigateToAsset={handleNavigateFromPortfolioPanel}
           onOpenFullDetail={handleOpenPortfolioFullDetail}
+        />
+      )}
+
+      {/* ── Contact Lawyer / CPA modal ── */}
+      {contactModalState && (
+        <ContactModal
+          type={contactModalState.type}
+          event={contactModalState.event}
+          onClose={() => setContactModalState(null)}
+          onDelegateToFojo={(contactId, text) => {
+            setContactModalState(null)
+            const allContacts = [...mockContacts.lawyers, ...mockContacts.accountants]
+            const contact = allContacts.find(c => c.id === contactId)
+            openTimelineAssist({
+              ...contactModalState.session,
+              preselectedContactId: contactId,
+              prefilledText: text,
+              suggestedLawyerSpecialization: contact?.specialization ?? contactModalState.session.suggestedLawyerSpecialization,
+            })
+          }}
         />
       )}
 

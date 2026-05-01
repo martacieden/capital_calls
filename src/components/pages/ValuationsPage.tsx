@@ -9,8 +9,8 @@ import {
     IconScale,
     IconReceipt,
     IconChevronRight,
-    IconArrowUpRight,
-    IconArrowDownRight,
+    IconArrowUp,
+    IconArrowDown,
 } from '@tabler/icons-react'
 import type { AnyCatalogItem } from '@/data/types'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
@@ -234,6 +234,12 @@ export function ValuationsPage({
         return counts
     }, [])
     const taskRows = useMemo(() => {
+        const insuranceCashflowDue = [...CASHFLOW_EVENTS]
+            .filter(ev => ev.type === 'Insurance')
+            .map(ev => ({ dateLabel: ev.date, days: daysUntilDateLabel(ev.date) }))
+            .filter((x): x is { dateLabel: string; days: number } => x.days != null)
+            .sort((a, b) => a.days - b.days)[0]
+
         return (Object.keys(TASK_TYPE_ICONS) as TaskType[])
             .map(type => {
                 const tasksOfType = thorntonTasks.filter(t => t.type === type)
@@ -243,7 +249,17 @@ export function ValuationsPage({
                     .filter((x): x is { date: string; days: number } => x.days != null)
                     .sort((a, b) => a.days - b.days)
                 const nearest = dueCandidates[0]
-                const nearestDays = nearest?.days ?? 10_000
+                const nearestDaysFromTasks = nearest?.days ?? 10_000
+                const nearestDays =
+                    type === 'Insurance' && insuranceCashflowDue
+                        ? Math.min(nearestDaysFromTasks, insuranceCashflowDue.days)
+                        : nearestDaysFromTasks
+                const nearestDueLabel =
+                    type === 'Insurance' && insuranceCashflowDue && insuranceCashflowDue.days <= nearestDaysFromTasks
+                        ? insuranceCashflowDue.dateLabel
+                        : nearest
+                            ? monthDayFromIso(nearest.date)
+                            : '—'
                 const urgencyColor =
                     nearestDays <= 14 ? '#EF4444' : nearestDays <= 30 ? '#D97706' : '#9CA3AF'
 
@@ -251,7 +267,7 @@ export function ValuationsPage({
                     type,
                     count: taskCounts[type] ?? 0,
                     Icon: TASK_TYPE_ICONS[type],
-                    nearestDueLabel: nearest ? monthDayFromIso(nearest.date) : '—',
+                    nearestDueLabel,
                     nearestDays,
                     urgencyColor,
                 }
@@ -409,7 +425,7 @@ export function ValuationsPage({
             </div>
 
             {/* Upcoming Cashflows + Asset Lifecycle — side by side */}
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-stretch">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:auto-rows-fr items-stretch">
                 {/* Upcoming Cashflows */}
                 <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 h-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -419,17 +435,23 @@ export function ValuationsPage({
                                 {cashflowSummary.count}
                             </span>
                         </div>
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
+                        <span
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
+                            style={{
+                                color: cashflowSummary.net >= 0 ? '#059669' : '#B91C1C',
+                                background: cashflowSummary.net >= 0 ? 'rgba(5,150,105,0.12)' : 'rgba(239,68,68,0.14)',
+                            }}
+                        >
                             Net {cashflowSummary.net >= 0 ? '+' : '-'}{formatValue(Math.abs(cashflowSummary.net))}
                         </span>
                     </div>
                     <div className="mb-2 flex items-center gap-3 text-[12px] font-semibold tabular-nums">
                         <span className="inline-flex items-center gap-1 text-[#059669]">
-                            <IconArrowUpRight size={14} />
+                            <IconArrowUp size={14} />
                             +{formatValue(cashflowSummary.inflow)} inflow
                         </span>
                         <span className="inline-flex items-center gap-1 text-[#EF4444]">
-                            <IconArrowDownRight size={14} />
+                            <IconArrowDown size={14} />
                             -{formatValue(cashflowSummary.outflow)} outflow
                         </span>
                     </div>
@@ -438,10 +460,17 @@ export function ValuationsPage({
                         {sortedCashflowEvents.map((ev, i) => {
                             const daysLeft = daysUntilDateLabel(ev.date)
                             const isDueSoon = daysLeft != null && daysLeft <= 14
+                            const isDueSoonAmber = daysLeft != null && daysLeft > 14 && daysLeft <= 45
                             return (
                                 <div key={i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-[var(--color-neutral-2)]">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 min-w-0">
+                                            {(isDueSoon || isDueSoonAmber) && (
+                                                <span
+                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                    style={{ background: isDueSoon ? '#EF4444' : '#D97706' }}
+                                                />
+                                            )}
                                             <p className="text-[12px] font-medium text-[var(--color-black)] truncate">{ev.asset}</p>
                                             {isDueSoon && (
                                                 <span className="shrink-0 inline-flex items-center rounded bg-[rgba(245,158,11,0.16)] px-1.5 py-px text-[10px] font-semibold text-[#B45309]">
@@ -492,7 +521,7 @@ export function ValuationsPage({
                         {onNavigateToTasks && (
                             <button
                                 onClick={onNavigateToTasks}
-                                className="text-[11px] font-semibold text-[var(--color-neutral-10)] hover:text-[var(--color-accent-9)] hover:underline underline-offset-2 transition-colors flex items-center gap-0.5"
+                                className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-neutral-11)] hover:text-[var(--color-accent-9)] hover:bg-[var(--color-neutral-2)] hover:underline underline-offset-2 transition-colors"
                             >
                                 View all <IconChevronRight size={13} />
                             </button>

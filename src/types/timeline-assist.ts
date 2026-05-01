@@ -16,4 +16,8 @@ export interface TimelineAssistSession {
     suggestedLawyerSpecialization?: string
     suggestedDescription?: string
     eventDescription?: string
+    /** Якщо контакт вже вибраний у попапі — пропускаємо pick-крок */
+    preselectedContactId?: string
+    /** Текст, введений у попапі — одразу підставляємо в textarea */
+    prefilledText?: string
 }
