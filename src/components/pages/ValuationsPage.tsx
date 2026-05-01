@@ -35,6 +35,14 @@ import {
 } from '@/data/thornton/portfolio-data'
 import { thorntonTasks } from '@/data/thornton/tasks-data'
 import type { TaskType } from '@/data/thornton/tasks-data'
+import {
+    CAPITAL_CALL_COMMITMENTS,
+    getTotalRemaining,
+    getTotalCalled,
+    getNextCall,
+} from '@/data/thornton/capital-calls-data'
+import { showToast } from '@/components/atoms/Toast'
+import { IconCircleCheckFilled, IconClock, IconPlayerPlay } from '@tabler/icons-react'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 
 interface ValuationsPageProps {
@@ -623,6 +631,123 @@ export function ValuationsPage({
                 </div>
             </div>
 
+            {/* Capital Call Commitments */}
+            <CapitalCallsSection />
+
+        </div>
+    )
+}
+
+const STATUS_META: Record<string, { label: string; color: string; bg: string; Icon: typeof IconClock }> = {
+    paid:     { label: 'Paid',     color: '#059669', bg: 'rgba(5,150,105,0.12)',  Icon: IconCircleCheckFilled },
+    pending:  { label: 'Pending',  color: '#D97706', bg: 'rgba(217,119,6,0.12)', Icon: IconClock },
+    upcoming: { label: 'Upcoming', color: '#6366F1', bg: 'rgba(99,102,241,0.12)', Icon: IconPlayerPlay },
+}
+
+function fmtIsoDate(iso: string): string {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+    if (!m) return iso
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function CapitalCallsSection() {
+    const totalRemaining = getTotalRemaining(CAPITAL_CALL_COMMITMENTS)
+    const totalCommitted = CAPITAL_CALL_COMMITMENTS.reduce((s, c) => s + c.totalCommitment, 0)
+
+    return (
+        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 w-full">
+            <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                    <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Capital Call Commitments</h2>
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
+                        {CAPITAL_CALL_COMMITMENTS.length}
+                    </span>
+                </div>
+                <div className="flex items-center gap-4 text-[12px] tabular-nums">
+                    <span className="text-[var(--color-neutral-9)]">
+                        Total committed: <span className="font-semibold text-[var(--color-neutral-11)]">{formatValue(totalCommitted)}</span>
+                    </span>
+                    <span className="text-[var(--color-neutral-9)]">
+                        Remaining: <span className="font-semibold text-[#EF4444]">{formatValue(totalRemaining)}</span>
+                    </span>
+                </div>
+            </div>
+            <p className="text-[12px] text-[var(--color-neutral-9)] mb-4">
+                Uncalled capital obligations across active fund commitments
+            </p>
+
+            <div className="flex flex-col gap-3">
+                {CAPITAL_CALL_COMMITMENTS.map(commitment => {
+                    const called = getTotalCalled(commitment)
+                    const remaining = commitment.totalCommitment - called
+                    const calledPct = commitment.totalCommitment > 0 ? (called / commitment.totalCommitment) * 100 : 0
+                    const nextCall = getNextCall(commitment)
+                    const activeCalls = commitment.calls.filter(c => c.status !== 'paid')
+
+                    return (
+                        <div key={commitment.id} className="border border-[var(--color-neutral-3)] rounded-[var(--radius-lg)] p-4">
+                            {/* Fund header */}
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[13px] font-semibold text-[var(--color-black)]">{commitment.fundName}</span>
+                                        <span className="inline-flex items-center rounded px-1.5 py-px text-[10px] font-semibold"
+                                            style={{ color: '#6366F1', background: 'rgba(99,102,241,0.1)' }}>
+                                            {commitment.fundType}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-[var(--color-neutral-9)] tabular-nums">
+                                        <span>{formatValue(called)} called of {formatValue(commitment.totalCommitment)}</span>
+                                        <span className="text-[#EF4444] font-medium">{formatValue(remaining)} remaining</span>
+                                    </div>
+                                </div>
+                                {nextCall && (
+                                    <button
+                                        type="button"
+                                        onClick={() => showToast(`Task created for ${commitment.fundName} — Call #${nextCall.callNumber}`, 'success')}
+                                        className="shrink-0 inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                                    >
+                                        + Create Task
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Progress bar */}
+                            <div className="relative h-1.5 w-full rounded-full bg-[var(--color-neutral-3)] overflow-hidden mb-3">
+                                <div
+                                    className="absolute left-0 top-0 h-full rounded-full transition-all"
+                                    style={{ width: `${calledPct}%`, background: '#8B5CF6' }}
+                                />
+                            </div>
+
+                            {/* Upcoming / pending calls */}
+                            {activeCalls.length > 0 && (
+                                <div className="flex flex-col gap-1">
+                                    {activeCalls.map(call => {
+                                        const meta = STATUS_META[call.status]
+                                        return (
+                                            <div key={call.id} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 -mx-2 hover:bg-[var(--color-neutral-2)] transition-colors">
+                                                <meta.Icon size={13} style={{ color: meta.color, flexShrink: 0 }} />
+                                                <span className="text-[12px] text-[var(--color-neutral-10)] tabular-nums w-24 shrink-0">
+                                                    {fmtIsoDate(call.dueDate)}
+                                                </span>
+                                                <span className="text-[12px] font-medium text-[var(--color-black)] tabular-nums">
+                                                    {formatValue(call.amount)}
+                                                </span>
+                                                <span className="ml-auto inline-flex items-center rounded px-1.5 py-px text-[10px] font-semibold"
+                                                    style={{ color: meta.color, background: meta.bg }}>
+                                                    {meta.label}
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
         </div>
     )
 }
