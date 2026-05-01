@@ -23,13 +23,43 @@ interface UseFojoChatOptions {
     onCreateItem?: (categoryKey?: string) => void
 }
 
+const FOJO_CHAT_SESSION_KEY = 'fojo-chat-state-v1'
+
+type PersistedFojoChatState = {
+    conversations: Conversation[]
+    activeConversationId: string | null
+    answeredActionKeys: string[]
+}
+
+function readPersistedFojoChatState(): PersistedFojoChatState | null {
+    if (typeof window === 'undefined') return null
+    try {
+        const raw = window.sessionStorage.getItem(FOJO_CHAT_SESSION_KEY)
+        if (!raw) return null
+        const parsed = JSON.parse(raw) as Partial<PersistedFojoChatState>
+        if (!Array.isArray(parsed.conversations)) return null
+        return {
+            conversations: parsed.conversations,
+            activeConversationId: typeof parsed.activeConversationId === 'string' || parsed.activeConversationId === null
+                ? parsed.activeConversationId
+                : null,
+            answeredActionKeys: Array.isArray(parsed.answeredActionKeys) ? parsed.answeredActionKeys : [],
+        }
+    } catch {
+        return null
+    }
+}
+
 export function useFojoChat({ onUnreadCountChange, onCatalogUpdate: _onCatalogUpdate, onCreateItem }: UseFojoChatOptions) {
-    const [conversations, setConversations] = useState<Conversation[]>([])
-    const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+    const persisted = readPersistedFojoChatState()
+    const [conversations, setConversations] = useState<Conversation[]>(() => persisted?.conversations ?? [])
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(() => persisted?.activeConversationId ?? null)
     const [toasts, setToasts] = useState<{ id: string; title: string; preview: string; conversationId: string }[]>([])
     const [inputValue, setInputValue] = useState('')
     const [isTyping, setIsTyping] = useState(false)
-    const [answeredActions, setAnsweredActions] = useState<Set<string>>(new Set())
+    const [answeredActions, setAnsweredActions] = useState<Set<string>>(
+        () => new Set(persisted?.answeredActionKeys ?? []),
+    )
     // Search mode state
     const [searchMode, setSearchMode] = useState(false)
     const [searchConvId, setSearchConvId] = useState<string | null>(null)
@@ -45,6 +75,21 @@ export function useFojoChat({ onUnreadCountChange, onCatalogUpdate: _onCatalogUp
 
     const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null
     const activeMessages = useMemo(() => activeConversation?.messages ?? [], [activeConversation])
+
+    // Keep chat history between page navigations in the same session.
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        try {
+            const payload: PersistedFojoChatState = {
+                conversations,
+                activeConversationId,
+                answeredActionKeys: [...answeredActions],
+            }
+            window.sessionStorage.setItem(FOJO_CHAT_SESSION_KEY, JSON.stringify(payload))
+        } catch {
+            // Ignore storage failures (private mode/quota) and keep runtime state only.
+        }
+    }, [conversations, activeConversationId, answeredActions])
 
     // ── Notifications ──
     const notifCallbacks = useRef({

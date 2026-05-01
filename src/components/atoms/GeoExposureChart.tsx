@@ -162,7 +162,7 @@ const ExposureRow = memo(function ExposureRow({
         >
             <span
                 title={item.label}
-                className={`text-xs min-w-0 flex-[1_1_30%] truncate leading-tight ${isActive ? 'font-semibold text-[var(--color-black)]' : 'text-[var(--color-neutral-11)]'}`}
+                className={`text-xs min-w-0 flex-[1_1_22%] truncate leading-tight ${isActive ? 'font-semibold text-[var(--color-black)]' : 'text-[var(--color-neutral-11)]'}`}
             >
                 {item.label}
             </span>

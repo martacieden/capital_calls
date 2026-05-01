@@ -672,6 +672,8 @@ function AppShell() {
         onExpandFromPreview={() => setFojoForceOpen(true)}
         onClose={() => {
           setTimelineAssistSession(null)
+          // Closing Fojo should return the regular app shell with left nav.
+          setIsTimelineExpanded(false)
           setFojoForceOpen(false)
         }}
         onUnreadCountChange={setFojoUnreadCount}
