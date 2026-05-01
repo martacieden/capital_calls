@@ -4,7 +4,7 @@ import {
     IconX, IconScale, IconCalculator,
     IconBuilding, IconMail, IconPhone,
     IconCopy, IconArrowLeft,
-    IconBrandWhatsapp, IconSparkles,
+    IconBrandWhatsapp, IconSparkles, IconMicrophone,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { mockContacts, type Contact } from '@/data/thornton/contacts-data'
@@ -72,9 +72,22 @@ export function ContactModal({ type, event, onClose, onDelegateToFojo }: Contact
     const [emailBody, setEmailBody]       = useState('')
     const [whatsappMsg, setWhatsappMsg]   = useState('')
     const [aiHint, setAiHint]             = useState(false)
+    const [isRecording, setIsRecording]   = useState(false)
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     useEffect(() => { setTimeout(() => textareaRef.current?.focus(), 80) }, [])
+
+    const handleVoiceClick = useCallback(() => {
+        if (isRecording) return
+        setIsRecording(true)
+        setTimeout(() => {
+            const firstName = contacts[0]?.name.split(' ')[0] ?? 'you'
+            const mockVoiceText = `Hi ${firstName}, I'm reaching out regarding ${event.title}. I'd like to schedule a call to review the current status and discuss next steps. Please let me know your availability this week.`
+            setUserText(mockVoiceText)
+            setIsRecording(false)
+            textareaRef.current?.focus()
+        }, 2400)
+    }, [isRecording, contacts, event.title])
 
     const selectedContact = contacts.find(c => c.id === selectedContactId) ?? contacts[0] ?? null
 
@@ -233,17 +246,33 @@ export function ContactModal({ type, event, onClose, onDelegateToFojo }: Contact
                                 <label className="text-xs font-medium text-[var(--color-neutral-10)]">
                                     What do you need from {selectedContact?.name.split(' ')[0] ?? 'them'}?
                                 </label>
-                                <textarea
-                                    ref={textareaRef}
-                                    rows={3}
-                                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-gray-2)] px-3 py-2.5 text-sm text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] outline-none resize-none font-[inherit] leading-[1.5] focus:border-[var(--color-accent-9)] focus:bg-white transition-[border-color,background] duration-150"
-                                    placeholder="Describe your request, or leave empty to let Fojo use the event context"
-                                    value={userText}
-                                    onChange={e => setUserText(e.target.value)}
-                                />
+                                <div className="relative">
+                                    <textarea
+                                        ref={textareaRef}
+                                        rows={3}
+                                        className="w-full rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-gray-2)] px-3 py-2.5 pr-10 text-sm text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] outline-none resize-none font-[inherit] leading-[1.5] focus:border-[var(--color-accent-9)] focus:bg-white transition-[border-color,background] duration-150 disabled:opacity-60"
+                                        placeholder="Describe your request, or leave empty to let Fojo use the event context"
+                                        value={isRecording ? '🎙 Listening…' : userText}
+                                        onChange={e => !isRecording && setUserText(e.target.value)}
+                                        disabled={isRecording}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleVoiceClick}
+                                        className={cn(
+                                            'absolute bottom-2.5 right-2.5 p-1 rounded-full transition-all',
+                                            isRecording
+                                                ? 'text-[#EF4444] animate-pulse bg-[rgba(239,68,68,0.1)]'
+                                                : 'text-[var(--color-neutral-8)] hover:text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-3)]'
+                                        )}
+                                        title={isRecording ? 'Recording…' : 'Voice input'}
+                                    >
+                                        <IconMicrophone size={15} stroke={2} />
+                                    </button>
+                                </div>
 
                                 {/* AI task hint */}
-                                {aiHint && userText.trim() && (
+                                {aiHint && userText.trim() && !isRecording && (
                                     <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[rgba(0,91,226,0.06)] border border-[rgba(0,91,226,0.15)]">
                                         <IconSparkles size={12} stroke={2} className="shrink-0 text-[var(--color-accent-9)]" />
                                         <span className="text-[11px] text-[var(--color-accent-9)] font-medium">This looks like it could be a task</span>
