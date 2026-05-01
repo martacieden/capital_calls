@@ -40,8 +40,8 @@ function CustomTooltip({
     benchmarkData,
     benchmarkLabel,
 }: SliceTooltipProps<DefaultSeries> & { color: string; sourceData: LinePoint[]; benchmarkData?: LinePoint[]; benchmarkLabel?: string }) {
-    const portfolioPoint = slice.points.find(p => p.serieId === 'portfolio') ?? slice.points[0]
-    const benchmarkPoint = slice.points.find(p => p.serieId === 'benchmark')
+    const portfolioPoint = slice.points.find(p => p.seriesId === 'portfolio') ?? slice.points[0]
+    const benchmarkPoint = slice.points.find(p => p.seriesId === 'benchmark')
     if (!portfolioPoint) return null
 
     const value = portfolioPoint.data.y as number
