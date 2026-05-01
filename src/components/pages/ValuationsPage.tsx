@@ -335,7 +335,7 @@ export function ValuationsPage({
             <div className="flex gap-3 items-stretch">
                 {/* Portfolio Allocation pie chart */}
                 <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 flex-1 min-w-0 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-3">
                         <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Portfolio Allocation</h2>
                         <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(PORTFOLIO_ALLOCATION_DISPLAY_TOTAL)}</span>
                     </div>
@@ -423,7 +423,7 @@ export function ValuationsPage({
                             Net {cashflowSummary.net >= 0 ? '+' : '-'}{formatValue(Math.abs(cashflowSummary.net))}
                         </span>
                     </div>
-                    <div className="mb-3 flex items-center gap-4 text-[12px] font-semibold tabular-nums">
+                    <div className="mb-2 flex items-center gap-3 text-[12px] font-semibold tabular-nums">
                         <span className="inline-flex items-center gap-1 text-[#059669]">
                             <IconArrowUpRight size={14} />
                             +{formatValue(cashflowSummary.inflow)} inflow
@@ -433,13 +433,13 @@ export function ValuationsPage({
                             -{formatValue(cashflowSummary.outflow)} outflow
                         </span>
                     </div>
-                    <div className="mb-2 h-px bg-[var(--color-neutral-3)]" />
-                    <div className="flex flex-col gap-2.5 flex-1">
+                    <div className="mb-1.5 h-px bg-[var(--color-neutral-3)]" />
+                    <div className="flex flex-col gap-1.5 flex-1">
                         {sortedCashflowEvents.map((ev, i) => {
                             const daysLeft = daysUntilDateLabel(ev.date)
                             const isDueSoon = daysLeft != null && daysLeft <= 14
                             return (
-                                <div key={i} className="flex items-center gap-3 rounded-lg px-2 py-2 -mx-2 transition-colors hover:bg-[var(--color-neutral-2)]">
+                                <div key={i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-[var(--color-neutral-2)]">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 min-w-0">
                                             <p className="text-[12px] font-medium text-[var(--color-black)] truncate">{ev.asset}</p>
@@ -466,14 +466,14 @@ export function ValuationsPage({
                             )
                         })}
                     </div>
-                    <div className="mt-3 pt-3 border-t border-[var(--color-neutral-3)] text-[11px] text-[var(--color-neutral-9)] tabular-nums">
+                    <div className="mt-2 pt-2 border-t border-[var(--color-neutral-3)] text-[11px] text-[var(--color-neutral-9)] tabular-nums">
                         Net {cashflowSummary.net >= 0 ? '+' : '-'}{formatValue(Math.abs(cashflowSummary.net))} over the next {cashflowWindowDays} days
                     </div>
                     {onNavigateToTimeline && (
                         <button
                             type="button"
                             onClick={onNavigateToTimeline}
-                            className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-neutral-9)] hover:text-[var(--color-neutral-11)] transition-colors"
+                            className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-neutral-9)] hover:text-[var(--color-neutral-11)] transition-colors"
                         >
                             View full timeline <IconChevronRight size={13} />
                         </button>
