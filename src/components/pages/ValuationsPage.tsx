@@ -22,6 +22,7 @@ import {
     ESTATE_KPIS,
     getTopHoldings,
     getTopSectors,
+    getCountryExposure,
     INVESTABLE_CATALOG_TOTAL,
 } from '@/data/thornton/valuations-data'
 import { PortfolioAllocationChart, type PortfolioAllocationSlice } from '@/components/atoms/PortfolioAllocationChart'
@@ -145,6 +146,8 @@ function monthDayFromIso(isoDate: string): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const PRIVATE_ONLY_KEYS = ['investment'] as const
+
 export function ValuationsPage({
     isV3Processing,
     onNavigateToCatalogCategory,
@@ -154,8 +157,24 @@ export function ValuationsPage({
     onNavigateToTimeline,
 }: ValuationsPageProps) {
     const [activeSector, setActiveSector] = useState<string | null>(null)
+    const [portfolioMode, setPortfolioMode] = useState<'all' | 'private'>('all')
 
-    const drilldownSlices: PortfolioAllocationSlice[] = portfolioAllocationItems.map(item => {
+    const isPrivate = portfolioMode === 'private'
+
+    const visibleAllocationItems = useMemo(
+        () => isPrivate
+            ? portfolioAllocationItems.filter(i => i.id !== 'lifestyle-assets' && i.id !== 'real-estate')
+            : portfolioAllocationItems,
+        [isPrivate],
+    )
+
+    const lifestyleValue = portfolioAllocationItems.find(i => i.id === 'lifestyle-assets')?.value ?? 0
+    const realEstateValue = portfolioAllocationItems.find(i => i.id === 'real-estate')?.value ?? 0
+    const currentDisplayTotal = isPrivate
+        ? PORTFOLIO_ALLOCATION_DISPLAY_TOTAL - lifestyleValue - realEstateValue
+        : PORTFOLIO_ALLOCATION_DISPLAY_TOTAL
+
+    const drilldownSlices: PortfolioAllocationSlice[] = visibleAllocationItems.map(item => {
         const tooltipRows = getPortfolioAllocationTooltipBreakdown(item.id)
         const breakdownIntro = getPortfolioAllocationTooltipIntro(item.id)
         const breakdown = tooltipRows.map((row, i) => ({
@@ -175,11 +194,15 @@ export function ValuationsPage({
                             ? 'Liquidity buckets'
                             : undefined
 
+        const percentage = isPrivate && currentDisplayTotal > 0
+            ? Math.round((item.value / currentDisplayTotal) * 1000) / 10
+            : item.percentage
+
         return {
             key: item.id,
             label: item.label,
             value: item.value,
-            percentage: item.percentage,
+            percentage,
             color: PORTFOLIO_PIE_COLORS[item.id] ?? item.color,
             isClickable: item.id !== 'cash-equivalents',
             categoryFilter: [item.id],
@@ -193,13 +216,25 @@ export function ValuationsPage({
         }
     })
 
-    const allTopHoldings = useMemo(() => getTopHoldings([], 10), [])
+    const allTopHoldings = useMemo(
+        () => getTopHoldings(isPrivate ? [...PRIVATE_ONLY_KEYS] : [], 10),
+        [isPrivate],
+    )
     const topHoldings = useMemo(() => {
         if (!activeSector) return allTopHoldings
         return allTopHoldings.filter(h => h.sector === activeSector)
     }, [allTopHoldings, activeSector])
 
-    const topSectors = getTopSectors([])
+    const topSectors = useMemo(
+        () => getTopSectors(isPrivate ? [...PRIVATE_ONLY_KEYS] : []),
+        [isPrivate],
+    )
+
+    const geoData = useMemo(
+        () => isPrivate ? getCountryExposure([...PRIVATE_ONLY_KEYS]) : PORTFOLIO_OVERVIEW_GEO,
+        [isPrivate],
+    )
+
     const holdingsSubtitle = activeSector
         ? `Largest positions in ${activeSector}`
         : 'Largest positions by value across all categories'
@@ -221,9 +256,12 @@ export function ValuationsPage({
     const netWorthPct = Math.round((netWorth / totalAssets) * 100)
 
     // Concentration: top 5 holdings as % of portfolio
-    const top5Holdings = useMemo(() => getTopHoldings([], 5), [])
+    const top5Holdings = useMemo(
+        () => getTopHoldings(isPrivate ? [...PRIVATE_ONLY_KEYS] : [], 5),
+        [isPrivate],
+    )
     const top5Value = top5Holdings.reduce((s, h) => s + h.value, 0)
-    const top5Pct = totalAssets > 0 ? Math.round((top5Value / totalAssets) * 100) : 0
+    const top5Pct = currentDisplayTotal > 0 ? Math.round((top5Value / currentDisplayTotal) * 100) : 0
 
     // Task lifecycle summary
     const taskCounts = useMemo(() => {
@@ -322,8 +360,32 @@ export function ValuationsPage({
 
     return (
         <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
-            <div className="flex w-full flex-col p-0">
+            <div className="flex w-full items-center justify-between p-0">
                 <ContentHeader title="Portfolio" />
+                <div className="flex items-center gap-0.5 p-1 bg-[var(--color-neutral-3)] rounded-[var(--radius-lg)]">
+                    <button
+                        type="button"
+                        onClick={() => { setPortfolioMode('all'); setActiveSector(null) }}
+                        className={`px-3 py-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all ${
+                            portfolioMode === 'all'
+                                ? 'bg-white text-[var(--color-black)] shadow-sm'
+                                : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
+                        }`}
+                    >
+                        All Assets
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setPortfolioMode('private'); setActiveSector(null) }}
+                        className={`px-3 py-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all ${
+                            portfolioMode === 'private'
+                                ? 'bg-white text-[var(--color-black)] shadow-sm'
+                                : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
+                        }`}
+                    >
+                        Private Investments
+                    </button>
+                </div>
             </div>
 
             {/* Net Worth summary bar */}
@@ -353,11 +415,11 @@ export function ValuationsPage({
                 <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 flex-1 min-w-0 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Portfolio Allocation</h2>
-                        <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(PORTFOLIO_ALLOCATION_DISPLAY_TOTAL)}</span>
+                        <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(currentDisplayTotal)}</span>
                     </div>
                     <PortfolioAllocationChart
                         data={drilldownSlices}
-                        totalValue={PORTFOLIO_ALLOCATION_DISPLAY_TOTAL}
+                        totalValue={currentDisplayTotal}
                         onSliceClick={handlePieSliceClick}
                     />
                 </div>
@@ -421,7 +483,7 @@ export function ValuationsPage({
                 <div className="mb-4">
                     <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Geographic Exposure</h2>
                 </div>
-                <GeoExposureChart data={PORTFOLIO_OVERVIEW_GEO} legendColumns={1} />
+                <GeoExposureChart data={geoData} legendColumns={1} />
             </div>
 
             {/* Upcoming Cashflows + Asset Lifecycle — side by side */}
