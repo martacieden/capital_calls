@@ -4,15 +4,11 @@ import {
     IconAt,
     IconMicrophone,
     IconSend2,
-    IconMail,
-    IconPhone,
     IconScale,
     IconCalculator,
-    IconBuilding,
     IconCheck,
     IconChevronDown,
     IconChevronRight,
-    IconBrandWhatsapp,
     IconArrowLeft,
     IconSparkles,
 } from '@tabler/icons-react'
@@ -43,12 +39,6 @@ function dueDateForPriority(priority: TaskPriority): string {
     const days = priority === 'High' ? 7 : priority === 'Medium' ? 14 : 30
     d.setDate(d.getDate() + days)
     return d.toISOString().slice(0, 10)
-}
-
-function phoneToWhatsApp(phone: string, message: string): string {
-    const digits = phone.replace(/\D/g, '')
-    if (!digits) return '#'
-    return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
 }
 
 function shortLine(text: string, max = 48): string {
@@ -179,7 +169,7 @@ export interface TimelineAssistPanelProps {
     onOpenTask?: (taskId: string) => void
 }
 
-type ContactPhase = 'pick' | 'compose' | 'email-preview' | 'whatsapp-preview' | 'task-generating' | 'task-done'
+type ContactPhase = 'pick' | 'compose' | 'task-generating' | 'task-done'
 
 /* ── Component ── */
 
@@ -219,9 +209,6 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
     const [selectedContact, setSelectedContact] = useState<Contact | null>(preselected ?? contacts[0] ?? null)
     const [composerText, setComposerText]       = useState(session.prefilledText ?? '')
     const [aiTaskHint, setAiTaskHint]           = useState(false)
-    const [emailSubject, setEmailSubject]       = useState('')
-    const [emailBody, setEmailBody]             = useState('')
-    const [whatsappMessage, setWhatsappMessage] = useState('')
     const [contactTaskResult, setContactTaskResult] = useState<Task | null>(null)
     const [otherContactsOpen, setOtherContactsOpen] = useState(false)
 
@@ -314,41 +301,6 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
         setContactTaskResult(task)
         setContactPhase('task-done')
     }, [buildContactPrompt, onTaskCreated, selectedContact, session, composerText])
-
-    const handleEmailClick = useCallback(() => {
-        if (!selectedContact) return
-        const firstName = selectedContact.name.split(' ')[0]
-        const text = composerText.trim()
-        setEmailSubject(`Re: ${session.contextName}`)
-        setEmailBody(
-            `Dear ${selectedContact.name},\n\nI hope this message finds you well.\n\nI'm reaching out regarding: ${session.contextName}.\n\n${text || `[Please describe what you need from ${firstName}]`}\n\nI would appreciate your guidance on this. Please let me know your availability.\n\nBest regards`
-        )
-        setContactPhase('email-preview')
-    }, [selectedContact, composerText, session.contextName])
-
-    const handleWhatsAppClick = useCallback(() => {
-        if (!selectedContact) return
-        setWhatsappMessage(
-            composerText.trim() || `Hi ${selectedContact.name.split(' ')[0]}, I'd like to discuss: ${session.contextName}.`
-        )
-        setContactPhase('whatsapp-preview')
-    }, [selectedContact, composerText, session.contextName])
-
-    const handleConfirmEmail = useCallback(() => {
-        if (!selectedContact) return
-        const subject = encodeURIComponent(emailSubject)
-        const body    = encodeURIComponent(emailBody)
-        window.open(`mailto:${selectedContact.email}?subject=${subject}&body=${body}`, '_blank', 'noopener,noreferrer')
-        showToast('Email opened in your mail app', 'success')
-        onDismiss()
-    }, [selectedContact, emailSubject, emailBody, onDismiss])
-
-    const handleConfirmWhatsApp = useCallback(() => {
-        if (!selectedContact?.phone) return
-        window.open(phoneToWhatsApp(selectedContact.phone, whatsappMessage), '_blank', 'noopener,noreferrer')
-        showToast('WhatsApp opened', 'success')
-        onDismiss()
-    }, [selectedContact, whatsappMessage, onDismiss])
 
     /* create-task priority handlers */
     const finishCreatePriority = useCallback(async (prio: TaskPriority, descriptionExtra?: string) => {
@@ -664,105 +616,6 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
                             Create Task
                         </button>
                     </div>
-                </AssistBubble>
-            )}
-
-            {/* ── Email preview ── */}
-            {contactPhase === 'email-preview' && selectedContact && (
-                <AssistBubble>
-                    <div className="flex items-center gap-2 mb-3">
-                        <button
-                            type="button"
-                            className="p-1 rounded-[var(--radius-sm)] text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] transition-colors"
-                            onClick={() => setContactPhase('compose')}
-                        >
-                            <IconArrowLeft size={14} stroke={2} />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <IconMail size={14} stroke={1.75} className="text-[var(--color-neutral-9)]" />
-                            <span className="text-[13px] font-semibold text-[var(--color-gray-12)]">Email to {selectedContact.name.split(' ')[0]}</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2.5">
-                        <div>
-                            <label className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] mb-1 block">To</label>
-                            <div className="flex items-center gap-2 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-neutral-2)]">
-                                <IconBuilding size={13} stroke={1.75} className="text-[var(--color-neutral-9)] shrink-0" />
-                                <span className="text-sm text-[var(--color-neutral-11)] truncate">{selectedContact.email}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] mb-1 block">Subject</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-neutral-1)] px-3 h-9 text-sm text-[var(--color-gray-12)] outline-none font-[inherit] focus:border-[var(--color-accent-9)] focus:bg-white transition-[border-color,background] duration-150"
-                                value={emailSubject}
-                                onChange={e => setEmailSubject(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] mb-1 block">Body</label>
-                            <textarea
-                                rows={7}
-                                className="w-full rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-neutral-1)] px-3 py-2.5 text-sm text-[var(--color-gray-12)] outline-none resize-none font-[inherit] leading-[1.5] focus:border-[var(--color-accent-9)] focus:bg-white transition-[border-color,background] duration-150"
-                                value={emailBody}
-                                onChange={e => setEmailBody(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleConfirmEmail}
-                        disabled={!emailSubject.trim()}
-                        className="mt-3 w-full flex items-center justify-center gap-2 h-9 rounded-[var(--radius-lg)] bg-[var(--color-accent-9)] text-[13px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        <IconMail size={15} stroke={2} />
-                        Open in Mail App
-                    </button>
-                </AssistBubble>
-            )}
-
-            {/* ── WhatsApp preview ── */}
-            {contactPhase === 'whatsapp-preview' && selectedContact && (
-                <AssistBubble>
-                    <div className="flex items-center gap-2 mb-3">
-                        <button
-                            type="button"
-                            className="p-1 rounded-[var(--radius-sm)] text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] transition-colors"
-                            onClick={() => setContactPhase('compose')}
-                        >
-                            <IconArrowLeft size={14} stroke={2} />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <IconBrandWhatsapp size={14} stroke={1.75} className="text-[#25D366]" />
-                            <span className="text-[13px] font-semibold text-[var(--color-gray-12)]">WhatsApp message</span>
-                        </div>
-                    </div>
-                    <div className="mb-2">
-                        <div className="flex items-center gap-2 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-neutral-2)]">
-                            <IconPhone size={13} stroke={1.75} className="text-[var(--color-neutral-9)] shrink-0" />
-                            <span className="text-sm text-[var(--color-neutral-11)] truncate">{selectedContact.phone}</span>
-                        </div>
-                    </div>
-                    <textarea
-                        rows={4}
-                        className="w-full rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-neutral-1)] px-3 py-2.5 text-sm text-[var(--color-gray-12)] outline-none resize-none font-[inherit] leading-[1.5] focus:border-[#25D366] focus:bg-white transition-[border-color,background] duration-150"
-                        value={whatsappMessage}
-                        onChange={e => setWhatsappMessage(e.target.value)}
-                    />
-                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[var(--color-neutral-9)]">
-                        <IconBrandWhatsapp size={13} stroke={1.75} className="text-[#25D366] shrink-0" />
-                        Message will open in WhatsApp
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleConfirmWhatsApp}
-                        disabled={!whatsappMessage.trim()}
-                        className="mt-3 w-full flex items-center justify-center gap-2 h-9 rounded-[var(--radius-lg)] border border-[#25D366] bg-white text-[13px] font-semibold text-[#25D366] hover:bg-[#f0fdf4] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        <IconBrandWhatsapp size={15} stroke={1.75} />
-                        Confirm & Open WhatsApp
-                    </button>
                 </AssistBubble>
             )}
 

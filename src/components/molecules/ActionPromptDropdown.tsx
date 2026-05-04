@@ -150,7 +150,7 @@ export function ActionPromptDropdown({ action, contextName: _contextName, anchor
     const [isListening, setIsListening] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
-    const recognitionRef = useRef<null | ReturnType<SpeechRecognitionCtor>>(null)
+    const recognitionRef = useRef<null | InstanceType<SpeechRecognitionCtor>>(null)
 
     const copy = getCopy(action)
     const placeholder = usePlaceholderRotation(copy.placeholders, !inputValue)
