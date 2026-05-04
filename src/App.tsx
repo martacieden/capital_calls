@@ -739,7 +739,6 @@ function AppShell() {
           setPreviousPage('timeline')
           setDetailTaskId(taskId)
           setActivePage('task-detail')
-          setTimelineAssistSession(null)
         }}
         onClearTimelineAssist={() => setTimelineAssistSession(null)}
       />

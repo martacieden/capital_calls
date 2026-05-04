@@ -63,9 +63,9 @@ function sleepMs(ms: number): Promise<void> {
 }
 
 const PRIORITY_OPTS: QAOption[] = [
-    { value: 'high',   title: 'High priority',   description: 'Flag for immediate review' },
-    { value: 'normal', title: 'Normal priority',  description: 'Regular queue' },
-    { value: 'low',    title: 'Low priority',     description: 'Next quarterly review cycle' },
+    { value: 'high',   title: 'High priority',   description: 'Flag for immediate review — insurance gaps can create liability.' },
+    { value: 'normal', title: 'Normal priority', description: 'Add to the regular review queue — no immediate risk.' },
+    { value: 'low',    title: 'Low priority',    description: 'Track for the next quarterly review cycle.' },
 ]
 
 function qaValueToPriority(v: string): TaskPriority {
@@ -81,6 +81,16 @@ function AssistBubble({ children }: { children: React.ReactNode }) {
         <div className="chat-message chat-message--assistant flex gap-[var(--spacing-2)] items-start">
             <div className="chat-message__col min-w-0 flex-1 max-w-[100%]">
                 <div className="chat-message__bubble">{children}</div>
+            </div>
+        </div>
+    )
+}
+
+function UserBubble({ text }: { text: string }) {
+    return (
+        <div className="chat-message chat-message--user flex gap-[var(--spacing-2)] items-start justify-end">
+            <div className="chat-message__col">
+                <div className="chat-message__bubble">{text}</div>
             </div>
         </div>
     )
@@ -197,7 +207,7 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
     const [analyzeComplete, setAnalyzeComplete]         = useState(false)
     const [needsPriorityOther, setNeedsPriorityOther]   = useState(false)
     const [customPriorityNote, setCustomPriorityNote]   = useState('')
-    const [pickedPriorityCaption, setPickedPriorityCaption] = useState<string | null>(null)
+    const [selectedPriorityLabel, setSelectedPriorityLabel] = useState<string | null>(null)
     const [createTaskResult, setCreateTaskResult]       = useState<Task | null>(null)
     const [createComposerText, setCreateComposerText]   = useState('')
 
@@ -379,14 +389,14 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
 
     const handlePrioritySelect = (values: string[]) => {
         const v = values[0]; if (!v) return
-        const cap = v === 'high' ? 'High priority selected.' : v === 'low' ? 'Low priority selected.' : 'Normal priority selected.'
-        setPickedPriorityCaption(cap)
-        void finishCreatePriority(qaValueToPriority(v), cap)
+        const label = v === 'high' ? 'High priority' : v === 'low' ? 'Low priority' : 'Normal priority'
+        setSelectedPriorityLabel(label)
+        void finishCreatePriority(qaValueToPriority(v), `${label} selected.`)
     }
 
     const handleCustomPrioritySubmit = () => {
         if (!customPriorityNote.trim()) return
-        setPickedPriorityCaption('Custom priority note provided.')
+        setSelectedPriorityLabel(customPriorityNote.trim())
         void finishCreatePriority('Medium', customPriorityNote.trim())
         setNeedsPriorityOther(false)
     }
@@ -420,7 +430,25 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
                         }]} />
                     </AssistBubble>
 
-                    {createPhase === 'priority' && analyzeComplete && !pickedPriorityCaption && !needsPriorityOther ? (
+                    {analyzeComplete ? (
+                        <AssistBubble>
+                            <FojoPipeline steps={[{
+                                text: 'Checking related records',
+                                detail: 'Checking for similar open tasks and recent trust-related updates.',
+                                status: 'complete',
+                            }]} />
+                        </AssistBubble>
+                    ) : null}
+
+                    {analyzeComplete ? (
+                        <AssistBubble>
+                            <p className="m-0 text-sm leading-relaxed">
+                                I&apos;ve identified a coverage gap and upcoming renewals. Let me create a task to track this.
+                            </p>
+                        </AssistBubble>
+                    ) : null}
+
+                    {createPhase === 'priority' && analyzeComplete && !selectedPriorityLabel && !needsPriorityOther ? (
                         <FojoQA
                             question="What priority should this task have?"
                             options={PRIORITY_OPTS}
@@ -430,34 +458,43 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
                         />
                     ) : null}
 
-                    {createPhase === 'priority' && analyzeComplete && needsPriorityOther && !pickedPriorityCaption ? (
+                    {createPhase === 'priority' && analyzeComplete && needsPriorityOther && !selectedPriorityLabel ? (
                         <>
                             <AssistBubble><p className="m-0 text-sm">Tell us how you&apos;d like to prioritize this task.</p></AssistBubble>
                             <AssistComposer placeholder="Describe priority or urgency…" value={customPriorityNote} onChange={setCustomPriorityNote} onSend={handleCustomPrioritySubmit} />
                         </>
                     ) : null}
 
-                    {pickedPriorityCaption ? (
-                        <AssistBubble>
-                            <p className="m-0 text-sm flex items-center gap-1.5">
-                                <IconCheck size={14} stroke={2.5} className="text-green-600 shrink-0" />
-                                {pickedPriorityCaption}
-                            </p>
-                        </AssistBubble>
+                    {selectedPriorityLabel ? (
+                        <UserBubble text={selectedPriorityLabel} />
                     ) : null}
 
                     {createPhase === 'generating' ? (
-                        <AssistBubble>
-                            <div className="flex items-center gap-3 text-sm text-[var(--color-neutral-10)] py-1" role="status" aria-live="polite">
-                                <span className="inline-block h-7 w-7 shrink-0 rounded-full border-2 border-[var(--color-accent-9)] border-t-transparent animate-spin" />
-                                <p className="m-0 leading-snug">Generating task…</p>
-                            </div>
-                        </AssistBubble>
+                        <>
+                            <AssistBubble>
+                                <p className="m-0 text-sm leading-relaxed">Creating the task now.</p>
+                            </AssistBubble>
+                            <AssistBubble>
+                                <FojoPipeline steps={[{
+                                    text: 'Creating task',
+                                    detail: 'Applying selected priority and preparing task details.',
+                                    status: 'running',
+                                }]} />
+                            </AssistBubble>
+                        </>
                     ) : null}
 
                     {createPhase === 'done' && createTaskResult ? (
                         <AssistBubble>
-                            <InlineTaskPreview task={createTaskResult} onDone={onDismiss} onOpenTask={() => { onOpenTask?.(createTaskResult.id); onDismiss() }} />
+                            <p className="m-0 text-sm leading-relaxed">
+                                Done! I created a task: <strong>{createTaskResult.title}</strong>.
+                            </p>
+                            <p className="m-0 mt-2 text-sm leading-relaxed text-[var(--color-neutral-11)]">
+                                {createTaskResult.description}
+                            </p>
+                            <div className="mt-3">
+                                <InlineTaskPreview task={createTaskResult} onDone={onDismiss} onOpenTask={() => { onOpenTask?.(createTaskResult.id) }} />
+                            </div>
                         </AssistBubble>
                     ) : null}
                 </div>
