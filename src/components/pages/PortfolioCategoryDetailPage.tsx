@@ -86,10 +86,7 @@ export function PortfolioCategoryDetailPage({
                         type="button"
                         className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-2 text-left text-[13px] font-[var(--font-weight-medium)] text-[var(--color-gray-12)] transition-[background] duration-[0.12s] hover:bg-[var(--color-neutral-3)]"
                         onClick={() => {
-                            showToast(
-                                `PDF summary for "${label}" would export holdings and allocation (prototype).`,
-                                'success',
-                            )
+                            showToast(`Preparing PDF for "${label}"…`, 'success')
                             setActionsOpen(false)
                         }}
                     >
@@ -100,10 +97,7 @@ export function PortfolioCategoryDetailPage({
                         type="button"
                         className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-[var(--spacing-3)] py-2 text-left text-[13px] font-[var(--font-weight-medium)] text-[var(--color-gray-12)] transition-[background] duration-[0.12s] hover:bg-[var(--color-neutral-3)]"
                         onClick={() => {
-                            showToast(
-                                'Upload valuations or custody statements in Documents, or attach via Fojo for this category (prototype).',
-                                'success',
-                            )
+                            showToast('Document upload coming soon — use Documents for now.', 'success')
                             setActionsOpen(false)
                         }}
                     >

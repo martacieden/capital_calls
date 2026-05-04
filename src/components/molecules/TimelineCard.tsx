@@ -6,7 +6,6 @@ import type { DistributionEvent, AnyCatalogItem } from '@/data/types'
 import { getSourceDocsForItem } from '@/data/citations'
 import { formatAmount, getTypeLabel, shouldShowAmount } from '@/lib/helpers/timeline'
 import { CardActionsMenu, type CardActionType } from '@/components/molecules/CardActionsMenu'
-import { getDistributionContactActions } from '@/lib/utils/contactActionUtils'
 import { snapshotPromptAnchor, type PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
 
 export interface TimelineCardProps {
@@ -131,7 +130,9 @@ export function TimelineCard({ event, beneficiary, trust: _trust, onClick, onDou
                     onClose={() => setActionsMenuOpen(false)}
                     visibleActions={[
                         'create-task',
-                        ...getDistributionContactActions(event),
+                        // Contact actions are intentionally available on all trust timeline cards.
+                        'contact-lawyer',
+                        'contact-cpa',
                         'edit-distribution',
                         'view-source',
                     ]}

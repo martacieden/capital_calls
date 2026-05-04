@@ -32,3 +32,4 @@ sb-*.png
 sb-*.jpg
 verify-*.png
 storybook-static/
+.vercel

@@ -473,7 +473,7 @@ export function PortfolioCategoryDetailPanel({
                     <button
                         type="button"
                         className={iconBtnClass}
-                        onClick={() => showToast(`${label} allocation exported`, 'success')}
+                        onClick={() => showToast(`Preparing export for ${label}…`, 'success')}
                         aria-label="Export to Excel"
                         title="Export to Excel"
                     >

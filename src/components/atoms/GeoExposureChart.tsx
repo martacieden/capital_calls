@@ -21,8 +21,12 @@ interface GeoExposureChartProps {
 
 const MAP_HEIGHT = 320
 
-/** Поріг руху перед тим як вважати жест перетягуванням (не кліком по країні). */
-const PAN_DRAG_THRESHOLD_PX = 6
+/**
+ * Поріг руху перед тим як вважати жест перетягуванням (не кліком по країні).
+ * Занадто малий поріг — майже кожен клік з легким джитером стає «drag» і
+ * наступний onClick по полігону глушиться через suppressNextMapClickRef.
+ */
+const PAN_DRAG_THRESHOLD_PX = 14
 
 /** Обмеження зміщення, щоб карта не «зникала» занадто далеко. */
 function clampPanOffsetPx(px: number, py: number, width: number, height: number) {
@@ -643,7 +647,7 @@ export function GeoExposureChart({
             && projectionFeaturesForFit === regionZoomSubset
         if (regionFramed)
             return Math.round(
-                m * Math.min(regionZoomSubset.length <= 4 ? 0.2 : 0.14, 0.32),
+                m * Math.min(regionZoomSubset.length <= 4 ? 0.12 : 0.08, 0.20),
             )
         const portfolioFramed =
             extentMode === 'portfolio' && portfolioSubset.length > 0
@@ -676,22 +680,16 @@ export function GeoExposureChart({
 
     const focusGeoOnChart = useCallback(
         (geoKey: string) => {
-            const hadFocusedRegion = regionFocusGeoKey != null
             const row = choroplethData.find(r => r.geoKey === geoKey)
             const feats = row ? featuresForPortfolioIds(mergedGeoFeatures, [row]) : []
             if (feats.length > 0) {
                 setRegionFocusGeoKey(geoKey)
-                setZoomMultiplier(z =>
-                    Math.min(
-                        MAP_ZOOM_MAX,
-                        +(z * (hadFocusedRegion ? ZOOM_STEP : 1.08)).toFixed(4),
-                    ),
-                )
+                setZoomMultiplier(MAP_ZOOM_MAX)
                 setPanOffsetPx({ x: 0, y: 0 })
             }
             onGeoClick?.(geoKey)
         },
-        [choroplethData, mergedGeoFeatures, onGeoClick, regionFocusGeoKey],
+        [choroplethData, mergedGeoFeatures, onGeoClick],
     )
 
     const zoomInOneStep = useCallback(() => {
@@ -750,6 +748,8 @@ export function GeoExposureChart({
         }
         if (sess.dragging)
             suppressNextMapClickRef.current = true
+        else
+            suppressNextMapClickRef.current = false
         panDragRef.current = null
         setDraggingPan(false)
     }, [])
