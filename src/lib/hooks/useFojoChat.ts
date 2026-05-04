@@ -24,6 +24,7 @@ interface UseFojoChatOptions {
 }
 
 const FOJO_CHAT_SESSION_KEY = 'fojo-chat-state-v1'
+const FOJO_CHAT_LOCAL_KEY = 'fojo-chat-state-persist-v1'
 
 type PersistedFojoChatState = {
     conversations: Conversation[]
@@ -34,7 +35,8 @@ type PersistedFojoChatState = {
 function readPersistedFojoChatState(): PersistedFojoChatState | null {
     if (typeof window === 'undefined') return null
     try {
-        const raw = window.sessionStorage.getItem(FOJO_CHAT_SESSION_KEY)
+        const raw = window.localStorage.getItem(FOJO_CHAT_LOCAL_KEY)
+            ?? window.sessionStorage.getItem(FOJO_CHAT_SESSION_KEY)
         if (!raw) return null
         const parsed = JSON.parse(raw) as Partial<PersistedFojoChatState>
         if (!Array.isArray(parsed.conversations)) return null
@@ -85,7 +87,11 @@ export function useFojoChat({ onUnreadCountChange, onCatalogUpdate: _onCatalogUp
                 activeConversationId,
                 answeredActionKeys: [...answeredActions],
             }
-            window.sessionStorage.setItem(FOJO_CHAT_SESSION_KEY, JSON.stringify(payload))
+            const serialized = JSON.stringify(payload)
+            // localStorage keeps history across browser tabs/sessions.
+            window.localStorage.setItem(FOJO_CHAT_LOCAL_KEY, serialized)
+            // Keep sessionStorage in sync as a lightweight same-tab fallback.
+            window.sessionStorage.setItem(FOJO_CHAT_SESSION_KEY, serialized)
         } catch {
             // Ignore storage failures (private mode/quota) and keep runtime state only.
         }

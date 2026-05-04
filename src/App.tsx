@@ -84,7 +84,7 @@ function AppShell() {
 
   // ── Local navigation state ──
   const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
-  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail'>('home')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail'>('home')
   const [holdingsCategoryKeys, setHoldingsCategoryKeys] = useState<string[]>([])
   const [holdingsCategoryLabel, setHoldingsCategoryLabel] = useState('')
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
@@ -135,7 +135,7 @@ function AppShell() {
   }, [])
 
   useEffect(() => {
-    if (activePage !== 'portfolio') setPortfolioPanelCategoryId(null)
+    if (activePage !== 'portfolio' && activePage !== 'portfolio-private') setPortfolioPanelCategoryId(null)
     if (activePage !== 'portfolio-category-detail') setPortfolioDetailCategoryId(null)
   }, [activePage])
 
@@ -197,13 +197,13 @@ function AppShell() {
 
   const handlePortfolioCategoryDetailBack = useCallback(() => {
     setPortfolioDetailCategoryId(null)
-    setActivePage('portfolio')
-  }, [])
+    setActivePage(previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
+  }, [previousPage])
 
   const handleOpenPortfolioFullDetail = useCallback((categoryId: string) => {
     setPortfolioPanelCategoryId(null)
     setPortfolioDetailCategoryId(categoryId)
-    setActivePage('portfolio-category-detail')
+    setActivePage(cur => { setPreviousPage(cur); return 'portfolio-category-detail' })
     setFojoForceOpen(true)
   }, [setFojoForceOpen])
 
@@ -671,7 +671,13 @@ function AppShell() {
   return (
     <div className={`app-shell${(isFullscreen || isDetailGraphExpanded) ? ' app-shell--map-fullscreen' : ''}${isTimelineExpanded ? ' app-shell--tl-fullscreen' : ''}${isFullscreenDetail ? ' app-shell--map-detail' : ''}${isTimelineDetail ? ' app-shell--tl-detail' : ''}${hasStrip ? ' app-shell--has-strip' : ''}${hasStripContent ? ' app-shell--strip-active' : ''}`}>
       <LeftNav
-          activeItem={activePage === 'task-detail' ? 'tasks' : activePage === 'detail' ? 'catalog' : activePage === 'portfolio-category-detail' ? 'portfolio' : activePage}
+          activeItem={
+            activePage === 'task-detail' ? 'tasks'
+            : activePage === 'detail' ? 'catalog'
+            : activePage === 'portfolio-category-detail'
+                ? (previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
+            : activePage
+          }
           navBadges={navBadges}
           onNavItemClick={(id) => {
               clearBadge(id)
@@ -683,6 +689,11 @@ function AppShell() {
                 setPortfolioPanelCategoryId(null)
                 setPortfolioDetailCategoryId(null)
                 setActivePage('portfolio')
+              }
+              else if (id === 'portfolio-private') {
+                setPortfolioPanelCategoryId(null)
+                setPortfolioDetailCategoryId(null)
+                setActivePage('portfolio-private')
               }
               else if (id === 'documents') setActivePage('documents')
               else if (id === 'tasks') setActivePage('tasks')
@@ -733,7 +744,7 @@ function AppShell() {
         onClearTimelineAssist={() => setTimelineAssistSession(null)}
       />
 
-      {activePage === 'portfolio' && (
+      {(activePage === 'portfolio' || activePage === 'portfolio-private') && (
         <PortfolioCategoryDetailPanel
           categoryId={portfolioPanelCategoryId}
           isOpen={portfolioPanelCategoryId != null}
@@ -796,10 +807,18 @@ function AppShell() {
             const allContacts = [...mockContacts.lawyers, ...mockContacts.accountants]
             const contact = allContacts.find(c => c.id === contactId)
             openTimelineAssist({
-              ...contactModalState.session,
-              preselectedContactId: contactId,
-              prefilledText: text,
-              suggestedLawyerSpecialization: contact?.specialization ?? contactModalState.session.suggestedLawyerSpecialization,
+              flow: 'create-task',
+              contextName: contactModalState.event.title,
+              contextEventId: contactModalState.session.contextEventId,
+              sourceDistributionEvent: contactModalState.session.sourceDistributionEvent ?? null,
+              suggestedTaskTitle: contact
+                ? `Follow up with ${contact.name} — ${contactModalState.event.title}`
+                : contactModalState.event.suggestedTaskTitle ?? contactModalState.event.title,
+              suggestedDescription: text.trim() || contactModalState.event.suggestedDescription,
+              eventDescription: [
+                contact ? `Contact: ${contact.name}${contact.firm ? ` (${contact.firm})` : ''}` : null,
+                text.trim() ? `Additional context: ${text.trim()}` : null,
+              ].filter(Boolean).join('\n'),
             })
           }}
         />
@@ -880,6 +899,7 @@ function AppShell() {
           />
         ) : activePage === 'portfolio' ? (
           <ValuationsPage
+            key="all"
             items={allItems}
             isV3Processing={isProcessing}
             isChatOpen={isChatOpen}
@@ -900,14 +920,43 @@ function AppShell() {
               const key = categories.join(',')
               setHoldingsCategoryKeys(categories)
               setHoldingsCategoryLabel(labelMap[key] ?? categories.map(c => c[0].toUpperCase() + c.slice(1)).join(' & '))
-              setActivePage('category-holdings')
+              setActivePage(cur => { setPreviousPage(cur); return 'category-holdings' })
+            }}
+          />
+        ) : activePage === 'portfolio-private' ? (
+          <ValuationsPage
+            key="private"
+            items={allItems}
+            lockedMode="private"
+            isV3Processing={isProcessing}
+            isChatOpen={isChatOpen}
+            onOpenPortfolioCategory={(id) => {
+              setPortfolioPanelCategoryId(id)
+              setFojoForceOpen(false)
+            }}
+            onNavigateToAsset={(id) => navigateToDetail(id)}
+            onNavigateToTasks={() => setActivePage('tasks')}
+            onNavigateToTimeline={() => setActivePage('timeline')}
+            onNavigateToCatalogCategory={(categories) => {
+              const labelMap: Record<string, string> = {
+                'investment': 'Private Investments',
+                'public-market': 'Public Market',
+                'property': 'Real Estate',
+                'maritime,vehicle,art': 'Lifestyle Assets',
+              }
+              const key = categories.join(',')
+              setHoldingsCategoryKeys(categories)
+              setHoldingsCategoryLabel(labelMap[key] ?? categories.map(c => c[0].toUpperCase() + c.slice(1)).join(' & '))
+              setActivePage(cur => { setPreviousPage(cur); return 'category-holdings' })
             }}
           />
         ) : activePage === 'category-holdings' ? (
           <CategoryHoldingsPage
             categoryKeys={holdingsCategoryKeys}
             categoryLabel={holdingsCategoryLabel}
-            onBack={() => setActivePage('portfolio')}
+            onBack={() => setActivePage(
+              previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio'
+            )}
             onNavigateToAsset={(id) => {
               setDetailItemId(id)
               setActivePage('detail')

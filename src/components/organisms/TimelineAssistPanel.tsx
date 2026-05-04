@@ -199,6 +199,7 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
     const [customPriorityNote, setCustomPriorityNote]   = useState('')
     const [pickedPriorityCaption, setPickedPriorityCaption] = useState<string | null>(null)
     const [createTaskResult, setCreateTaskResult]       = useState<Task | null>(null)
+    const [createComposerText, setCreateComposerText]   = useState('')
 
     /* ── Contact flow state ── */
     const preselected = session.preselectedContactId
@@ -390,68 +391,83 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
         setNeedsPriorityOther(false)
     }
 
+    const handleCreateComposerSend = useCallback(() => {
+        if (!createComposerText.trim()) return
+        showToast('Context added', 'success')
+        setCreateComposerText('')
+    }, [createComposerText])
+
     /* ── RENDER: create-task flow (unchanged) ── */
     if (session.flow === 'create-task') {
         return (
-            <div className="flex flex-col gap-[var(--spacing-4)] flex-1 min-h-0 overflow-y-auto chat-timeline-assist-scroll px-[var(--spacing-2)] py-[var(--spacing-3)] animate-[chat-area-in_0.2s_ease-out_both]">
-                <AssistBubble>
-                    <p className="m-0 text-sm leading-relaxed">
-                        I&apos;d like help creating a task related to:&nbsp;
-                        <strong>&quot;{session.contextName}&quot;</strong>.
-                    </p>
-                    <p className="m-0 mt-2 text-sm text-[var(--color-neutral-10)] leading-relaxed">
-                        Let me look into this and set up a task...
-                    </p>
-                </AssistBubble>
-
-                <AssistBubble>
-                    <FojoPipeline steps={[{
-                        text: 'Analyzing context',
-                        detail: `${session.contextName}\n${session.eventDescription ?? ''}`.trim() || undefined,
-                        status: analyzeComplete ? 'complete' : 'running',
-                    }]} />
-                </AssistBubble>
-
-                {createPhase === 'priority' && analyzeComplete && !pickedPriorityCaption && !needsPriorityOther ? (
-                    <FojoQA
-                        question="What priority should this task have?"
-                        options={PRIORITY_OPTS}
-                        showOther
-                        onSelect={handlePrioritySelect}
-                        onOther={() => setNeedsPriorityOther(true)}
-                    />
-                ) : null}
-
-                {createPhase === 'priority' && analyzeComplete && needsPriorityOther && !pickedPriorityCaption ? (
-                    <>
-                        <AssistBubble><p className="m-0 text-sm">Tell us how you&apos;d like to prioritize this task.</p></AssistBubble>
-                        <AssistComposer placeholder="Describe priority or urgency…" value={customPriorityNote} onChange={setCustomPriorityNote} onSend={handleCustomPrioritySubmit} />
-                    </>
-                ) : null}
-
-                {pickedPriorityCaption ? (
+            <div className="flex flex-col flex-1 min-h-0 animate-[chat-area-in_0.2s_ease-out_both]">
+                <div className="flex flex-col gap-[var(--spacing-4)] flex-1 min-h-0 overflow-y-auto chat-timeline-assist-scroll px-[var(--spacing-2)] py-[var(--spacing-3)]">
                     <AssistBubble>
-                        <p className="m-0 text-sm flex items-center gap-1.5">
-                            <IconCheck size={14} stroke={2.5} className="text-green-600 shrink-0" />
-                            {pickedPriorityCaption}
+                        <p className="m-0 text-sm leading-relaxed">
+                            I&apos;d like help creating a task related to:&nbsp;
+                            <strong>&quot;{session.contextName}&quot;</strong>.
+                        </p>
+                        <p className="m-0 mt-2 text-sm text-[var(--color-neutral-10)] leading-relaxed">
+                            Let me look into this and set up a task...
                         </p>
                     </AssistBubble>
-                ) : null}
 
-                {createPhase === 'generating' ? (
                     <AssistBubble>
-                        <div className="flex items-center gap-3 text-sm text-[var(--color-neutral-10)] py-1" role="status" aria-live="polite">
-                            <span className="inline-block h-7 w-7 shrink-0 rounded-full border-2 border-[var(--color-accent-9)] border-t-transparent animate-spin" />
-                            <p className="m-0 leading-snug">Generating task…</p>
-                        </div>
+                        <FojoPipeline steps={[{
+                            text: 'Analyzing context',
+                            detail: `${session.contextName}\n${session.eventDescription ?? ''}`.trim() || undefined,
+                            status: analyzeComplete ? 'complete' : 'running',
+                        }]} />
                     </AssistBubble>
-                ) : null}
 
-                {createPhase === 'done' && createTaskResult ? (
-                    <AssistBubble>
-                        <InlineTaskPreview task={createTaskResult} onDone={onDismiss} onOpenTask={() => { onOpenTask?.(createTaskResult.id); onDismiss() }} />
-                    </AssistBubble>
-                ) : null}
+                    {createPhase === 'priority' && analyzeComplete && !pickedPriorityCaption && !needsPriorityOther ? (
+                        <FojoQA
+                            question="What priority should this task have?"
+                            options={PRIORITY_OPTS}
+                            showOther
+                            onSelect={handlePrioritySelect}
+                            onOther={() => setNeedsPriorityOther(true)}
+                        />
+                    ) : null}
+
+                    {createPhase === 'priority' && analyzeComplete && needsPriorityOther && !pickedPriorityCaption ? (
+                        <>
+                            <AssistBubble><p className="m-0 text-sm">Tell us how you&apos;d like to prioritize this task.</p></AssistBubble>
+                            <AssistComposer placeholder="Describe priority or urgency…" value={customPriorityNote} onChange={setCustomPriorityNote} onSend={handleCustomPrioritySubmit} />
+                        </>
+                    ) : null}
+
+                    {pickedPriorityCaption ? (
+                        <AssistBubble>
+                            <p className="m-0 text-sm flex items-center gap-1.5">
+                                <IconCheck size={14} stroke={2.5} className="text-green-600 shrink-0" />
+                                {pickedPriorityCaption}
+                            </p>
+                        </AssistBubble>
+                    ) : null}
+
+                    {createPhase === 'generating' ? (
+                        <AssistBubble>
+                            <div className="flex items-center gap-3 text-sm text-[var(--color-neutral-10)] py-1" role="status" aria-live="polite">
+                                <span className="inline-block h-7 w-7 shrink-0 rounded-full border-2 border-[var(--color-accent-9)] border-t-transparent animate-spin" />
+                                <p className="m-0 leading-snug">Generating task…</p>
+                            </div>
+                        </AssistBubble>
+                    ) : null}
+
+                    {createPhase === 'done' && createTaskResult ? (
+                        <AssistBubble>
+                            <InlineTaskPreview task={createTaskResult} onDone={onDismiss} onOpenTask={() => { onOpenTask?.(createTaskResult.id); onDismiss() }} />
+                        </AssistBubble>
+                    ) : null}
+                </div>
+
+                <AssistComposer
+                    placeholder="Ask me anything, use @ to add context"
+                    value={createComposerText}
+                    onChange={setCreateComposerText}
+                    onSend={handleCreateComposerSend}
+                />
             </div>
         )
     }
@@ -601,30 +617,12 @@ export function TimelineAssistPanel({ session, onDismiss, onTaskCreated, onOpenT
                         </div>
                     )}
 
-                    {/* Action buttons */}
-                    <div className="mt-3 flex flex-col gap-2">
-                        <button
-                            type="button"
-                            onClick={handleEmailClick}
-                            className="w-full flex items-center justify-center gap-2 h-9 rounded-[var(--radius-lg)] bg-[var(--color-accent-9)] text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
-                        >
-                            <IconMail size={15} stroke={2} />
-                            Send via Email
-                        </button>
-                        {selectedContact.phone ? (
-                            <button
-                                type="button"
-                                onClick={handleWhatsAppClick}
-                                className="w-full flex items-center justify-center gap-2 h-9 rounded-[var(--radius-lg)] border border-[#25D366] text-[13px] font-semibold text-[#25D366] bg-white hover:bg-[#f0fdf4] transition-colors"
-                            >
-                                <IconBrandWhatsapp size={15} stroke={1.75} />
-                                Send via WhatsApp
-                            </button>
-                        ) : null}
+                    {/* Action button */}
+                    <div className="mt-3">
                         <button
                             type="button"
                             onClick={() => void runContactGeneration()}
-                            className="w-full flex items-center justify-center gap-2 h-9 rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] bg-[var(--color-neutral-1)] text-[13px] font-medium text-[var(--color-gray-12)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                            className="w-full flex items-center justify-center gap-2 h-9 rounded-[var(--radius-lg)] bg-[var(--color-accent-9)] text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
                         >
                             Create Task
                         </button>

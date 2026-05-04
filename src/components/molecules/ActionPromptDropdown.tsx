@@ -6,12 +6,23 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { IconPaperclip, IconFileText, IconX } from '@tabler/icons-react'
+import { IconPaperclip, IconFileText, IconMicrophone, IconX } from '@tabler/icons-react'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 import { useClickOutside } from '@/lib/hooks/useClickOutside'
 import { usePlaceholderRotation } from '@/lib/hooks/usePlaceholderRotation'
 import type { CardActionType } from '@/components/molecules/CardActionsMenu'
 import type { PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
+
+type SpeechRecognitionCtor = new () => {
+    lang: string
+    interimResults: boolean
+    continuous: boolean
+    onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
+    onerror: ((event: { error?: string }) => void) | null
+    onend: (() => void) | null
+    start: () => void
+    stop: () => void
+}
 
 /* ── Copy per action ─────────────────────────────────────────────── */
 
@@ -136,13 +147,18 @@ export interface ActionPromptDropdownProps {
 export function ActionPromptDropdown({ action, contextName: _contextName, anchorRect = null, anchorGetter, onSubmit, onClose }: ActionPromptDropdownProps) {
     const [inputValue, setInputValue] = useState('')
     const [attachedFiles, setAttachedFiles] = useState<{ id: string; name: string }[]>([])
+    const [isListening, setIsListening] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    const recognitionRef = useRef<null | ReturnType<SpeechRecognitionCtor>>(null)
 
     const copy = getCopy(action)
     const placeholder = usePlaceholderRotation(copy.placeholders, !inputValue)
     const canSubmit = inputValue.trim() || attachedFiles.length > 0
     const dropdownStyle = useLiveDropdownStyle(anchorRect, anchorGetter)
+    const speechSupported = typeof window !== 'undefined'
+        && !!((window as Window & { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).SpeechRecognition
+            || (window as Window & { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition)
 
     useEffect(() => {
         setTimeout(() => inputRef.current?.focus(), 80)
@@ -155,6 +171,12 @@ export function ActionPromptDropdown({ action, contextName: _contextName, anchor
         document.addEventListener('keydown', handler)
         return () => document.removeEventListener('keydown', handler)
     }, [onClose])
+
+    useEffect(() => {
+        return () => {
+            recognitionRef.current?.stop()
+        }
+    }, [])
 
     const handleSubmit = () => {
         if (!canSubmit) return
@@ -169,13 +191,73 @@ export function ActionPromptDropdown({ action, contextName: _contextName, anchor
         setAttachedFiles(prev => prev.filter(f => f.id !== id))
     }
 
+    const handleVoiceToggle = () => {
+        if (!speechSupported)
+            return
+
+        if (isListening) {
+            recognitionRef.current?.stop()
+            setIsListening(false)
+            return
+        }
+
+        const SpeechApi = (window as Window & {
+            SpeechRecognition?: SpeechRecognitionCtor
+            webkitSpeechRecognition?: SpeechRecognitionCtor
+        }).SpeechRecognition
+            ?? (window as Window & {
+                SpeechRecognition?: SpeechRecognitionCtor
+                webkitSpeechRecognition?: SpeechRecognitionCtor
+            }).webkitSpeechRecognition
+
+        if (!SpeechApi)
+            return
+
+        const recognition = new SpeechApi()
+        recognition.lang = 'en-US'
+        recognition.interimResults = true
+        recognition.continuous = false
+
+        recognition.onresult = event => {
+            let transcript = ''
+            for (let i = 0; i < event.results.length; i += 1) {
+                const chunk = event.results[i]
+                transcript += chunk?.[0]?.transcript ?? ''
+            }
+            const next = transcript.trim()
+            if (!next)
+                return
+            setInputValue(prev => {
+                if (!prev.trim())
+                    return next
+                return `${prev.trim()} ${next}`.trim()
+            })
+        }
+        recognition.onerror = () => {
+            setIsListening(false)
+        }
+        recognition.onend = () => {
+            setIsListening(false)
+        }
+        recognitionRef.current = recognition
+        setIsListening(true)
+        recognition.start()
+    }
+
     return createPortal(
         <div
             ref={dropdownRef}
             className="fixed z-[var(--z-modal)] w-[424px] bg-white border border-[var(--color-gray-4)] rounded-[var(--radius-2xl)] shadow-[0_24px_80px_rgba(0,0,0,0.10),0_8px_24px_rgba(0,0,0,0.06)] animate-[notif-dropdown-in_0.22s_cubic-bezier(0.16,1,0.3,1)] origin-top-left p-[var(--spacing-5)] flex flex-col gap-[var(--spacing-5)]"
             style={dropdownStyle}
         >
-            <style>{`.ap-dropdown .chat-input::placeholder { color: transparent; }`}</style>
+            <style>{`
+                .ap-dropdown .chat-input::placeholder { color: transparent; }
+                @keyframes ap-mic-pulse {
+                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 91, 226, 0.30); }
+                    70% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(0, 91, 226, 0); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 91, 226, 0); }
+                }
+            `}</style>
             <div className="ap-dropdown flex flex-col gap-[var(--spacing-5)]">
                 <div className="flex items-start gap-4">
                     <img className="w-[52px] h-[52px] rounded-full shrink-0" src={fojoMascotSmall} alt="Fojo" />
@@ -226,9 +308,31 @@ export function ActionPromptDropdown({ action, contextName: _contextName, anchor
                         />
                     </div>
                     <div className="flex mt-[var(--spacing-4)] w-full items-center justify-between">
-                        <button className="p-[6px] rounded-[var(--radius-md)] flex items-center transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]" onClick={handleAttach} title="Attach documents">
-                            <IconPaperclip size={18} stroke={2} color="var(--color-neutral-11)" />
-                        </button>
+                        <div className="flex items-center gap-[var(--spacing-1)]">
+                            <button
+                                className="p-[6px] rounded-[var(--radius-md)] flex items-center transition-[background] duration-150 hover:bg-[var(--color-neutral-3)]"
+                                onClick={handleAttach}
+                                title="Attach documents"
+                                type="button"
+                            >
+                                <IconPaperclip size={18} stroke={2} color="var(--color-neutral-11)" />
+                            </button>
+                            <button
+                                className={`p-[6px] rounded-[var(--radius-md)] flex items-center transition-[background,color] duration-150 hover:bg-[var(--color-neutral-3)] ${isListening ? 'bg-[var(--color-accent-3)] text-[var(--color-accent-9)]' : ''}`}
+                                type="button"
+                                aria-label="Voice input"
+                                title={speechSupported ? (isListening ? 'Stop voice input' : 'Start voice input') : 'Voice input not supported in this browser'}
+                                onClick={handleVoiceToggle}
+                                disabled={!speechSupported}
+                                style={isListening ? { animation: 'ap-mic-pulse 1.2s ease-in-out infinite' } : undefined}
+                            >
+                                <IconMicrophone
+                                    size={18}
+                                    stroke={2}
+                                    color={isListening ? 'var(--color-accent-9)' : 'var(--color-neutral-11)'}
+                                />
+                            </button>
+                        </div>
                         <button
                             className="flex items-center justify-center gap-[var(--spacing-1)] rounded-[var(--radius-md)] border border-[var(--color-accent-9)] bg-[var(--color-accent-9)] min-h-[32px] px-3.5 py-[4px] text-[13px] font-[var(--font-weight-semibold)] leading-[1.43] text-[var(--color-accent-contrast)] transition-[background,transform,color,border-color,opacity] duration-150 ease-linear hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                             disabled={!canSubmit}

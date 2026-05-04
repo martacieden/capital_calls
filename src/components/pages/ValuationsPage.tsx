@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
     IconCurrencyDollar,
     IconListDetails,
@@ -20,10 +20,13 @@ import { TopSectorsChart } from '@/components/atoms/TopSectorsChart'
 import { GeoExposureChart } from '@/components/atoms/GeoExposureChart'
 import {
     ESTATE_KPIS,
+    CATEGORY_LABELS,
     getTopHoldings,
     getTopSectors,
     getCountryExposure,
+    getGeoExposure,
     INVESTABLE_CATALOG_TOTAL,
+    assetMatchesGeoKey,
 } from '@/data/thornton/valuations-data'
 import { PortfolioAllocationChart, type PortfolioAllocationSlice } from '@/components/atoms/PortfolioAllocationChart'
 import {
@@ -44,11 +47,13 @@ import {
 import { showToast } from '@/components/atoms/Toast'
 import { IconCircleCheckFilled, IconClock, IconPlayerPlay } from '@tabler/icons-react'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
+import { thorntonAssets } from '@/data/thornton/assets'
 
 interface ValuationsPageProps {
     items: AnyCatalogItem[]
     isV3Processing?: boolean
     isChatOpen?: boolean
+    lockedMode?: 'all' | 'private'
     onNavigateToCatalogCategory: (categories: string[]) => void
     onOpenPortfolioCategory: (portfolioCategoryId: string) => void
     onNavigateToAsset?: (id: string) => void
@@ -158,6 +163,7 @@ const PRIVATE_ONLY_KEYS = ['investment'] as const
 
 export function ValuationsPage({
     isV3Processing,
+    lockedMode,
     onNavigateToCatalogCategory,
     onOpenPortfolioCategory,
     onNavigateToAsset,
@@ -165,7 +171,10 @@ export function ValuationsPage({
     onNavigateToTimeline,
 }: ValuationsPageProps) {
     const [activeSector, setActiveSector] = useState<string | null>(null)
-    const [portfolioMode, setPortfolioMode] = useState<'all' | 'private'>('all')
+    const [activeGeoKey, setActiveGeoKey] = useState<string | null>(null)
+    const [geoDrillRoot, setGeoDrillRoot] = useState<string | null>(null)
+    const [activeGeoCategory, setActiveGeoCategory] = useState<string | null>(null)
+    const [portfolioMode, setPortfolioMode] = useState<'all' | 'private'>(lockedMode ?? 'all')
 
     const isPrivate = portfolioMode === 'private'
 
@@ -238,14 +247,107 @@ export function ValuationsPage({
         [isPrivate],
     )
 
-    const geoData = useMemo(
+    const baseGeoData = useMemo(
         () => isPrivate ? getCountryExposure([...PRIVATE_ONLY_KEYS]) : PORTFOLIO_OVERVIEW_GEO,
         [isPrivate],
     )
+    const subGeoData = useMemo(() => {
+        if (!geoDrillRoot) return []
+        const full = isPrivate ? getGeoExposure([...PRIVATE_ONLY_KEYS]) : getGeoExposure([])
+        if (geoDrillRoot === 'ROW|United States') {
+            return full
+                .filter(row => row.geoKey.startsWith('US|') && row.geoKey !== 'US|__')
+                .sort((a, b) => b.value - a.value)
+        }
+        if (geoDrillRoot === 'CA|__') {
+            return full
+                .filter(row => row.geoKey.startsWith('CA|') && row.geoKey !== 'CA|__')
+                .sort((a, b) => b.value - a.value)
+        }
+        return []
+    }, [geoDrillRoot, isPrivate])
+    const geoData = geoDrillRoot && subGeoData.length > 0 ? subGeoData : baseGeoData
+    const effectiveGeoKey = activeGeoKey ?? geoDrillRoot
+    const activeGeoLabel = useMemo(
+        () =>
+            geoData.find(g => g.geoKey === effectiveGeoKey)?.label
+            ?? baseGeoData.find(g => g.geoKey === effectiveGeoKey)?.label
+            ?? null,
+        [baseGeoData, effectiveGeoKey, geoData],
+    )
+    const activeGeoItemCount = useMemo(
+        () =>
+            geoData.find(g => g.geoKey === effectiveGeoKey)?.count
+            ?? baseGeoData.find(g => g.geoKey === effectiveGeoKey)?.count
+            ?? 0,
+        [baseGeoData, effectiveGeoKey, geoData],
+    )
+
+    const geoFilteredAssets = useMemo(() => {
+        return thorntonAssets
+            .filter(asset => asset.categoryKey !== 'insurance')
+            .filter(asset => !isPrivate || asset.categoryKey === 'investment')
+            .filter(asset => assetMatchesGeoKey(asset, effectiveGeoKey))
+    }, [effectiveGeoKey, isPrivate])
+
+    const geoCategoryRows = useMemo(() => {
+        const totals: Record<string, { value: number; count: number }> = {}
+        for (const asset of geoFilteredAssets) {
+            const key = asset.categoryKey
+            if (!totals[key]) {
+                totals[key] = { value: 0, count: 0 }
+            }
+            totals[key].value += asset.value ?? 0
+            totals[key].count += 1
+        }
+        return Object.entries(totals)
+            .map(([categoryKey, stats]) => ({
+                categoryKey,
+                label: CATEGORY_LABELS[categoryKey] ?? categoryKey,
+                value: stats.value,
+                count: stats.count,
+            }))
+            .sort((a, b) => b.value - a.value)
+    }, [geoFilteredAssets])
+
+    const geoAssetRows = useMemo(() => {
+        return geoFilteredAssets
+            .filter(asset => !activeGeoCategory || asset.categoryKey === activeGeoCategory)
+            .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+    }, [activeGeoCategory, geoFilteredAssets])
+
+    useEffect(() => {
+        if (!effectiveGeoKey) {
+            if (activeGeoCategory) setActiveGeoCategory(null)
+            return
+        }
+        const isActiveGeoVisible =
+            geoData.some(row => row.geoKey === effectiveGeoKey)
+            || baseGeoData.some(row => row.geoKey === effectiveGeoKey)
+        if (!isActiveGeoVisible) {
+            setActiveGeoKey(null)
+            setGeoDrillRoot(null)
+            setActiveGeoCategory(null)
+        }
+    }, [activeGeoCategory, baseGeoData, effectiveGeoKey, geoData])
+
+    useEffect(() => {
+        setActiveGeoCategory(null)
+    }, [effectiveGeoKey])
+
+    useEffect(() => {
+        if (!geoDrillRoot) return
+        if (activeGeoKey) return
+        if (subGeoData.length === 0) return
+        // Auto-focus the largest split area to continue drilldown without extra click.
+        setActiveGeoKey(subGeoData[0]!.geoKey)
+    }, [activeGeoKey, geoDrillRoot, subGeoData])
 
     const holdingsSubtitle = activeSector
         ? `Largest positions in ${activeSector}`
-        : 'Largest positions by value across all categories'
+        : isPrivate
+            ? 'Largest private investment positions by value'
+            : 'Largest positions by value across all categories'
 
     const handleSectorClick = (sector: string) => {
         setActiveSector(prev => prev === sector ? null : sector)
@@ -256,12 +358,41 @@ export function ValuationsPage({
         if (!categoryId) return
         onOpenPortfolioCategory(categoryId)
     }
+    const handleGeoClick = (geoKey: string) => {
+        const canDrillToSubregions = geoKey === 'ROW|United States' || geoKey === 'CA|__'
+        if (!geoDrillRoot && canDrillToSubregions) {
+            setGeoDrillRoot(geoKey)
+            setActiveGeoKey(null)
+            return
+        }
+        if (activeGeoKey === geoKey) {
+            setActiveGeoKey(null)
+            return
+        }
+        setActiveGeoKey(geoKey)
+    }
 
-    // Net worth calculation
-    const totalAssets = INVESTABLE_CATALOG_TOTAL
-    const totalLiabilities = Math.round(totalAssets * MOCK_LIABILITIES_RATIO)
-    const netWorth = totalAssets - totalLiabilities
-    const netWorthPct = Math.round((netWorth / totalAssets) * 100)
+    const privateInvestmentAssets = useMemo(
+        () => thorntonAssets.filter(a => a.categoryKey === 'investment'),
+        [],
+    )
+
+    const portfolioNetWorth = useMemo(() => {
+        const totalAssets = isPrivate
+            ? privateInvestmentAssets.reduce((s, a) => s + (a.value ?? 0), 0)
+            : INVESTABLE_CATALOG_TOTAL
+        const totalLiabilities = Math.round(totalAssets * MOCK_LIABILITIES_RATIO)
+        const netWorth = totalAssets - totalLiabilities
+        const netWorthPct = totalAssets > 0 ? Math.round((netWorth / totalAssets) * 100) : 0
+        return { totalAssets, totalLiabilities, netWorth, netWorthPct }
+    }, [isPrivate, privateInvestmentAssets])
+
+    const { totalAssets, totalLiabilities, netWorth, netWorthPct } = portfolioNetWorth
+
+    const kpiPrivateHoldingsCount = privateInvestmentAssets.length
+    const kpiPrivateActiveEntities = useMemo(() => {
+        return new Set(privateInvestmentAssets.map(a => a.holderId).filter(Boolean)).size
+    }, [privateInvestmentAssets])
 
     // Concentration: top 5 holdings as % of portfolio
     const top5Holdings = useMemo(
@@ -355,7 +486,7 @@ export function ValuationsPage({
         return (
             <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
                 <div className="flex w-full flex-col p-0">
-                    <ContentHeader title="Portfolio" />
+                    <ContentHeader title={lockedMode === 'private' ? 'Private Investments' : 'Portfolio'} />
                 </div>
                 <div className="v3-empty-state">
                     <img className="v3-empty-state__icon" src={fojoMascotSmall} alt="Fojo" />
@@ -368,32 +499,36 @@ export function ValuationsPage({
 
     return (
         <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)] pt-9 pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto flex-1">
-            <div className="flex w-full items-center justify-between p-0">
-                <ContentHeader title="Portfolio" />
-                <div className="flex items-center gap-0.5 p-0.5 bg-[var(--color-neutral-3)] rounded-[var(--radius-md)]">
-                    <button
-                        type="button"
-                        onClick={() => { setPortfolioMode('all'); setActiveSector(null) }}
-                        className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium leading-4 transition-all ${
-                            portfolioMode === 'all'
-                                ? 'bg-white text-[var(--color-black)] shadow-sm'
-                                : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
-                        }`}
-                    >
-                        All Assets
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => { setPortfolioMode('private'); setActiveSector(null) }}
-                        className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium leading-4 transition-all ${
-                            portfolioMode === 'private'
-                                ? 'bg-white text-[var(--color-black)] shadow-sm'
-                                : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
-                        }`}
-                    >
-                        Private Investments
-                    </button>
+            <div className="flex w-full items-center justify-between gap-3 p-0 min-w-0">
+                <div className="min-w-0 flex-1">
+                    <ContentHeader title={lockedMode === 'private' ? 'Private Investments' : 'Portfolio'} />
                 </div>
+                {!lockedMode && (
+                    <div className="flex shrink-0 items-center gap-0.5 p-0.5 bg-[var(--color-neutral-3)] rounded-[var(--radius-md)]">
+                        <button
+                            type="button"
+                            onClick={() => { setPortfolioMode('all'); setActiveSector(null) }}
+                            className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium leading-4 whitespace-nowrap transition-all ${
+                                portfolioMode === 'all'
+                                    ? 'bg-white text-[var(--color-black)] shadow-sm'
+                                    : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
+                            }`}
+                        >
+                            All Assets
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setPortfolioMode('private'); setActiveSector(null) }}
+                            className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[12px] font-medium leading-4 whitespace-nowrap transition-all ${
+                                portfolioMode === 'private'
+                                    ? 'bg-white text-[var(--color-black)] shadow-sm'
+                                    : 'text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)]'
+                            }`}
+                        >
+                            Private Investments
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Net Worth summary bar */}
@@ -401,7 +536,11 @@ export function ValuationsPage({
                 <div className="flex items-center justify-between mb-3">
                     <div>
                         <span className="text-sm font-semibold text-[var(--color-black)]">Net Worth</span>
-                        <span className="ml-2 text-xs text-[var(--color-neutral-10)]">Assets − estimated liabilities</span>
+                        <span className="ml-2 text-xs text-[var(--color-neutral-10)]">
+                            {isPrivate
+                                ? 'Private investments − estimated liabilities (proportional)'
+                                : 'Assets − estimated liabilities'}
+                        </span>
                     </div>
                     <span className="text-base font-bold text-[var(--color-black)] tabular-nums">{formatValue(netWorth)}</span>
                 </div>
@@ -412,7 +551,11 @@ export function ValuationsPage({
                     />
                 </div>
                 <div className="flex justify-between mt-2 text-[11px] text-[var(--color-neutral-10)] tabular-nums">
-                    <span>Total assets: {formatValue(totalAssets)}</span>
+                    <span>
+                        {isPrivate ? 'Private investments (NAV):' : 'Total assets:'}
+                        {' '}
+                        {formatValue(totalAssets)}
+                    </span>
                     <span>Liabilities (est.): {formatValue(totalLiabilities)}</span>
                 </div>
             </div>
@@ -435,23 +578,23 @@ export function ValuationsPage({
                 {/* KPI 2x2 grid */}
                 <div className="grid grid-cols-2 grid-rows-2 gap-3 w-[340px] shrink-0">
                     <KpiStatCard
-                        label="Total Estate Value"
-                        value={formatValue(ESTATE_KPIS.totalValue)}
+                        label={isPrivate ? 'Private investments (NAV)' : 'Total Estate Value'}
+                        value={formatValue(isPrivate ? totalAssets : ESTATE_KPIS.totalValue)}
                         icon={IconCurrencyDollar}
                     />
                     <KpiStatCard
-                        label="Total Assets"
-                        value={String(ESTATE_KPIS.totalAssets)}
+                        label={isPrivate ? 'Holdings' : 'Total Assets'}
+                        value={String(isPrivate ? kpiPrivateHoldingsCount : ESTATE_KPIS.totalAssets)}
                         icon={IconListDetails}
-                        onClick={() => onNavigateToCatalogCategory([])}
+                        onClick={() => onNavigateToCatalogCategory(isPrivate ? ['investment'] : [])}
                     />
                     <KpiStatCard
-                        label="Active Entities"
-                        value={String(ESTATE_KPIS.activeEntities)}
+                        label={isPrivate ? 'Related entities' : 'Active Entities'}
+                        value={String(isPrivate ? kpiPrivateActiveEntities : ESTATE_KPIS.activeEntities)}
                         icon={IconBuildingBank}
                     />
                     <KpiStatCard
-                        label="YTD Performance"
+                        label={isPrivate ? 'YTD (full portfolio)' : 'YTD Performance'}
                         value={`+${ESTATE_KPIS.ytdPerformance}%`}
                         icon={IconTrendingUp}
                         badge={{ text: 'On track', positive: true }}
@@ -491,7 +634,111 @@ export function ValuationsPage({
                 <div className="mb-4">
                     <h2 className="text-[16px] font-[var(--font-weight-semibold)] text-[var(--color-black)]">Geographic Exposure</h2>
                 </div>
-                <GeoExposureChart data={geoData} legendColumns={1} />
+                <GeoExposureChart
+                    data={geoData}
+                    legendColumns={1}
+                    activeGeoKey={activeGeoKey}
+                    onGeoClick={handleGeoClick}
+                />
+                <div className="mt-4 border-t border-[var(--color-neutral-4)] pt-4">
+                    {!effectiveGeoKey ? (
+                        <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">
+                            Click a country or region to drill down into categories and specific assets.
+                        </p>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--color-neutral-9)]">
+                                    Drilldown
+                                </span>
+                                <span className="text-[12px] text-[var(--color-neutral-9)]">Geo:</span>
+                                <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-neutral-11)]">
+                                    {activeGeoLabel ?? activeGeoKey}
+                                </span>
+                                {activeGeoCategory ? (
+                                    <>
+                                        <span className="text-[12px] text-[var(--color-neutral-9)]">Category:</span>
+                                        <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-neutral-11)]">
+                                            {CATEGORY_LABELS[activeGeoCategory] ?? activeGeoCategory}
+                                        </span>
+                                    </>
+                                ) : null}
+                                {geoDrillRoot ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setGeoDrillRoot(null)
+                                            setActiveGeoKey(null)
+                                        }}
+                                        className="ml-auto text-[11px] font-medium text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-11)] hover:underline underline-offset-2"
+                                    >
+                                        Back to countries
+                                    </button>
+                                ) : null}
+                            </div>
+                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
+                                {activeGeoItemCount} item{activeGeoItemCount === 1 ? '' : 's'} in selected geography. Click category to go deeper.
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                <div className="rounded-lg border border-[var(--color-neutral-4)] p-2.5">
+                                    <p className="m-0 mb-1.5 text-[12px] font-semibold text-[var(--color-neutral-11)]">
+                                        Step 2: Categories in this geography
+                                    </p>
+                                    <div className="flex flex-col gap-1">
+                                        {geoCategoryRows.map(row => (
+                                            <button
+                                                key={row.categoryKey}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (activeGeoCategory === row.categoryKey) {
+                                                        setActiveGeoCategory(null)
+                                                        return
+                                                    }
+                                                    setActiveGeoCategory(row.categoryKey)
+                                                }}
+                                                className={`flex items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors ${
+                                                    activeGeoCategory === row.categoryKey
+                                                        ? 'bg-[var(--color-neutral-3)]'
+                                                        : 'hover:bg-[var(--color-neutral-2)]'
+                                                }`}
+                                            >
+                                                <span className="text-[12px] text-[var(--color-black)]">{row.label}</span>
+                                                <span className="text-[11px] text-[var(--color-neutral-10)] tabular-nums">
+                                                    {formatValue(row.value)} · {row.count}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="rounded-lg border border-[var(--color-neutral-4)] p-2.5">
+                                    <p className="m-0 mb-1.5 text-[12px] font-semibold text-[var(--color-neutral-11)]">
+                                        Step 3: Specific assets
+                                    </p>
+                                    <div className="flex flex-col gap-1 max-h-[248px] overflow-auto pr-0.5">
+                                        {geoAssetRows.slice(0, 12).map(asset => (
+                                            <button
+                                                key={asset.id}
+                                                type="button"
+                                                onClick={() => onNavigateToAsset?.(asset.id)}
+                                                className="flex items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[var(--color-neutral-2)]"
+                                            >
+                                                <span className="truncate text-[12px] text-[var(--color-black)]">{asset.name}</span>
+                                                <span className="shrink-0 text-[11px] text-[var(--color-neutral-10)] tabular-nums">
+                                                    {formatValue(asset.value ?? 0)}
+                                                </span>
+                                            </button>
+                                        ))}
+                                        {geoAssetRows.length === 0 ? (
+                                            <p className="m-0 px-2 py-1 text-[11px] text-[var(--color-neutral-9)]">
+                                                No assets in this filter.
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Upcoming Cashflows + Asset Lifecycle — side by side */}
@@ -632,7 +879,7 @@ export function ValuationsPage({
             </div>
 
             {/* Capital Call Commitments */}
-            <CapitalCallsSection />
+            <CapitalCallsSection onNavigateToTimeline={onNavigateToTimeline} />
 
         </div>
     )
@@ -651,9 +898,27 @@ function fmtIsoDate(iso: string): string {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function CapitalCallsSection() {
+const FUND_CALL_COLORS: Record<string, string> = {
+    'whitmore-capital-i': '#059669',
+    'whitmore-ventures-ii': '#8B5CF6',
+    'whitmore-real-assets-iii': '#005BE2',
+}
+
+function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: () => void }) {
     const totalRemaining = getTotalRemaining(CAPITAL_CALL_COMMITMENTS)
     const totalCommitted = CAPITAL_CALL_COMMITMENTS.reduce((s, c) => s + c.totalCommitment, 0)
+
+    const paidCallCount = CAPITAL_CALL_COMMITMENTS.reduce(
+        (n, c) => n + c.calls.filter(call => call.status === 'paid').length, 0
+    )
+
+    const activeCalls = CAPITAL_CALL_COMMITMENTS
+        .flatMap(commitment =>
+            commitment.calls
+                .filter(c => c.status !== 'paid')
+                .map(call => ({ call, commitment }))
+        )
+        .sort((a, b) => a.call.dueDate.localeCompare(b.call.dueDate))
 
     return (
         <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 w-full">
@@ -677,77 +942,141 @@ function CapitalCallsSection() {
                 Uncalled capital obligations across active fund commitments
             </p>
 
-            <div className="flex flex-col gap-3">
+            {/* Horizontal scrollable call timeline */}
+            <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] mb-4 -mx-1 px-1">
+                <div className="flex items-stretch gap-2.5" style={{ minWidth: 'max-content' }}>
+
+                    {/* Paid summary pill */}
+                    {paidCallCount > 0 && (
+                        <div className="flex flex-col justify-center items-center w-[60px] shrink-0 rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-[var(--color-neutral-2)] px-2 py-3 gap-0.5">
+                            <span className="text-[20px] font-bold text-[var(--color-neutral-7)] leading-none tabular-nums">{paidCallCount}</span>
+                            <span className="text-[10px] text-[var(--color-neutral-7)] font-medium leading-tight text-center">paid</span>
+                        </div>
+                    )}
+
+                    {/* Now divider */}
+                    <div className="flex flex-col items-center w-5 shrink-0 self-stretch py-1 gap-0.5">
+                        <div className="flex-1 w-px bg-[var(--color-accent-9)] opacity-40" />
+                        <span className="font-display text-[8px] font-[800] uppercase tracking-[0.06em] text-white bg-[var(--color-accent-9)] px-1.5 py-[2px] rounded-full whitespace-nowrap select-none leading-tight">
+                            Now
+                        </span>
+                        <div className="flex-1 w-px bg-[var(--color-accent-9)] opacity-40" />
+                    </div>
+
+                    {/* Active call cards */}
+                    {activeCalls.map(({ call, commitment }) => {
+                        const color = FUND_CALL_COLORS[commitment.id] ?? '#6366F1'
+                        const meta = STATUS_META[call.status]
+                        const daysLeft = daysUntilIsoDate(call.dueDate)
+                        const isDueSoon = daysLeft != null && daysLeft <= 60
+
+                        return (
+                            <div
+                                key={call.id}
+                                className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] w-[176px] shrink-0 overflow-hidden shadow-sm hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all cursor-default"
+                            >
+                                <div className="h-[3px] w-full shrink-0" style={{ background: color }} />
+                                <div className="flex flex-col px-3 py-2.5 gap-1 flex-1">
+                                    <div className="flex items-center justify-between gap-1">
+                                        <span className="text-[11px] font-semibold text-[var(--color-neutral-10)] truncate leading-tight">
+                                            {commitment.fundName.replace('Whitmore ', '')}
+                                        </span>
+                                        <span className="text-[10px] text-[var(--color-neutral-7)] shrink-0 tabular-nums">#{call.callNumber}</span>
+                                    </div>
+                                    <div className="font-display text-[17px] font-bold text-[var(--color-black)] tabular-nums leading-none mt-0.5">
+                                        {formatValue(call.amount)}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-[11px] text-[var(--color-neutral-9)]">{fmtIsoDate(call.dueDate)}</span>
+                                        {isDueSoon && daysLeft != null && (
+                                            <span className="inline-flex items-center rounded bg-[rgba(245,158,11,0.14)] px-1 py-px text-[9px] font-semibold text-[#B45309] whitespace-nowrap">
+                                                {daysLeft}d
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-auto pt-1.5">
+                                        <span
+                                            className="inline-flex items-center rounded px-1.5 py-px text-[10px] font-semibold"
+                                            style={{ color: meta?.color, background: meta?.bg }}
+                                        >
+                                            {meta?.label}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => showToast(`Task created — ${commitment.fundName} Call #${call.callNumber}`, 'success')}
+                                            className="text-[10px] font-medium text-[var(--color-neutral-8)] hover:text-[var(--color-accent-9)] transition-colors"
+                                        >
+                                            + Task
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-[var(--color-neutral-3)] mb-4" />
+
+            {/* Compact fund progress rows */}
+            <div className="flex flex-col gap-2.5">
                 {CAPITAL_CALL_COMMITMENTS.map(commitment => {
                     const called = getTotalCalled(commitment)
                     const remaining = commitment.totalCommitment - called
                     const calledPct = commitment.totalCommitment > 0 ? (called / commitment.totalCommitment) * 100 : 0
+                    const color = FUND_CALL_COLORS[commitment.id] ?? '#6366F1'
                     const nextCall = getNextCall(commitment)
-                    const activeCalls = commitment.calls.filter(c => c.status !== 'paid')
 
                     return (
-                        <div key={commitment.id} className="border border-[var(--color-neutral-3)] rounded-[var(--radius-lg)] p-4">
-                            {/* Fund header */}
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[13px] font-semibold text-[var(--color-black)]">{commitment.fundName}</span>
-                                        <span className="inline-flex items-center rounded px-1.5 py-px text-[10px] font-semibold"
-                                            style={{ color: '#6366F1', background: 'rgba(99,102,241,0.1)' }}>
-                                            {commitment.fundType}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-[var(--color-neutral-9)] tabular-nums">
-                                        <span>{formatValue(called)} called of {formatValue(commitment.totalCommitment)}</span>
-                                        <span className="text-[#EF4444] font-medium">{formatValue(remaining)} remaining</span>
-                                    </div>
-                                </div>
-                                {nextCall && (
-                                    <button
-                                        type="button"
-                                        onClick={() => showToast(`Task created for ${commitment.fundName} — Call #${nextCall.callNumber}`, 'success')}
-                                        className="shrink-0 inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
-                                    >
-                                        + Create Task
-                                    </button>
-                                )}
+                        <div key={commitment.id} className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 w-[200px] shrink-0 min-w-0">
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                                <span className="text-[12px] font-semibold text-[var(--color-neutral-11)] truncate">
+                                    {commitment.fundName.replace('Whitmore ', '')}
+                                </span>
+                                <span
+                                    className="inline-flex items-center rounded px-1 py-px text-[10px] font-semibold shrink-0"
+                                    style={{ color: '#6366F1', background: 'rgba(99,102,241,0.1)' }}
+                                >
+                                    {commitment.fundType}
+                                </span>
                             </div>
-
-                            {/* Progress bar */}
-                            <div className="relative h-1.5 w-full rounded-full bg-[var(--color-neutral-3)] overflow-hidden mb-3">
+                            <div className="flex-1 relative h-1.5 rounded-full bg-[var(--color-neutral-3)] overflow-hidden">
                                 <div
                                     className="absolute left-0 top-0 h-full rounded-full transition-all"
-                                    style={{ width: `${calledPct}%`, background: '#8B5CF6' }}
+                                    style={{ width: `${calledPct}%`, background: color }}
                                 />
                             </div>
-
-                            {/* Upcoming / pending calls */}
-                            {activeCalls.length > 0 && (
-                                <div className="flex flex-col gap-1">
-                                    {activeCalls.map(call => {
-                                        const meta = STATUS_META[call.status]
-                                        return (
-                                            <div key={call.id} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 -mx-2 hover:bg-[var(--color-neutral-2)] transition-colors">
-                                                <meta.Icon size={13} style={{ color: meta.color, flexShrink: 0 }} />
-                                                <span className="text-[12px] text-[var(--color-neutral-10)] tabular-nums w-24 shrink-0">
-                                                    {fmtIsoDate(call.dueDate)}
-                                                </span>
-                                                <span className="text-[12px] font-medium text-[var(--color-black)] tabular-nums">
-                                                    {formatValue(call.amount)}
-                                                </span>
-                                                <span className="ml-auto inline-flex items-center rounded px-1.5 py-px text-[10px] font-semibold"
-                                                    style={{ color: meta.color, background: meta.bg }}>
-                                                    {meta.label}
-                                                </span>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
+                            <span className="text-[11px] tabular-nums text-[var(--color-neutral-9)] shrink-0">
+                                {formatValue(called)} / {formatValue(commitment.totalCommitment)}
+                            </span>
+                            <span className="text-[11px] font-semibold text-[#EF4444] tabular-nums shrink-0">
+                                {formatValue(remaining)} left
+                            </span>
+                            {nextCall && (
+                                <button
+                                    type="button"
+                                    onClick={() => showToast(`Task created for ${commitment.fundName} — Call #${nextCall.callNumber}`, 'success')}
+                                    className="shrink-0 inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                                >
+                                    + Create Task
+                                </button>
                             )}
                         </div>
                     )
                 })}
             </div>
+
+            {onNavigateToTimeline && (
+                <button
+                    type="button"
+                    onClick={onNavigateToTimeline}
+                    className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-neutral-9)] hover:text-[var(--color-neutral-11)] transition-colors"
+                >
+                    View full timeline <IconChevronRight size={13} />
+                </button>
+            )}
         </div>
     )
 }

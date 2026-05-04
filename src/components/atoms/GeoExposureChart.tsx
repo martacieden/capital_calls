@@ -190,6 +190,7 @@ type ChoroplethRow = {
     geoKey: string
     label: string
     percentage: number
+    count: number
 }
 
 function filterAntarctica(features: Feature[]): Feature[] {
@@ -345,6 +346,7 @@ function buildSubnationalChoroplethRows(
                     geoKey: item.geoKey,
                     label: item.label,
                     percentage: item.percentage,
+                    count: item.count,
                 })
                 continue
             }
@@ -360,6 +362,7 @@ function buildSubnationalChoroplethRows(
                 geoKey: item.geoKey,
                 label: item.label,
                 percentage: item.percentage,
+                count: item.count,
             })
             continue
         }
@@ -372,6 +375,7 @@ function buildSubnationalChoroplethRows(
                     geoKey: item.geoKey,
                     label: item.label,
                     percentage: item.percentage,
+                    count: item.count,
                 })
                 continue
             }
@@ -384,6 +388,7 @@ function buildSubnationalChoroplethRows(
                 geoKey: item.geoKey,
                 label: item.label,
                 percentage: item.percentage,
+                count: item.count,
             })
             continue
         }
@@ -401,6 +406,7 @@ function buildSubnationalChoroplethRows(
             geoKey: item.geoKey,
             label: item.label,
             percentage: item.percentage,
+            count: item.count,
         })
     }
 
@@ -637,7 +643,7 @@ export function GeoExposureChart({
             && projectionFeaturesForFit === regionZoomSubset
         if (regionFramed)
             return Math.round(
-                m * Math.min(regionZoomSubset.length <= 4 ? 0.32 : 0.22, 0.42),
+                m * Math.min(regionZoomSubset.length <= 4 ? 0.2 : 0.14, 0.32),
             )
         const portfolioFramed =
             extentMode === 'portfolio' && portfolioSubset.length > 0
@@ -670,18 +676,22 @@ export function GeoExposureChart({
 
     const focusGeoOnChart = useCallback(
         (geoKey: string) => {
+            const hadFocusedRegion = regionFocusGeoKey != null
             const row = choroplethData.find(r => r.geoKey === geoKey)
             const feats = row ? featuresForPortfolioIds(mergedGeoFeatures, [row]) : []
             if (feats.length > 0) {
                 setRegionFocusGeoKey(geoKey)
                 setZoomMultiplier(z =>
-                    Math.min(MAP_ZOOM_MAX, +(z * ZOOM_STEP).toFixed(4)),
+                    Math.min(
+                        MAP_ZOOM_MAX,
+                        +(z * (hadFocusedRegion ? ZOOM_STEP : 1.08)).toFixed(4),
+                    ),
                 )
                 setPanOffsetPx({ x: 0, y: 0 })
             }
             onGeoClick?.(geoKey)
         },
-        [choroplethData, mergedGeoFeatures, onGeoClick],
+        [choroplethData, mergedGeoFeatures, onGeoClick, regionFocusGeoKey],
     )
 
     const zoomInOneStep = useCallback(() => {
@@ -965,6 +975,9 @@ export function GeoExposureChart({
                                         {formatValue(row.value)}
                                         {' · '}
                                         {row.percentage}%
+                                    </div>
+                                    <div className="text-[11px] text-[var(--color-neutral-9)] mt-0.5">
+                                        {row.count} item{row.count === 1 ? '' : 's'} in this area
                                     </div>
                                 </div>
                             )
