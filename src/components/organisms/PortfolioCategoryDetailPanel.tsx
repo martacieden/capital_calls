@@ -243,7 +243,6 @@ function holdingSearchHaystack(h: PortfolioHolding, categoryId: string): string 
 export function PortfolioCategoryDetailContent({
     categoryId,
     onNavigateToAsset,
-    onContactAction,
     geoLegendColumns = 2,
     variant = 'panel',
     subcategoryKeys: controlledSubKeys,

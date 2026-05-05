@@ -325,13 +325,6 @@ export function ValuationsPage({
     }, [privateInvestmentAssets])
 
     // Concentration: top 5 holdings as % of portfolio
-    const top5Holdings = useMemo(
-        () => getTopHoldings(isPrivate ? [...PRIVATE_ONLY_KEYS] : [], 5),
-        [isPrivate],
-    )
-    const top5Value = top5Holdings.reduce((s, h) => s + h.value, 0)
-    const top5Pct = currentDisplayTotal > 0 ? Math.round((top5Value / currentDisplayTotal) * 100) : 0
-
     const visibleCashflowEvents = useMemo(
         () => isPrivate ? CASHFLOW_EVENTS.filter(ev => ev.type === 'Investment') : CASHFLOW_EVENTS,
         [isPrivate],
