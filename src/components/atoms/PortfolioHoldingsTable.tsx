@@ -56,11 +56,42 @@ function HoldingThumb({ holding }: { holding: PortfolioHolding }) {
 }
 
 function holdingsDetailCell(h: PortfolioHolding, categoryId?: string): string {
-    if (categoryId === 'private-investments') {
-        const parts = [h.manager, h.vintage ? `Vintage ${h.vintage}` : null].filter(Boolean)
-        return parts.join(' · ') || '—'
+    const trimmedLocation = h.location?.trim()
+    const trimmedManager = h.manager?.trim()
+    const trimmedVintage = h.vintage?.trim()
+
+    const mockPrivateManagerByType: Record<string, string> = {
+        'Private Equity': 'Whitmore Capital Partners',
+        'Venture Capital': 'Whitmore Ventures',
+        'Real Assets': 'Whitmore Real Assets',
+        'Private Debt': 'Whitmore Credit Partners',
     }
-    return (h.location ?? h.manager ?? h.vintage ?? '—').trim()
+
+    if (categoryId === 'private-investments') {
+        const parts = [trimmedManager, trimmedVintage ? `Vintage ${trimmedVintage}` : null].filter(Boolean)
+        if (parts.length > 0) return parts.join(' · ')
+
+        // Mock fallback so private holdings table never shows an empty dash in this column.
+        const mockManager = mockPrivateManagerByType[h.type] ?? 'Whitmore Advisory'
+        const mockVintage = h.id === 'thn-a15' ? '2019' : h.id === 'thn-a42' ? '2020' : '2021'
+        return `${mockManager} · Vintage ${mockVintage}`
+    }
+
+    if (trimmedLocation) return trimmedLocation
+    if (trimmedManager) return trimmedManager
+    if (trimmedVintage) return `Vintage ${trimmedVintage}`
+
+    // Generic fallback for categories where source data does not include detail fields.
+    const mockDetailsByType: Record<string, string> = {
+        Maritime: 'Monaco · Dock A-12',
+        Aviation: 'London · Hangar 3',
+        Vehicles: 'Zurich · Secured storage',
+        Art: 'Geneva Freeport',
+        Collectibles: 'Singapore vault',
+        Residential: 'Primary market',
+        Cash: 'Tier-1 custody account',
+    }
+    return mockDetailsByType[h.type] ?? `${h.sector} portfolio`
 }
 
 export function PortfolioHoldingsTable({

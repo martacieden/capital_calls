@@ -9,7 +9,9 @@ import {
     IconArrowUp,
     IconArrowDown,
     IconX,
+    IconArrowUpRight,
 } from '@tabler/icons-react'
+import { showToast } from '@/components/atoms/Toast'
 import type { AnyCatalogItem } from '@/data/types'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
 import { KpiStatCard } from '@/components/atoms/KpiStatCard'
@@ -237,25 +239,6 @@ export function ValuationsPage({
             .filter(asset => assetMatchesGeoKey(asset, effectiveGeoKey))
     }, [effectiveGeoKey, isPrivate])
 
-    const geoCategoryRows = useMemo(() => {
-        const totals: Record<string, { value: number; count: number }> = {}
-        for (const asset of geoFilteredAssets) {
-            const key = asset.categoryKey
-            if (!totals[key]) {
-                totals[key] = { value: 0, count: 0 }
-            }
-            totals[key].value += asset.value ?? 0
-            totals[key].count += 1
-        }
-        return Object.entries(totals)
-            .map(([categoryKey, stats]) => ({
-                categoryKey,
-                label: CATEGORY_LABELS[categoryKey] ?? categoryKey,
-                value: stats.value,
-                count: stats.count,
-            }))
-            .sort((a, b) => b.value - a.value)
-    }, [geoFilteredAssets])
 
     const geoAssetRows = useMemo(() => {
         return geoFilteredAssets
@@ -472,12 +455,8 @@ export function ValuationsPage({
                     <div className="mb-4">
                         <div className="flex items-start justify-between gap-3">
                             <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Top Holdings</h2>
-                            <p className="text-xs text-[var(--color-neutral-10)] text-right">By market value (top {topHoldings.length})</p>
                         </div>
                         <p className="text-sm text-[var(--color-neutral-10)] mt-0.5">{holdingsSubtitle}</p>
-                        <p className="text-[11px] text-[var(--color-neutral-9)] mt-1.5">
-                            Top 5 positions represent <span className="font-semibold text-[var(--color-neutral-11)]">{top5Pct}%</span> of portfolio
-                        </p>
                     </div>
                     <TopHoldingsChart items={topHoldings} onItemClick={onNavigateToAsset} colorOverride={HOLDINGS_COLOR_OVERRIDE} />
                 </div>
@@ -486,7 +465,6 @@ export function ValuationsPage({
                     <div className="mb-4">
                         <div className="flex items-start justify-between gap-3">
                             <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Top Sectors</h2>
-                            <p className="text-xs text-[var(--color-neutral-10)] text-right">By portfolio share (top {topSectors.length})</p>
                         </div>
                         <p className="text-sm text-[var(--color-neutral-10)] mt-0.5">Portfolio exposure by sector</p>
                     </div>
@@ -539,62 +517,68 @@ export function ValuationsPage({
                             <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
                                 {activeGeoItemCount} asset{activeGeoItemCount === 1 ? '' : 's'} in this region
                             </p>
-                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                                <div className="rounded-lg border border-[var(--color-neutral-4)] p-2.5">
-                                    <p className="m-0 mb-1.5 text-[12px] font-semibold text-[var(--color-neutral-11)]">
-                                        Categories
-                                    </p>
-                                    <div className="flex flex-col gap-1">
-                                        {geoCategoryRows.map(row => (
-                                            <button
-                                                key={row.categoryKey}
-                                                type="button"
-                                                onClick={() => {
-                                                    if (activeGeoCategory === row.categoryKey) {
-                                                        setActiveGeoCategory(null)
-                                                        return
-                                                    }
-                                                    setActiveGeoCategory(row.categoryKey)
-                                                }}
-                                                className={`flex items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors ${
-                                                    activeGeoCategory === row.categoryKey
-                                                        ? 'bg-[var(--color-neutral-3)]'
-                                                        : 'hover:bg-[var(--color-neutral-2)]'
-                                                }`}
-                                            >
-                                                <span className="text-[12px] text-[var(--color-black)]">{row.label}</span>
-                                                <span className="text-[11px] text-[var(--color-neutral-10)] tabular-nums">
-                                                    {formatValue(row.value)} · {row.count}
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="rounded-lg border border-[var(--color-neutral-4)] p-2.5">
-                                    <p className="m-0 mb-1.5 text-[12px] font-semibold text-[var(--color-neutral-11)]">
-                                        Assets
-                                    </p>
-                                    <div className="flex flex-col gap-1 max-h-[248px] overflow-auto pr-0.5">
-                                        {geoAssetRows.slice(0, 12).map(asset => (
-                                            <button
-                                                key={asset.id}
-                                                type="button"
-                                                onClick={() => onNavigateToAsset?.(asset.id)}
-                                                className="flex items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[var(--color-neutral-2)]"
-                                            >
-                                                <span className="truncate text-[12px] text-[var(--color-black)]">{asset.name}</span>
-                                                <span className="shrink-0 text-[11px] text-[var(--color-neutral-10)] tabular-nums">
-                                                    {formatValue(asset.value ?? 0)}
-                                                </span>
-                                            </button>
-                                        ))}
+                            <div className="rounded-lg border border-[var(--color-neutral-4)] overflow-hidden">
+                                <table className="w-full border-collapse text-[12px]">
+                                    <thead>
+                                        <tr className="border-b border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)]">
+                                            <th className="px-3 py-2 text-left font-semibold text-[var(--color-neutral-11)]">Category</th>
+                                            <th className="px-3 py-2 text-left font-semibold text-[var(--color-neutral-11)]">Asset</th>
+                                            <th className="px-3 py-2 text-right font-semibold text-[var(--color-neutral-11)]">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {geoAssetRows.slice(0, 12).map(asset => {
+                                            const categoryLabel = CATEGORY_LABELS[asset.categoryKey] ?? asset.categoryKey
+                                            const isCategoryActive = activeGeoCategory === asset.categoryKey
+                                            return (
+                                                <tr
+                                                    key={asset.id}
+                                                    className="border-b border-[var(--color-neutral-3)] last:border-b-0 hover:bg-[var(--color-neutral-2)]"
+                                                >
+                                                    <td className="px-3 py-2 align-middle">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (isCategoryActive) {
+                                                                    setActiveGeoCategory(null)
+                                                                    return
+                                                                }
+                                                                setActiveGeoCategory(asset.categoryKey)
+                                                            }}
+                                                            className={`rounded px-1.5 py-0.5 text-left transition-colors ${
+                                                                isCategoryActive
+                                                                    ? 'bg-[var(--color-neutral-3)] text-[var(--color-black)]'
+                                                                    : 'text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-3)]'
+                                                            }`}
+                                                        >
+                                                            {categoryLabel}
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-3 py-2 align-middle">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onNavigateToAsset?.(asset.id)}
+                                                            className="max-w-full truncate text-left text-[var(--color-black)] hover:text-[var(--color-accent-10)]"
+                                                            title={asset.name}
+                                                        >
+                                                            {asset.name}
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-3 py-2 align-middle text-right tabular-nums text-[var(--color-neutral-10)]">
+                                                        {formatValue(asset.value ?? 0)}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                         {geoAssetRows.length === 0 ? (
-                                            <p className="m-0 px-2 py-1 text-[11px] text-[var(--color-neutral-9)]">
-                                                No assets in this filter.
-                                            </p>
+                                            <tr>
+                                                <td colSpan={3} className="px-3 py-2 text-[11px] text-[var(--color-neutral-9)]">
+                                                    No assets in this filter.
+                                                </td>
+                                            </tr>
                                         ) : null}
-                                    </div>
-                                </div>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -603,73 +587,103 @@ export function ValuationsPage({
 
             {/* Upcoming Cashflows */}
             <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Upcoming Cashflows</h2>
-                            <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
-                                {cashflowSummary.count}
-                            </span>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Upcoming Cashflows</h2>
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
+                            {cashflowSummary.count}
+                        </span>
+                    </div>
+                    <span
+                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums"
+                        style={{
+                            color: cashflowSummary.net >= 0 ? '#059669' : '#B91C1C',
+                            background: cashflowSummary.net >= 0 ? 'rgba(5,150,105,0.10)' : 'rgba(185,28,28,0.08)',
+                        }}
+                    >
+                        Net {cashflowSummary.net >= 0 ? '+' : '−'}{formatValue(Math.abs(cashflowSummary.net))}
+                    </span>
+                </div>
+
+                {/* Summary stat chips */}
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[rgba(5,150,105,0.07)] px-3 py-2">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(5,150,105,0.15)]">
+                            <IconArrowUp size={12} stroke={2.5} className="text-[#059669]" />
                         </div>
-                        <span
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
-                            style={{
-                                color: cashflowSummary.net >= 0 ? '#059669' : '#B91C1C',
-                                background: cashflowSummary.net >= 0 ? 'rgba(5,150,105,0.12)' : 'rgba(239,68,68,0.14)',
-                            }}
-                        >
-                            Net {cashflowSummary.net >= 0 ? '+' : '-'}{formatValue(Math.abs(cashflowSummary.net))}
-                        </span>
+                        <div>
+                            <p className="text-[11px] text-[#059669] font-medium leading-none mb-0.5">Inflow</p>
+                            <p className="text-[13px] font-bold tabular-nums text-[#059669] leading-none">+{formatValue(cashflowSummary.inflow)}</p>
+                        </div>
                     </div>
-                    <div className="mb-2 flex items-center gap-3 text-[12px] font-semibold tabular-nums">
-                        <span className="inline-flex items-center gap-1 text-[#059669]">
-                            <IconArrowUp size={14} />
-                            +{formatValue(cashflowSummary.inflow)} inflow
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[#EF4444]">
-                            <IconArrowDown size={14} />
-                            -{formatValue(cashflowSummary.outflow)} outflow
-                        </span>
+                    <div className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[rgba(185,28,28,0.06)] px-3 py-2">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(185,28,28,0.12)]">
+                            <IconArrowDown size={12} stroke={2.5} className="text-[#B91C1C]" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] text-[#B91C1C] font-medium leading-none mb-0.5">Outflow</p>
+                            <p className="text-[13px] font-bold tabular-nums text-[#B91C1C] leading-none">−{formatValue(cashflowSummary.outflow)}</p>
+                        </div>
                     </div>
-                    <div className="mb-1.5 h-px bg-[var(--color-neutral-3)]" />
-                    <div className="flex flex-col gap-1.5 flex-1">
-                        {sortedCashflowEvents.map((ev, i) => {
-                            const daysLeft = daysUntilDateLabel(ev.date)
-                            const isDueSoon = daysLeft != null && daysLeft <= 14
-                            const isDueSoonAmber = daysLeft != null && daysLeft > 14 && daysLeft <= 45
-                            return (
-                                <div key={i} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-[var(--color-neutral-2)]">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            {(isDueSoon || isDueSoonAmber) && (
-                                                <span
-                                                    className="w-2 h-2 rounded-full shrink-0"
-                                                    style={{ background: isDueSoon ? '#EF4444' : '#D97706' }}
-                                                />
-                                            )}
-                                            <p className="text-[12px] font-medium text-[var(--color-black)] truncate">{ev.asset}</p>
-                                            {isDueSoon && (
-                                                <span className="shrink-0 inline-flex items-center rounded bg-[rgba(245,158,11,0.16)] px-1.5 py-px text-[10px] font-semibold text-[#B45309]">
-                                                    Due soon
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-[11px] text-[var(--color-neutral-9)]">
-                                            {ev.date} · {ev.type}
-                                            {daysLeft != null ? ` · in ${daysLeft} day${daysLeft === 1 ? '' : 's'}` : ''}
-                                        </p>
+                </div>
+
+                <div className="mb-2 h-px bg-[var(--color-neutral-3)]" />
+
+                <div className="flex flex-col gap-0.5 flex-1">
+                    {sortedCashflowEvents.map((ev, i) => {
+                        const daysLeft = daysUntilDateLabel(ev.date)
+                        const urgency: 'critical' | 'soon' | 'normal' =
+                            daysLeft != null && daysLeft <= 7 ? 'critical' :
+                            daysLeft != null && daysLeft <= 30 ? 'soon' : 'normal'
+                        const daysBadgeStyle = urgency === 'critical'
+                            ? { color: '#B91C1C', background: 'rgba(185,28,28,0.10)' }
+                            : urgency === 'soon'
+                            ? { color: '#B45309', background: 'rgba(217,119,6,0.10)' }
+                            : { color: 'var(--color-neutral-9)', background: 'var(--color-neutral-3)' }
+                        return (
+                            <div
+                                key={i}
+                                className="group flex items-center gap-2.5 rounded-[var(--radius-md)] px-2 py-2 -mx-2 transition-colors hover:bg-[var(--color-neutral-2)]"
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <p className="text-[12px] font-medium text-[var(--color-black)] truncate">{ev.asset}</p>
                                     </div>
+                                    <p className="text-[11px] text-[var(--color-neutral-9)] mt-0.5">
+                                        {ev.date} · {ev.type}
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {ev.outflow && (
+                                        <button
+                                            type="button"
+                                            onClick={() => showToast(`Opening review for ${ev.asset}…`, 'success')}
+                                            className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-neutral-4)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--color-neutral-11)] transition-[opacity,border-color,color] duration-150 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto hover:border-[var(--color-neutral-6)] hover:text-[var(--color-black)]"
+                                        >
+                                            Review
+                                            <IconArrowUpRight size={11} stroke={2} />
+                                        </button>
+                                    )}
+                                    {daysLeft != null && (
+                                        <span
+                                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
+                                            style={daysBadgeStyle}
+                                        >
+                                            {daysLeft}d
+                                        </span>
+                                    )}
                                     <span
-                                        className="shrink-0 text-sm font-semibold tabular-nums"
-                                        style={{
-                                            color: ev.outflow ? '#EF4444' : '#059669',
-                                        }}
+                                        className="text-sm font-semibold tabular-nums"
+                                        style={{ color: ev.outflow ? '#B91C1C' : '#059669' }}
                                     >
                                         {ev.outflow ? '−' : '+'}{formatValue(ev.amount)}
                                     </span>
                                 </div>
-                            )
-                        })}
-                    </div>
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* Capital Call Commitments — private investments only */}
@@ -790,7 +804,7 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
                             grid: { line: { stroke: '#F1F1F4', strokeWidth: 1 } },
                         }}
                         tooltip={({ id, value, indexValue }) => (
-                            <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px 10px', fontSize: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+                            <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px', fontSize: 12, minWidth: 168, maxWidth: 220, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
                                 <div style={{ fontWeight: 600, marginBottom: 2, color: '#111' }}>{String(indexValue)}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <span style={{ width: 8, height: 8, borderRadius: 2, background: FUND_CALL_COLORS[String(id)] ?? '#94A3B8', flexShrink: 0 }} />

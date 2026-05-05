@@ -57,7 +57,7 @@ export interface PortfolioCategoryData {
 }
 
 const LIFESTYLE_KEYS = ['maritime', 'vehicle', 'art'] as const
-const DRILLDOWN_SECTOR_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#94A3B8']
+export const DRILLDOWN_SECTOR_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9', '#94A3B8']
 
 /** Total portfolio value = sum of non-insurance catalog assets (single source of truth). */
 export const PORTFOLIO_TOTAL = INVESTABLE_CATALOG_TOTAL
@@ -259,6 +259,22 @@ function buildTopSectorsForKeys(keys: readonly string[]): PortfolioSector[] {
         percentage: row.percentage,
         color: DRILLDOWN_SECTOR_COLORS[i % DRILLDOWN_SECTOR_COLORS.length],
     }))
+}
+
+export function buildSectorsFromHoldings(holdings: PortfolioHolding[]): PortfolioSector[] {
+    const totals = new Map<string, number>()
+    for (const h of holdings) {
+        totals.set(h.sector, (totals.get(h.sector) ?? 0) + h.value)
+    }
+    const grand = holdings.reduce((s, h) => s + h.value, 0)
+    return [...totals.entries()]
+        .sort(([, a], [, b]) => b - a)
+        .map(([label, value], i) => ({
+            label,
+            value,
+            percentage: grand > 0 ? Math.round((value / grand) * 1000) / 10 : 0,
+            color: DRILLDOWN_SECTOR_COLORS[i % DRILLDOWN_SECTOR_COLORS.length],
+        }))
 }
 
 function syntheticCashHolding(

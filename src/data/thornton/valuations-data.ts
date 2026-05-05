@@ -373,6 +373,10 @@ export interface GeoItem {
     value: number
     percentage: number
     count: number
+    /** Tooltip helper: single item name (or top item name when count > 1). */
+    itemName?: string
+    /** Top holdings inside this geographic bucket (max 5) with local share %. */
+    topItems?: { name: string; percentage: number }[]
 }
 
 /** Returns true when the asset belongs to the selected geographic bucket. */
@@ -513,28 +517,48 @@ export function getGeoExposure(categoryKeys: string[]): GeoItem[] {
         region?: string
         value: number
         count: number
+        topItemName?: string
+        topItemValue: number
+        assets: { name: string; value: number }[]
     }> = {}
 
     for (const a of filtered) {
         const { geoKey, label, country, region } = geoBucket(a)
         if (!totals[geoKey])
-            totals[geoKey] = { label, country, region, value: 0, count: 0 }
+            totals[geoKey] = { label, country, region, value: 0, count: 0, topItemValue: -1, assets: [] }
         totals[geoKey].value += a.value ?? 0
         totals[geoKey].count += 1
+        const assetValue = a.value ?? 0
+        totals[geoKey].assets.push({ name: a.name, value: assetValue })
+        if (assetValue >= totals[geoKey].topItemValue) {
+            totals[geoKey].topItemValue = assetValue
+            totals[geoKey].topItemName = a.name
+        }
     }
 
     const grand = Object.values(totals).reduce((s, t) => s + t.value, 0)
     return Object.entries(totals)
         .sort(([, a], [, b]) => b.value - a.value)
-        .map(([geoKey, meta]) => ({
-            geoKey,
-            label: meta.label,
-            country: meta.country,
-            region: meta.region,
-            value: meta.value,
-            percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
-            count: meta.count,
-        }))
+        .map(([geoKey, meta]) => {
+            const topItems = [...meta.assets]
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 5)
+                .map(item => ({
+                    name: item.name,
+                    percentage: meta.value > 0 ? Math.round((item.value / meta.value) * 1000) / 10 : 0,
+                }))
+            return {
+                geoKey,
+                label: meta.label,
+                country: meta.country,
+                region: meta.region,
+                value: meta.value,
+                percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
+                count: meta.count,
+                itemName: meta.topItemName,
+                topItems,
+            }
+        })
 }
 
 /** Country-level geographic exposure — collapses US states → single entry, CA provinces → single entry. */
@@ -543,7 +567,15 @@ export function getCountryExposure(categoryKeys: string[]): GeoItem[] {
         ? thorntonAssets.filter(a => a.categoryKey !== 'insurance')
         : thorntonAssets.filter(a => categoryKeys.includes(a.categoryKey))
 
-    const totals: Record<string, { label: string; country: string; value: number; count: number }> = {}
+    const totals: Record<string, {
+        label: string
+        country: string
+        value: number
+        count: number
+        topItemName?: string
+        topItemValue: number
+        assets: { name: string; value: number }[]
+    }> = {}
 
     for (const a of filtered) {
         const country = a.country ?? 'Unknown'
@@ -554,23 +586,40 @@ export function getCountryExposure(categoryKeys: string[]): GeoItem[] {
         else if (country === 'Canada') { geoKey = 'CA|__'; label = 'Canada' }
         else { geoKey = `ROW|${country}`; label = country }
 
-        if (!totals[geoKey]) totals[geoKey] = { label, country, value: 0, count: 0 }
+        if (!totals[geoKey]) totals[geoKey] = { label, country, value: 0, count: 0, topItemValue: -1, assets: [] }
         totals[geoKey].value += a.value ?? 0
         totals[geoKey].count += 1
+        const assetValue = a.value ?? 0
+        totals[geoKey].assets.push({ name: a.name, value: assetValue })
+        if (assetValue >= totals[geoKey].topItemValue) {
+            totals[geoKey].topItemValue = assetValue
+            totals[geoKey].topItemName = a.name
+        }
     }
 
     const grand = Object.values(totals).reduce((s, t) => s + t.value, 0)
     return Object.entries(totals)
         .filter(([, t]) => t.value > 0)
         .sort(([, a], [, b]) => b.value - a.value)
-        .map(([geoKey, meta]) => ({
-            geoKey,
-            label: meta.label,
-            country: meta.country,
-            value: meta.value,
-            percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
-            count: meta.count,
-        }))
+        .map(([geoKey, meta]) => {
+            const topItems = [...meta.assets]
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 5)
+                .map(item => ({
+                    name: item.name,
+                    percentage: meta.value > 0 ? Math.round((item.value / meta.value) * 1000) / 10 : 0,
+                }))
+            return {
+                geoKey,
+                label: meta.label,
+                country: meta.country,
+                value: meta.value,
+                percentage: grand > 0 ? Math.round((meta.value / grand) * 100) : 0,
+                count: meta.count,
+                itemName: meta.topItemName,
+                topItems,
+            }
+        })
 }
 
 export interface USStateItem {

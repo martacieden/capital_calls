@@ -4,6 +4,7 @@ import {
     IconChevronUp,
     IconTableExport,
     IconSend,
+    IconDots,
     IconBuildingSkyscraper,
     IconPalette,
     IconScale,
@@ -22,6 +23,7 @@ import {
     getCategoryLabel,
     getPortfolioSubcategories,
     holdingMatchesPortfolioSubcategory,
+    buildSectorsFromHoldings,
     PORTFOLIO_ALLOCATION_DISPLAY_TOTAL,
     type PortfolioHolding,
     type PortfolioSector,
@@ -315,7 +317,12 @@ export function PortfolioCategoryDetailContent({
             ? 'max-h-[min(70vh,640px)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-neutral-3)]'
             : ''
 
-    const showSectorGeo = effectiveSubKeys.length === 0 && !searchQ
+    const filteredSectors = useMemo(
+        () => (effectiveSubKeys.length === 0 && !searchQ)
+            ? data.topSectors
+            : buildSectorsFromHoldings(filteredHoldings),
+        [effectiveSubKeys, searchQ, data.topSectors, filteredHoldings],
+    )
 
     const enableTableSort = variant === 'page'
 
@@ -349,20 +356,6 @@ export function PortfolioCategoryDetailContent({
                 <KpiCard label="Total Value" value={formatValue(filteredTotal)} />
                 <KpiCard label="Holdings" value={String(filteredHoldings.length)} />
             </div>
-
-            {onContactAction && CONTACT_META[categoryId] && (() => {
-                const { label, Icon } = CONTACT_META[categoryId]
-                return (
-                    <button
-                        type="button"
-                        onClick={() => onContactAction(categoryId)}
-                        className="flex items-center gap-2 w-full rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-4 py-2.5 text-sm font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-3)] hover:text-[var(--color-black)] transition-colors"
-                    >
-                        <Icon size={15} />
-                        {label}
-                    </button>
-                )
-            })()}
 
             {filteredHoldings.length === 0 && effectiveSubKeys.length > 0 && (
                 <p className="text-sm text-[var(--color-neutral-10)]">No holdings in this slice.</p>
@@ -414,14 +407,14 @@ export function PortfolioCategoryDetailContent({
                 </div>
             )}
 
-            {data.topSectors.length > 0 && showSectorGeo && (
+            {filteredSectors.length > 0 && (
                 <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6">
                     <h2 className="text-base font-semibold text-[var(--color-black)] mb-4">Breakdown by sector</h2>
-                    <SectorBreakdown sectors={data.topSectors} />
+                    <SectorBreakdown sectors={filteredSectors} />
                 </div>
             )}
 
-            {data.geographicExposure.length > 0 && showSectorGeo && (
+            {data.geographicExposure.length > 0 && (
                 <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 w-full overflow-visible">
                     <h2 className="text-base font-semibold text-[var(--color-black)] mb-4">Geographic Exposure</h2>
                     <GeoExposureChart data={data.geographicExposure} legendColumns={geoLegendColumns} />
@@ -451,12 +444,20 @@ export function PortfolioCategoryDetailPanel({
     onContactAction,
 }: PortfolioCategoryDetailPanelProps) {
     const closeBtnRef = useRef<HTMLButtonElement>(null)
+    const actionsMenuWrapRef = useRef<HTMLDivElement>(null)
     const label = categoryId ? getCategoryLabel(categoryId) : ''
     const data = categoryId ? getDrilldownData(categoryId) : null
+    const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
+
+    useClickOutside([actionsMenuWrapRef], () => setActionsMenuOpen(false), actionsMenuOpen)
 
     useEffect(() => {
         if (isOpen && categoryId && !data) onClose()
     }, [isOpen, categoryId, data, onClose])
+
+    useEffect(() => {
+        if (!isOpen) setActionsMenuOpen(false)
+    }, [isOpen])
 
     if (!categoryId || !isOpen) return null
 
@@ -470,26 +471,69 @@ export function PortfolioCategoryDetailPanel({
             closeButtonRef={closeBtnRef}
             headerActions={
                 <div className="flex items-center gap-1">
-                    <button
-                        type="button"
-                        className={iconBtnClass}
-                        onClick={() => showToast(`Preparing export for ${label}…`, 'success')}
-                        aria-label="Export to Excel"
-                        title="Export to Excel"
-                    >
-                        <IconTableExport size={20} stroke={2} aria-hidden />
-                    </button>
-                    {onShare && (
+                    <div ref={actionsMenuWrapRef} className="relative">
                         <button
                             type="button"
                             className={iconBtnClass}
-                            onClick={() => onShare(categoryId)}
-                            aria-label="Share"
-                            title="Share"
+                            aria-label="More actions"
+                            title="More actions"
+                            aria-haspopup="menu"
+                            aria-expanded={actionsMenuOpen}
+                            onClick={() => setActionsMenuOpen(v => !v)}
                         >
-                            <IconSend size={20} stroke={2} aria-hidden />
+                            <IconDots size={20} stroke={2} aria-hidden />
                         </button>
-                    )}
+                        {actionsMenuOpen && (
+                            <div
+                                role="menu"
+                                className="absolute right-0 top-[calc(100%+6px)] z-[1200] min-w-[188px] rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-[var(--color-white)] p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12)]"
+                            >
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left text-sm text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                    onClick={() => {
+                                        showToast(`Preparing export for ${label}…`, 'success')
+                                        setActionsMenuOpen(false)
+                                    }}
+                                >
+                                    <IconTableExport size={16} stroke={2} aria-hidden />
+                                    Export to Excel
+                                </button>
+                                {onShare && (
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left text-sm text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                        onClick={() => {
+                                            onShare(categoryId)
+                                            setActionsMenuOpen(false)
+                                        }}
+                                    >
+                                        <IconSend size={16} stroke={2} aria-hidden />
+                                        Share
+                                    </button>
+                                )}
+                                {onContactAction && CONTACT_META[categoryId] && (() => {
+                                    const { label: contactLabel, Icon: ContactIcon } = CONTACT_META[categoryId]
+                                    return (
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left text-sm text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                            onClick={() => {
+                                                onContactAction(categoryId)
+                                                setActionsMenuOpen(false)
+                                            }}
+                                        >
+                                            <ContactIcon size={16} stroke={2} aria-hidden />
+                                            {contactLabel}
+                                        </button>
+                                    )
+                                })()}
+                            </div>
+                        )}
+                    </div>
                     {onOpenFullDetail && (
                         <button
                             type="button"

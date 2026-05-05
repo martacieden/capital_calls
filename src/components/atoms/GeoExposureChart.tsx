@@ -195,6 +195,8 @@ type ChoroplethRow = {
     label: string
     percentage: number
     count: number
+    itemName?: string
+    topItems?: { name: string; percentage: number }[]
 }
 
 function filterAntarctica(features: Feature[]): Feature[] {
@@ -334,6 +336,15 @@ function buildSubnationalChoroplethRows(
     const rows: ChoroplethRow[] = []
 
     const usStateFromItem = (item: GeoItem) => item.region ?? item.geoKey.slice(3)
+    const rowMeta = (item: GeoItem) => ({
+        value: item.value,
+        geoKey: item.geoKey,
+        label: item.label,
+        percentage: item.percentage,
+        count: item.count,
+        itemName: item.itemName,
+        topItems: item.topItems,
+    })
 
     for (const item of data) {
         if (item.geoKey === 'UNKNOWN' || item.value <= 0)
@@ -346,11 +357,7 @@ function buildSubnationalChoroplethRows(
             ) {
                 rows.push({
                     id: '840',
-                    value: item.value,
-                    geoKey: item.geoKey,
-                    label: item.label,
-                    percentage: item.percentage,
-                    count: item.count,
+                    ...rowMeta(item),
                 })
                 continue
             }
@@ -362,11 +369,7 @@ function buildSubnationalChoroplethRows(
                 continue
             rows.push({
                 id: fips,
-                value: item.value,
-                geoKey: item.geoKey,
-                label: item.label,
-                percentage: item.percentage,
-                count: item.count,
+                ...rowMeta(item),
             })
             continue
         }
@@ -375,11 +378,7 @@ function buildSubnationalChoroplethRows(
             if (item.geoKey === 'CA|__') {
                 rows.push({
                     id: '124',
-                    value: item.value,
-                    geoKey: item.geoKey,
-                    label: item.label,
-                    percentage: item.percentage,
-                    count: item.count,
+                    ...rowMeta(item),
                 })
                 continue
             }
@@ -388,11 +387,7 @@ function buildSubnationalChoroplethRows(
                 continue
             rows.push({
                 id: canadaProvinceTopoId(prov),
-                value: item.value,
-                geoKey: item.geoKey,
-                label: item.label,
-                percentage: item.percentage,
-                count: item.count,
+                ...rowMeta(item),
             })
             continue
         }
@@ -406,11 +401,7 @@ function buildSubnationalChoroplethRows(
             continue
         rows.push({
             id: tid,
-            value: item.value,
-            geoKey: item.geoKey,
-            label: item.label,
-            percentage: item.percentage,
-            count: item.count,
+            ...rowMeta(item),
         })
     }
 
@@ -960,7 +951,7 @@ export function GeoExposureChart({
 
                             if (!row?.value || row.value <= 0) {
                                 return (
-                                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-lg px-3 py-2 shadow text-sm text-[var(--color-neutral-10)] max-w-[min(280px,90vw)]">
+                                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-lg px-3 py-2 shadow text-sm text-[var(--color-neutral-10)] max-w-[min(360px,92vw)]">
                                         <span className="font-medium text-[var(--color-black)]">{pname}</span>
                                         <span className="text-[var(--color-neutral-9)]"> · </span>
                                         <span>No exposure</span>
@@ -969,16 +960,34 @@ export function GeoExposureChart({
                             }
 
                             return (
-                                <div className="bg-white border border-[var(--color-neutral-4)] rounded-lg px-3 py-2 shadow-md text-sm max-w-[min(300px,92vw)]">
+                                <div className="bg-white border border-[var(--color-neutral-4)] rounded-lg px-3 py-2 shadow-md text-sm max-w-[min(380px,94vw)]">
                                     <div className="font-semibold text-[var(--color-black)]">{row.label}</div>
                                     <div className="text-[var(--color-neutral-10)] mt-0.5 tabular-nums">
                                         {formatValue(row.value)}
                                         {' · '}
                                         {row.percentage}%
                                     </div>
-                                    <div className="text-[11px] text-[var(--color-neutral-9)] mt-0.5">
-                                        {row.count} item{row.count === 1 ? '' : 's'} in this area
-                                    </div>
+                                    {row.count === 1 && row.itemName ? (
+                                        <div className="text-[11px] text-[var(--color-neutral-9)] mt-0.5 truncate" title={row.itemName}>
+                                            Item: {row.itemName}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="text-[11px] text-[var(--color-neutral-9)] mt-0.5">
+                                                {row.count} items in this area
+                                            </div>
+                                            {row.topItems && row.topItems.length > 0 && (
+                                                <div className="mt-1.5 space-y-0.5">
+                                                    {row.topItems.slice(0, 5).map(item => (
+                                                        <div key={`${row.geoKey}-${item.name}`} className="flex items-center justify-between gap-2 text-[11px]">
+                                                            <span className="min-w-0 truncate text-[var(--color-neutral-11)]" title={item.name}>{item.name}</span>
+                                                            <span className="shrink-0 tabular-nums text-[var(--color-neutral-9)]">{item.percentage}%</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             )
                         }}

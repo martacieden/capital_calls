@@ -100,7 +100,7 @@ export function ContactModal({ type, event, onClose, onDelegateToFojo }: Contact
     }, [selectedContact, userText, event.title, onClose])
 
     const modal = (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
 
             <div className="relative z-10 w-full max-w-[480px] bg-white rounded-[var(--radius-2xl)] shadow-[0_32px_100px_rgba(0,0,0,0.18)] flex flex-col overflow-hidden">

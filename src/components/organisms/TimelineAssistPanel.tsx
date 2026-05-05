@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
     IconPaperclip,
     IconAt,
@@ -122,6 +122,153 @@ function InlineTaskPreview({ task, onDone, onOpenTask }: { task: Task; onDone: (
 function AssistComposer({ placeholder, value, onChange, onSend }: {
     placeholder: string; value: string; onChange: (v: string) => void; onSend: () => void
 }) {
+    const [isRecording, setIsRecording] = useState(false)
+    const [interimTranscript, setInterimTranscript] = useState('')
+    const valueRef = useRef(value)
+    const recognitionRef = useRef<{
+        start: () => void
+        stop: () => void
+        onstart: (() => void) | null
+        onend: (() => void) | null
+        onerror: ((e: { error?: string }) => void) | null
+        onresult: ((e: {
+            resultIndex: number
+            results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>
+        }) => void) | null
+        continuous: boolean
+        interimResults: boolean
+        lang: string
+    } | null>(null)
+
+    const isSpeechSupported = typeof window !== 'undefined'
+        && (('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window))
+
+    useEffect(() => {
+        valueRef.current = value
+    }, [value])
+
+    useEffect(() => {
+        return () => {
+            recognitionRef.current?.stop()
+            recognitionRef.current = null
+        }
+    }, [])
+
+    const startRecording = () => {
+        if (!isSpeechSupported) {
+            showToast('Voice recording is not supported in this browser.', 'error')
+            return
+        }
+
+        const SpeechRecognitionCtor = (
+            window as typeof window & {
+                SpeechRecognition?: new () => {
+                    continuous: boolean
+                    interimResults: boolean
+                    lang: string
+                    start: () => void
+                    stop: () => void
+                    onstart: (() => void) | null
+                    onend: (() => void) | null
+                    onerror: ((e: { error?: string }) => void) | null
+                    onresult: ((e: {
+                        resultIndex: number
+                        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>
+                    }) => void) | null
+                }
+                webkitSpeechRecognition?: new () => {
+                    continuous: boolean
+                    interimResults: boolean
+                    lang: string
+                    start: () => void
+                    stop: () => void
+                    onstart: (() => void) | null
+                    onend: (() => void) | null
+                    onerror: ((e: { error?: string }) => void) | null
+                    onresult: ((e: {
+                        resultIndex: number
+                        results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>
+                    }) => void) | null
+                }
+            }
+        ).SpeechRecognition
+            ?? (
+                window as typeof window & {
+                    webkitSpeechRecognition?: new () => {
+                        continuous: boolean
+                        interimResults: boolean
+                        lang: string
+                        start: () => void
+                        stop: () => void
+                        onstart: (() => void) | null
+                        onend: (() => void) | null
+                        onerror: ((e: { error?: string }) => void) | null
+                        onresult: ((e: {
+                            resultIndex: number
+                            results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>
+                        }) => void) | null
+                    }
+                }
+            ).webkitSpeechRecognition
+
+        if (!SpeechRecognitionCtor) {
+            showToast('Voice recording is unavailable right now.', 'error')
+            return
+        }
+
+        recognitionRef.current?.stop()
+        const recognition = new SpeechRecognitionCtor()
+        recognition.continuous = true
+        recognition.interimResults = true
+        recognition.lang = 'en-US'
+
+        recognition.onstart = () => {
+            setIsRecording(true)
+            setInterimTranscript('')
+        }
+
+        recognition.onend = () => {
+            setIsRecording(false)
+            setInterimTranscript('')
+        }
+
+        recognition.onerror = (e) => {
+            setIsRecording(false)
+            setInterimTranscript('')
+            if (e.error === 'no-speech' || e.error === 'aborted') return
+            if (e.error === 'not-allowed')
+                showToast('Microphone access denied. Check browser permissions.', 'error')
+            else
+                showToast('Could not process voice input.', 'error')
+        }
+
+        recognition.onresult = event => {
+            let finalText = ''
+            let interimText = ''
+            for (let i = event.resultIndex; i < event.results.length; i += 1) {
+                const result = event.results[i]
+                const chunk = result?.[0]?.transcript?.trim()
+                if (!chunk) continue
+                if (result.isFinal) finalText += `${chunk} `
+                else interimText += `${chunk} `
+            }
+            if (finalText.trim()) {
+                const next = [valueRef.current.trim(), finalText.trim()].filter(Boolean).join(' ').trim()
+                onChange(next)
+            }
+            setInterimTranscript(interimText.trim())
+        }
+
+        recognitionRef.current = recognition
+        recognition.start()
+    }
+
+    const stopRecording = () => {
+        recognitionRef.current?.stop()
+        setIsRecording(false)
+        setInterimTranscript('')
+    }
+
     return (
         <div className="chat-footer rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] flex w-full mt-2 pt-[var(--spacing-4)] px-[var(--spacing-3)] pb-[var(--spacing-3)] flex-col bg-[var(--color-white)] focus-within:border-[var(--color-purple)] focus-within:shadow-[0_0_0_1px_rgba(0,0,0,0.15)]">
             <textarea
@@ -133,10 +280,16 @@ function AssistComposer({ placeholder, value, onChange, onSend }: {
                 onKeyDown={e => {
                     if (e.key === 'Enter' && !e.shiftKey && value.trim()) {
                         e.preventDefault()
+                        stopRecording()
                         onSend()
                     }
                 }}
             />
+            {isRecording && interimTranscript && (
+                <p className="m-0 px-[var(--spacing-2)] pt-1 text-[12px] text-[var(--color-neutral-10)] truncate" title={interimTranscript}>
+                    {interimTranscript}
+                </p>
+            )}
             <div className="flex mt-[var(--spacing-4)] w-full items-center justify-between">
                 <div className="flex items-center gap-[var(--spacing-1)]">
                     <button type="button" className="p-[6px] rounded-[var(--radius-md)] hover:bg-[var(--color-neutral-3)]" aria-label="Attach">
@@ -147,11 +300,22 @@ function AssistComposer({ placeholder, value, onChange, onSend }: {
                     </button>
                 </div>
                 {value.trim() ? (
-                    <button type="button" className="rounded-[var(--radius-md)] bg-[var(--color-purple)] flex min-h-[36px] w-9 h-9 items-center justify-center hover:opacity-85" onClick={onSend}>
+                    <button type="button" className="rounded-[var(--radius-md)] bg-[var(--color-purple)] flex min-h-[36px] w-9 h-9 items-center justify-center hover:opacity-85" onClick={() => { stopRecording(); onSend() }}>
                         <IconSend2 size={18} stroke={2} color="var(--color-white)" />
                     </button>
                 ) : (
-                    <button type="button" className="rounded-[var(--radius-md)] bg-[var(--color-purple)] flex min-h-[36px] w-9 h-9 items-center justify-center hover:opacity-85" aria-label="Voice">
+                    <button
+                        type="button"
+                        className={cn(
+                            'rounded-[var(--radius-md)] flex min-h-[36px] w-9 h-9 items-center justify-center hover:opacity-85',
+                            isRecording ? 'bg-[#B91C1C]' : 'bg-[var(--color-purple)]',
+                        )}
+                        aria-label={isRecording ? 'Stop recording' : 'Voice'}
+                        onClick={() => {
+                            if (isRecording) stopRecording()
+                            else startRecording()
+                        }}
+                    >
                         <IconMicrophone size={18} stroke={2} color="var(--color-white)" />
                     </button>
                 )}

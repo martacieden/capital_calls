@@ -49,6 +49,7 @@ import { sortByPriority } from '@/lib/helpers/priority-sort'
 import type { TimelineAssistSession } from '@/types/timeline-assist'
 import type { Task } from '@/data/thornton/tasks-data'
 import { ContactModal, type ContactEventContext } from '@/components/molecules/ContactModal'
+import { ShareModal } from '@/components/molecules/ShareModal'
 import { mockContacts } from '@/data/thornton/contacts-data'
 function App() {
   return (
@@ -104,6 +105,7 @@ function AppShell() {
   const [externalTasks, setExternalTasks] = useState<Task[]>([])
   const [dynamicDistributions, setDynamicDistributions] = useState<DistributionEvent[]>([])
   const [contactModalState, setContactModalState] = useState<{ type: 'lawyer' | 'cpa'; event: ContactEventContext; session: Omit<TimelineAssistSession, 'preselectedContactId' | 'prefilledText'> } | null>(null)
+  const [shareModalTitle, setShareModalTitle] = useState<string | null>(null)
   /** Меню ⋮ на таймлайні — сценарії тільки всередині Fojo, без модалок. */
   const [timelineAssistSession, setTimelineAssistSession] = useState<TimelineAssistSession | null>(null)
   // ── Asset collections state ──
@@ -758,15 +760,7 @@ function AppShell() {
               'cash-equivalents': 'Cash & Equivalents',
             }
             const label = labelMap[categoryId] ?? categoryId
-            setContactModalState({
-              type: 'lawyer',
-              event: { id: categoryId, title: `${label} allocation report` },
-              session: {
-                flow: 'contact-lawyer',
-                contextName: label,
-                contextEventId: categoryId,
-              },
-            })
+            setShareModalTitle(`${label} allocation report`)
           }}
           onContactAction={(categoryId) => {
             const typeMap: Record<string, 'lawyer' | 'cpa'> = {
@@ -803,6 +797,7 @@ function AppShell() {
           onClose={() => setContactModalState(null)}
           onDelegateToFojo={(contactId, text) => {
             setContactModalState(null)
+            handleClosePortfolioPanel()
             const allContacts = [...mockContacts.lawyers, ...mockContacts.accountants]
             const contact = allContacts.find(c => c.id === contactId)
             openTimelineAssist({
@@ -820,6 +815,13 @@ function AppShell() {
               ].filter(Boolean).join('\n'),
             })
           }}
+        />
+      )}
+
+      {shareModalTitle && (
+        <ShareModal
+          reportTitle={shareModalTitle}
+          onClose={() => setShareModalTitle(null)}
         />
       )}
 
