@@ -5,6 +5,7 @@ import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
 import { IconPencil, IconTrash, IconPlus } from '@tabler/icons-react'
+import { ContentHeader } from '@/components/molecules/ContentHeader'
 import {
     CAPITAL_CALL_COMMITMENTS,
     getTotalCalled,
@@ -15,9 +16,9 @@ const FORECAST_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031']
 const CURRENT_YEAR = String(new Date().getFullYear())
 
 const FUND_COLORS: Record<string, string> = {
-    'whitmore-capital-i': '#005BE2',
-    'whitmore-ventures-ii': '#8B5CF6',
-    'whitmore-real-assets-iii': '#60A5FA',
+    'whitmore-capital-i': '#005BE2',    // --color-accent-9
+    'whitmore-ventures-ii': '#8B5CF6',  // --color-card-purple
+    'whitmore-real-assets-iii': '#EA580C', // --color-card-orange
 }
 
 const CHART_THEME: PartialTheme = {
@@ -58,12 +59,12 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 function getForecastOpacity(year: string): number {
-    if (year === CURRENT_YEAR) return 1
-    if (year === '2027') return 0.9
-    if (year === '2028') return 0.8
-    if (year === '2029') return 0.72
-    if (year === '2030') return 0.64
-    return 0.56
+    if (year <= CURRENT_YEAR) return 1
+    if (year === '2027') return 0.95
+    if (year === '2028') return 0.9
+    if (year === '2029') return 0.85
+    if (year === '2030') return 0.82
+    return 0.78
 }
 
 type BarRow = Record<string, string | number>
@@ -88,8 +89,8 @@ function AnnualBarTooltip({ data }: BarTooltipProps<BarRow>) {
     )
 }
 
-const CALLED_COLOR = '#005BE2'
-const UNCALLED_COLOR = '#93C5FD'
+const CALLED_COLOR = '#005BE2'    // --color-accent-9
+const UNCALLED_COLOR = '#A9AAB4'  // --color-neutral-7
 
 function CumulativeTooltip({ slice }: SliceTooltipProps<DefaultSeries>) {
     const calledPoint = slice.points.find(p => p.seriesId === 'Called')
@@ -201,22 +202,19 @@ export function CapitalCallsPage() {
     return (
         <div className="flex flex-col flex-1 gap-[var(--spacing-5)] pt-[36px] px-[var(--spacing-6)] pb-8 max-w-[1120px] w-full mx-auto">
             {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-2">
-                        Liability Forecast
-                    </p>
-                    <h1 className="font-display text-[32px] font-bold text-[var(--color-black)] tracking-[-0.02em] leading-[1.1] m-0">
-                        Know your future<br />capital calls.
-                    </h1>
-                    <p className="text-[14px] text-[var(--color-neutral-10)] mt-2 max-w-[480px] leading-[1.5]">
-                        Add each fund commitment with its pacing assumptions and instantly see what you'll owe — and when.
-                    </p>
-                </div>
-                <button className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-accent-9)] bg-[var(--color-accent-9)] px-4 py-2 text-[13px] font-semibold text-white shrink-0 mt-2 transition-opacity hover:opacity-90">
-                    <IconPlus size={15} stroke={2.5} />
-                    Add commitment
-                </button>
+            <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] m-0">
+                    Liability Forecast
+                </p>
+                <ContentHeader
+                    title="Capital Calls"
+                    onActionClick={() => {}}
+                    actionLabel="Add commitment"
+                    actionIcon={IconPlus}
+                />
+                <p className="text-[14px] text-[var(--color-neutral-10)] m-0 max-w-[620px] leading-[1.5]">
+                    Add each fund commitment with its pacing assumptions and instantly see what you'll owe — and when.
+                </p>
             </div>
 
             {/* KPI Cards */}
@@ -303,11 +301,9 @@ export function CapitalCallsPage() {
                             lineWidth={2.5}
                             enablePoints
                             pointSize={7}
-                            pointColor={point => (
-                                point.serieId === 'Called' ? '#60A5FA' : '#BFDBFE'
-                            )}
+                            pointColor="white"
                             pointBorderWidth={2}
-                            pointBorderColor="white"
+                            pointBorderColor={{ from: 'serieColor' }}
                             enableArea
                             areaOpacity={1}
                             areaBaselineValue={0}
@@ -399,9 +395,9 @@ export function CapitalCallsPage() {
                                             <span className="inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap">
                                                 <span
                                                     className="w-1.5 h-1.5 rounded-full shrink-0"
-                                                    style={{ background: hasReceivedCall ? '#B45309' : 'var(--color-neutral-6)' }}
+                                                    style={{ background: hasReceivedCall ? 'var(--color-neutral-8)' : 'var(--color-neutral-6)' }}
                                                 />
-                                                <span className={hasReceivedCall ? 'text-[#B45309]' : 'text-[var(--color-neutral-9)]'}>
+                                                <span className={hasReceivedCall ? 'text-[var(--color-neutral-11)]' : 'text-[var(--color-neutral-9)]'}>
                                                     {hasReceivedCall ? 'Call received' : 'No active call'}
                                                 </span>
                                             </span>

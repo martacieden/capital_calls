@@ -692,6 +692,19 @@ const FUND_CALL_COLORS: Record<string, string> = {
     'whitmore-real-assets-iii': '#005BE2',
 }
 
+const CAPITAL_CALLS_CHART_THEME = {
+    background: 'transparent',
+    text: { fontFamily: 'Inter, -apple-system, sans-serif' },
+    axis: {
+        domain: { line: { stroke: 'transparent' } },
+        ticks: {
+            line: { stroke: 'transparent' },
+            text: { fontSize: 11, fill: '#9CA3AF', fontFamily: 'Inter, -apple-system, sans-serif' },
+        },
+    },
+    grid: { line: { stroke: '#F0F0F3', strokeWidth: 1 } },
+}
+
 function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: () => void }) {
     const yearTotals = CAPITAL_CALL_COMMITMENTS.reduce<Record<number, number>>((acc, commitment) => {
         for (const call of commitment.calls) {
@@ -722,15 +735,43 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
     const totalCalled = CAPITAL_CALL_COMMITMENTS.reduce((s, c) => s + getTotalCalled(c), 0)
     const totalRemaining = totalCommitment - totalCalled
     const totalCalledPct = totalCommitment > 0 ? (totalCalled / totalCommitment) * 100 : 0
+    const currentYear = new Date().getFullYear()
+    const currentYearTotal = yearTotals[currentYear] ?? 0
+    const confirmedCalls = CAPITAL_CALL_COMMITMENTS.flatMap(c => c.calls).filter(c => c.status === 'pending').length
+    const nextDueCall = CAPITAL_CALL_COMMITMENTS
+        .flatMap(c => c.calls)
+        .filter(c => c.status !== 'paid')
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0]
+    const nextDueLabel = nextDueCall
+        ? new Date(nextDueCall.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : '—'
 
     return (
         <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 shadow-sm flex flex-col gap-5 w-full">
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
-                <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Commitments</h2>
+                <div className="flex flex-col gap-0.5">
+                    <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Commitments</h2>
+                    <p className="text-[11px] text-[var(--color-neutral-9)] m-0">Forecast snapshot for private investments</p>
+                </div>
                 <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-3)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-neutral-11)] tabular-nums shrink-0">
                     {fundCountLabel}
                 </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-neutral-2)] px-3 py-2.5">
+                    <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--color-neutral-9)]">Current year</p>
+                    <p className="m-0 mt-1 text-[14px] font-semibold tabular-nums text-[var(--color-black)]">{formatValue(currentYearTotal)}</p>
+                </div>
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-neutral-2)] px-3 py-2.5">
+                    <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--color-neutral-9)]">Call received</p>
+                    <p className="m-0 mt-1 text-[14px] font-semibold tabular-nums text-[var(--color-black)]">{confirmedCalls}</p>
+                </div>
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-neutral-2)] px-3 py-2.5">
+                    <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--color-neutral-9)]">Next due</p>
+                    <p className="m-0 mt-1 text-[14px] font-semibold tabular-nums text-[var(--color-black)]">{nextDueLabel}</p>
+                </div>
             </div>
 
             {/* Summary stats */}
@@ -745,7 +786,7 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
                 </div>
                 <div>
                     <div className="text-[11px] font-medium text-[var(--color-neutral-9)] mb-0.5">Remaining</div>
-                    <div className="text-[15px] font-semibold tabular-nums text-[#C79B35]">{formatValue(totalRemaining)}</div>
+                    <div className="text-[15px] font-semibold tabular-nums text-[var(--color-black)]">{formatValue(totalRemaining)}</div>
                 </div>
             </div>
 
@@ -772,30 +813,36 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
 
             {/* Call Schedule */}
             <div>
-                <p className="text-[12px] font-semibold text-[var(--color-black)] mb-0.5">Call Schedule</p>
-                <p className="text-[11px] text-[var(--color-neutral-9)] mb-3">Projected capital calls by year</p>
-                <div style={{ height: 160 }}>
+                <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-[12px] font-semibold text-[var(--color-black)] m-0">Call Schedule</p>
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-accent-3)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--color-accent-11)]">
+                        {currentYear}
+                    </span>
+                </div>
+                <p className="text-[11px] text-[var(--color-neutral-9)] mb-3">Projected capital calls by year (lighter confidence after current year)</p>
+                <div style={{ height: 200 }}>
                     <ResponsiveBar
                         data={scheduleRows.map(row => ({ year: String(row.year), ...row.totalsByFund }))}
                         keys={CAPITAL_CALL_COMMITMENTS.map(c => c.id)}
                         indexBy="year"
-                        margin={{ top: 4, right: 4, bottom: 32, left: 60 }}
-                        padding={0.38}
+                        margin={{ top: 8, right: 8, bottom: 32, left: 52 }}
+                        padding={0.35}
+                        borderRadius={3}
                         colors={({ id }) => FUND_CALL_COLORS[String(id)] ?? '#94A3B8'}
                         enableLabel={false}
                         axisLeft={{
                             tickValues: 4,
                             format: (v: number) => v >= 1_000_000 ? `$${Math.round(v / 1_000_000)}M` : '',
                             tickSize: 0,
-                            tickPadding: 10,
+                            tickPadding: 8,
                         }}
-                        axisBottom={{ tickSize: 0, tickPadding: 8 }}
+                        axisBottom={{ tickSize: 0, tickPadding: 10 }}
+                        axisTop={null}
+                        axisRight={null}
+                        enableGridX={false}
+                        enableGridY
                         gridYValues={4}
-                        theme={{
-                            text: { fontFamily: 'inherit' },
-                            axis: { ticks: { text: { fontSize: 11, fill: '#9CA3AF' } } },
-                            grid: { line: { stroke: '#F1F1F4', strokeWidth: 1 } },
-                        }}
+                        theme={CAPITAL_CALLS_CHART_THEME}
                         tooltip={({ id, value, indexValue }) => (
                             <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px', fontSize: 12, minWidth: 168, maxWidth: 220, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
                                 <div style={{ fontWeight: 600, marginBottom: 2, color: '#111' }}>{String(indexValue)}</div>
@@ -826,15 +873,27 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
                     const called = getTotalCalled(c)
                     const calledPct = c.totalCommitment > 0 ? (called / c.totalCommitment) * 100 : 0
                     const color = FUND_CALL_COLORS[c.id] ?? '#94A3B8'
+                    const hasReceivedCall = c.calls.some(call => call.status === 'pending')
                     return (
                         <div key={c.id} className="flex items-center gap-3 py-2.5">
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="text-[13px] font-medium text-[var(--color-black)] flex-1 truncate">
-                                {c.fundName.replace('Whitmore ', '')}
-                            </span>
-                            <span className="inline-flex items-center rounded-full border border-[var(--color-neutral-4)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-neutral-9)] shrink-0">
-                                {c.fundType}
-                            </span>
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                                <span className="text-[13px] font-medium text-[var(--color-black)] truncate">
+                                    {c.fundName.replace('Whitmore ', '')}
+                                </span>
+                                <span className="inline-flex items-center rounded-full border border-[var(--color-neutral-4)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-neutral-9)] shrink-0">
+                                    {c.fundType}
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap shrink-0">
+                                    <span
+                                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                                        style={{ background: hasReceivedCall ? 'var(--color-neutral-8)' : 'var(--color-neutral-6)' }}
+                                    />
+                                    <span className={hasReceivedCall ? 'text-[var(--color-neutral-11)]' : 'text-[var(--color-neutral-9)]'}>
+                                        {hasReceivedCall ? 'Call received' : 'No active call'}
+                                    </span>
+                                </span>
+                            </div>
                             <div className="w-28 h-1.5 rounded-full bg-[var(--color-neutral-3)] overflow-hidden shrink-0">
                                 <div className="h-full rounded-full" style={{ width: `${calledPct}%`, background: color }} />
                             </div>
