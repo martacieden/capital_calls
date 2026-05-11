@@ -11,6 +11,7 @@ import {
     IconHome,
     IconChartDonut,
     IconGraph,
+    IconChartBar,
 } from '@tabler/icons-react'
 import { FojoMascot } from '@/components/atoms/FojoMascot'
 
@@ -24,6 +25,7 @@ const navItems = [
     { icon: IconBriefcase, label: 'Projects', id: 'projects' },
     { icon: IconChartDonut, label: 'Portfolio', id: 'portfolio' },
     { icon: IconGraph, label: 'Private Inv.', id: 'portfolio-private' },
+    { icon: IconChartBar, label: 'Cap. Calls', id: 'capital-calls' },
     { icon: IconCalendarEvent, label: 'Timeline', id: 'timeline' },
     { icon: IconDots, label: 'More', id: 'more' },
 ]

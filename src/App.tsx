@@ -26,6 +26,7 @@ import { DocumentsPage } from '@/components/pages/DocumentsPage'
 import { AssetDetailPage } from '@/components/pages/AssetDetailPage'
 import { TasksPage } from '@/components/pages/TasksPage'
 import { TaskDetailPage } from '@/components/pages/TaskDetailPage'
+import { CapitalCallsPage } from '@/components/pages/CapitalCallsPage'
 import { ToastContainer, showToast, updateToast } from '@/components/atoms/Toast'
 import { SearchOverlay } from '@/components/organisms/SearchOverlay'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
@@ -85,7 +86,7 @@ function AppShell() {
 
   // ── Local navigation state ──
   const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
-  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail'>('home')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'capital-calls'>('home')
   const [holdingsCategoryKeys, setHoldingsCategoryKeys] = useState<string[]>([])
   const [holdingsCategoryLabel, setHoldingsCategoryLabel] = useState('')
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
@@ -678,6 +679,8 @@ function AppShell() {
             : activePage === 'detail' ? 'catalog'
             : activePage === 'portfolio-category-detail'
                 ? (previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
+            : activePage === 'category-holdings'
+                ? (previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
             : activePage
           }
           navBadges={navBadges}
@@ -699,6 +702,7 @@ function AppShell() {
               }
               else if (id === 'documents') setActivePage('documents')
               else if (id === 'tasks') setActivePage('tasks')
+              else if (id === 'capital-calls') setActivePage('capital-calls')
           }}
           onFojoToggle={() => setFojoForceOpen(!fojoForceOpen)}
           fojoUnreadCount={fojoUnreadCount}
@@ -963,6 +967,8 @@ function AppShell() {
               setActivePage('detail')
             }}
           />
+        ) : activePage === 'capital-calls' ? (
+          <CapitalCallsPage />
         ) : activePage === 'documents' ? (
           <DocumentsPage
             onNavigateToTimeline={() => setActivePage('timeline')}

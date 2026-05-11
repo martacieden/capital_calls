@@ -12,8 +12,11 @@ export interface CapitalCallCommitment {
     id: string
     fundName: string
     fundType: string
+    vintage: string
     totalCommitment: number
     calls: CapitalCall[]
+    /** Projected capital calls by year (2026–2031 forecast schedule). */
+    yearlyPacing: Record<string, number>
 }
 
 export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
@@ -21,6 +24,7 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
         id: 'whitmore-capital-i',
         fundName: 'Whitmore Capital Fund I',
         fundType: 'Private Equity',
+        vintage: '2022',
         totalCommitment: 10_000_000,
         calls: [
             { id: 'wc1-1', callNumber: 1, dueDate: '2022-03-15', amount: 2_000_000, status: 'paid' },
@@ -29,11 +33,13 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             { id: 'wc1-4', callNumber: 4, dueDate: '2025-09-01', amount: 2_000_000, status: 'paid' },
             { id: 'wc1-5', callNumber: 5, dueDate: '2026-06-01', amount: 2_000_000, status: 'pending' },
         ],
+        yearlyPacing: { '2026': 2_000_000 },
     },
     {
         id: 'whitmore-ventures-ii',
         fundName: 'Whitmore Ventures Fund II',
         fundType: 'Venture Capital',
+        vintage: '2023',
         totalCommitment: 5_000_000,
         calls: [
             { id: 'wv2-1', callNumber: 1, dueDate: '2023-06-01', amount: 1_000_000, status: 'paid' },
@@ -42,11 +48,13 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             { id: 'wv2-4', callNumber: 4, dueDate: '2026-08-15', amount: 1_000_000, status: 'upcoming' },
             { id: 'wv2-5', callNumber: 5, dueDate: '2027-06-01', amount: 1_000_000, status: 'upcoming' },
         ],
+        yearlyPacing: { '2026': 1_000_000, '2027': 1_000_000 },
     },
     {
         id: 'whitmore-real-assets-iii',
         fundName: 'Whitmore Real Assets Fund III',
         fundType: 'Real Assets',
+        vintage: '2025',
         totalCommitment: 7_500_000,
         calls: [
             { id: 'wra3-1', callNumber: 1, dueDate: '2025-06-01', amount: 1_500_000, status: 'paid' },
@@ -55,6 +63,14 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             { id: 'wra3-4', callNumber: 4, dueDate: '2028-06-01', amount: 1_500_000, status: 'upcoming' },
             { id: 'wra3-5', callNumber: 5, dueDate: '2029-06-01', amount: 1_500_000, status: 'upcoming' },
         ],
+        yearlyPacing: {
+            '2026': 500_000,
+            '2027': 1_500_000,
+            '2028': 2_000_000,
+            '2029': 1_000_000,
+            '2030': 500_000,
+            '2031': 500_000,
+        },
     },
 ]
 
