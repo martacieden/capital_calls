@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { IconChevronRight, IconCloudUpload, IconFileText, IconList, IconShieldLock, IconX, IconSitemap, IconCalendarEvent, IconChartDonut } from '@tabler/icons-react'
+import { IconChevronRight, IconCloudUpload, IconFileText, IconList, IconShieldLock, IconX, IconSitemap, IconCalendarEvent, IconChartDonut, IconBriefcase } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
 interface OnboardingPageProps {
@@ -21,6 +21,11 @@ const DOCS = [
         icon: IconShieldLock,
         label: 'Insurance policies',
         description: "Coverage gaps and renewals we can catch early",
+    },
+    {
+        icon: IconBriefcase,
+        label: 'Investment documents',
+        description: "Capital call notices, LP agreements, and fund subscriptions",
     },
 ]
 

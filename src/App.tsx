@@ -27,6 +27,8 @@ import { AssetDetailPage } from '@/components/pages/AssetDetailPage'
 import { TasksPage } from '@/components/pages/TasksPage'
 import { TaskDetailPage } from '@/components/pages/TaskDetailPage'
 import { CapitalCallsPage } from '@/components/pages/CapitalCallsPage'
+import { DecisionsPage } from '@/components/pages/DecisionsPage'
+import { CapitalCallDetailPage } from '@/components/pages/CapitalCallDetailPage'
 import { ToastContainer, showToast, updateToast } from '@/components/atoms/Toast'
 import { SearchOverlay } from '@/components/organisms/SearchOverlay'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
@@ -86,7 +88,7 @@ function AppShell() {
 
   // ── Local navigation state ──
   const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
-  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'capital-calls'>('home')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'capital-calls' | 'decisions' | 'capital-call-detail'>('home')
   const [holdingsCategoryKeys, setHoldingsCategoryKeys] = useState<string[]>([])
   const [holdingsCategoryLabel, setHoldingsCategoryLabel] = useState('')
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
@@ -94,6 +96,7 @@ function AppShell() {
   const [portfolioPanelCategoryId, setPortfolioPanelCategoryId] = useState<string | null>(null)
   const [portfolioDetailCategoryId, setPortfolioDetailCategoryId] = useState<string | null>(null)
   const [previousPage, setPreviousPage] = useState<typeof activePage>('catalog')
+  const [detailCapCallId, setDetailCapCallId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [mapZoomTargetId, setMapZoomTargetId] = useState<string | null>(null)
@@ -677,6 +680,7 @@ function AppShell() {
           activeItem={
             activePage === 'task-detail' ? 'tasks'
             : activePage === 'detail' ? 'catalog'
+            : activePage === 'capital-call-detail' ? 'decisions'
             : activePage === 'portfolio-category-detail'
                 ? (previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
             : activePage === 'category-holdings'
@@ -703,6 +707,7 @@ function AppShell() {
               else if (id === 'documents') setActivePage('documents')
               else if (id === 'tasks') setActivePage('tasks')
               else if (id === 'capital-calls') setActivePage('capital-calls')
+              else if (id === 'decisions') setActivePage('decisions')
           }}
           onFojoToggle={() => setFojoForceOpen(!fojoForceOpen)}
           fojoUnreadCount={fojoUnreadCount}
@@ -969,6 +974,19 @@ function AppShell() {
           />
         ) : activePage === 'capital-calls' ? (
           <CapitalCallsPage />
+        ) : activePage === 'decisions' ? (
+          <DecisionsPage
+            onOpenDetail={(id) => {
+              setDetailCapCallId(id)
+              setPreviousPage('decisions')
+              setActivePage('capital-call-detail')
+            }}
+          />
+        ) : activePage === 'capital-call-detail' && detailCapCallId ? (
+          <CapitalCallDetailPage
+            id={detailCapCallId}
+            onBack={() => setActivePage('decisions')}
+          />
         ) : activePage === 'documents' ? (
           <DocumentsPage
             onNavigateToTimeline={() => setActivePage('timeline')}
