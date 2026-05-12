@@ -16,9 +16,9 @@ const FORECAST_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031']
 const CURRENT_YEAR = String(new Date().getFullYear())
 
 const FUND_COLORS: Record<string, string> = {
-    'whitmore-capital-i': '#005BE2',    // --color-accent-9
-    'whitmore-ventures-ii': '#8B5CF6',  // --color-card-purple
-    'whitmore-real-assets-iii': '#EA580C', // --color-card-orange
+    'whitmore-capital-i': '#005BE2',
+    'whitmore-ventures-ii': '#8B5CF6',
+    'whitmore-real-assets-iii': '#93C5FD',
 }
 
 const CHART_THEME: PartialTheme = {
@@ -100,8 +100,8 @@ function AnnualBarTooltip({ data }: BarTooltipProps<BarRow>) {
     )
 }
 
-const CALLED_COLOR = '#005BE2'    // --color-accent-9
-const UNCALLED_COLOR = '#A9AAB4'  // --color-neutral-7
+const CALLED_COLOR = '#005BE2'
+const UNCALLED_COLOR = '#93C5FD'
 
 function CumulativeTooltip({ slice }: SliceTooltipProps<DefaultSeries>) {
     const calledPoint = slice.points.find(p => p.seriesId === 'Called')
@@ -267,9 +267,9 @@ export function CapitalCallsPage() {
     ], [v2CumulativeData])
 
     const v2PurposeData = [
-        { key: 'Investments', value: 92.71, color: '#185fa5' },
-        { key: 'Fees', value: 6.33, color: '#7f77dd' },
-        { key: 'Expenses', value: 0.96, color: '#b4b2a9' },
+        { key: 'Investments', value: 92.71, color: '#005BE2' },
+        { key: 'Fees', value: 6.33, color: '#8B5CF6' },
+        { key: 'Expenses', value: 0.96, color: '#93C5FD' },
     ]
     const v2PurposeGradient = `conic-gradient(${v2PurposeData.map(seg => `${seg.color} 0 ${seg.value}%`).join(',')})`
 
@@ -600,14 +600,14 @@ export function CapitalCallsPage() {
                 </>
             ) : (
                 <>
-                    <div className="rounded-[var(--radius-xl)] border border-[#f0c070] bg-[#fff8f0] px-4 py-3.5 flex items-center justify-between gap-4">
+                    <div className="rounded-[var(--radius-xl)] border border-[var(--color-blue-3)] bg-[var(--color-blue-1)] px-4 py-3.5 flex items-center justify-between gap-4">
                         <div className="flex items-start gap-3 min-w-0">
-                            <IconAlertTriangle size={18} className="text-[#c07010] shrink-0 mt-0.5" />
+                            <IconAlertTriangle size={18} className="text-[var(--color-accent-9)] shrink-0 mt-0.5" />
                             <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-[#7a4f10] m-0">
+                                <p className="text-[13px] font-semibold text-[var(--color-accent-10)] m-0">
                                     1 capital call pending your approval — {fmt(v2PendingAmount)} due {formatDateShort(v2PendingDueDate)}
                                 </p>
-                                <p className="text-[11px] text-[#a07030] m-0 mt-0.5">
+                                <p className="text-[11px] text-[var(--color-accent-9)] m-0 mt-0.5">
                                     {v2ScenarioFundName} · Validated ✓ · Wire unchanged ✓ · Liquidity: OK · {v2PendingDays} days remaining
                                 </p>
                             </div>
@@ -626,12 +626,12 @@ export function CapitalCallsPage() {
                         </div>
                         <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] px-4 py-3.5">
                             <p className="text-[11px] text-[var(--color-neutral-9)] m-0 h-[16px]">Called to date</p>
-                            <p className="text-[31px] font-semibold tracking-[-0.01em] text-[#185fa5] m-0 leading-[1.1] mt-1">{fmt(v2CalledPaid + v2PendingAmount)}</p>
+                            <p className="text-[31px] font-semibold tracking-[-0.01em] text-[var(--color-accent-9)] m-0 leading-[1.1] mt-1">{fmt(v2CalledPaid + v2PendingAmount)}</p>
                             <p className="text-[11px] text-[var(--color-neutral-9)] m-0 mt-1 h-[16px]">75% deployed</p>
                         </div>
                         <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] px-4 py-3.5">
                             <p className="text-[11px] text-[var(--color-neutral-9)] m-0 h-[16px]">Pending approval</p>
-                            <p className="text-[31px] font-semibold tracking-[-0.01em] text-[#a32d2d] m-0 leading-[1.1] mt-1">{fmt(v2PendingAmount)}</p>
+                            <p className="text-[31px] font-semibold tracking-[-0.01em] text-[#8B5CF6] m-0 leading-[1.1] mt-1">{fmt(v2PendingAmount)}</p>
                             <p className="text-[11px] text-[var(--color-neutral-9)] m-0 mt-1 h-[16px]">{`Due in ${v2PendingDays} days`}</p>
                         </div>
                         <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] px-4 py-3.5">
@@ -655,7 +655,7 @@ export function CapitalCallsPage() {
                                     margin={{ top: 8, right: 8, bottom: 32, left: 56 }}
                                     padding={0.3}
                                     borderRadius={3}
-                                    colors={({ id }) => id === 'paid' ? '#185fa5' : id === 'pending' ? '#e24b4a' : '#dddbd4'}
+                                    colors={({ id }) => id === 'paid' ? '#005BE2' : id === 'pending' ? '#8B5CF6' : '#D9E7FF'}
                                     axisBottom={{ tickSize: 0, tickPadding: 10 }}
                                     axisLeft={{ tickSize: 0, tickPadding: 8, tickValues: 4, format: v => fmtAxis(v as number) }}
                                     axisTop={null}
@@ -687,7 +687,7 @@ export function CapitalCallsPage() {
                                     xScale={{ type: 'point' }}
                                     yScale={{ type: 'linear', min: 0, max: v2TotalCommitted * 1.05 }}
                                     curve="monotoneX"
-                                    colors={['#185fa5', '#85b7eb']}
+                                    colors={['#005BE2', '#93C5FD']}
                                     lineWidth={2.5}
                                     pointSize={6}
                                     pointColor={{ from: 'serieColor' }}
@@ -736,16 +736,16 @@ export function CapitalCallsPage() {
                             <div className="flex flex-col">
                                 {v2HistoryCalls.map((call, idx) => {
                                     const pct = (call.amount / v2TotalCommitted) * 100
-                                    const statusColor = call.status === 'paid' ? '#27500a' : call.status === 'pending' ? '#a32d2d' : '#5f5e5a'
+                                    const statusColor = call.status === 'paid' ? '#005BE2' : call.status === 'pending' ? '#8B5CF6' : '#94A3B8'
                                     const badgeClass = call.status === 'paid'
-                                        ? 'bg-[#eaf3de] text-[#27500a]'
+                                        ? 'bg-[var(--color-blue-1)] text-[var(--color-accent-10)]'
                                         : call.status === 'pending'
-                                            ? 'bg-[#fdecea] text-[#a32d2d]'
-                                            : 'bg-[#f1efe8] text-[#5f5e5a]'
+                                            ? 'bg-[#F3EEFF] text-[#6E3DD1]'
+                                            : 'bg-[var(--color-neutral-3)] text-[var(--color-neutral-10)]'
                                     return (
                                         <div
                                             key={call.id}
-                                            className={`grid grid-cols-[10px_80px_minmax(0,1fr)_112px_92px] items-start gap-2 py-2.5 border-b border-[var(--color-neutral-3)] last:border-b-0 ${call.status === 'pending' ? 'bg-[#fff8f5] rounded-[var(--radius-md)] px-2 -mx-2' : ''}`}
+                                            className={`grid grid-cols-[10px_80px_minmax(0,1fr)_112px_92px] items-start gap-2 py-2.5 border-b border-[var(--color-neutral-3)] last:border-b-0 ${call.status === 'pending' ? 'bg-[#F6F3FF] rounded-[var(--radius-md)] px-2 -mx-2' : ''}`}
                                         >
                                             <div className="relative pt-1">
                                                 <span className="w-2 h-2 rounded-full block" style={{ background: statusColor }} />
@@ -774,13 +774,13 @@ export function CapitalCallsPage() {
                             </div>
                             <div className="mt-3 pt-2.5 border-t border-[var(--color-neutral-3)]">
                                 <div className="h-1.5 rounded-full bg-[var(--color-neutral-3)] overflow-hidden flex">
-                                    <div style={{ width: `${Math.max(0, (v2CalledPaid / v2TotalCommitted) * 100)}%`, background: '#185fa5' }} />
-                                    <div style={{ width: `${Math.max(0, (v2PendingAmount / v2TotalCommitted) * 100)}%`, background: '#e24b4a' }} />
-                                    <div style={{ width: `${Math.max(0, (v2RemainingUncalled / v2TotalCommitted) * 100)}%`, background: '#dddbd4' }} />
+                                    <div style={{ width: `${Math.max(0, (v2CalledPaid / v2TotalCommitted) * 100)}%`, background: '#005BE2' }} />
+                                    <div style={{ width: `${Math.max(0, (v2PendingAmount / v2TotalCommitted) * 100)}%`, background: '#8B5CF6' }} />
+                                    <div style={{ width: `${Math.max(0, (v2RemainingUncalled / v2TotalCommitted) * 100)}%`, background: '#D9E7FF' }} />
                                 </div>
                                 <div className="flex items-center justify-between mt-1.5 text-[10px] text-[var(--color-neutral-9)]">
                                     <span>Paid {Math.round((v2CalledPaid / v2TotalCommitted) * 100)}%</span>
-                                    <span className="text-[#a32d2d]">Pending {Math.round((v2PendingAmount / v2TotalCommitted) * 100)}%</span>
+                                    <span className="text-[#6E3DD1]">Pending {Math.round((v2PendingAmount / v2TotalCommitted) * 100)}%</span>
                                     <span>Uncalled {Math.round((v2RemainingUncalled / v2TotalCommitted) * 100)}%</span>
                                 </div>
                             </div>
