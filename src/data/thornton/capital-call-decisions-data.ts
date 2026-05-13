@@ -422,6 +422,51 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             { time: '9:00 AM', actor: 'Anastasiya Mudryk', action: 'Created from Whitmore_CapCall_04.pdf' },
         ],
     },
+    // ── CAPCAL-7 · manually logged · awaiting-execution ─────────────────────
+    {
+        id: 'CAPCAL-7',
+        title: 'Capital call — Series B final deployment',
+        fund: 'Whitmore Ventures Fund II, L.P.',
+        entity: 'Thornton Holdings Inc.',
+        gp: 'Whitmore Capital Group',
+        amount: 1_000_000,
+        commitment: 5_000_000,
+        callNumber: 5,
+        totalCalls: 5,
+        drawnBefore: 0.80,
+        drawnAfter: 1.00,
+        dueDate: '2026-09-01',
+        createdDate: '2026-05-13',
+        stage: 'allocator-review',
+        stageStatus: 'active',
+        status: 'pending',
+        postDealStatus: 'awaiting-execution',
+        allocations: [
+            { entity: 'Thornton Holdings Inc.', entityType: 'LLC', allocationPct: 100, allocationAmount: 1_000_000, accountLast4: '8841' },
+        ],
+        approvals: [
+            { id: 'ap-15', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'pending' },
+            { id: 'ap-16', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'pending' },
+        ],
+        matchedInvestmentId: 'INV-2023-011',
+        matchedInvestmentName: 'Whitmore Ventures Fund II',
+        matchConfidence: 0,
+        priorCallsDrawn: 4,
+        pdfName: '',
+        pdfPages: 0,
+        pdfSizeKb: 0,
+        wireInstructions: {
+            beneficiary: 'Whitmore Ventures Fund II LP',
+            bank: 'JPMorgan Chase, NY',
+            aba: '021000021',
+            account: '···· 8841',
+            swift: 'CHASUS33',
+            reference: 'CAPCAL-7 / Thornton Holdings Inc.',
+        },
+        activityLog: [
+            { time: '10:30 AM', actor: 'Anastasiya Mudryk', action: 'Logged manually · awaiting capital call notice' },
+        ],
+    },
 ]
 
 export function getDecisionById(id: string): CapitalCallDecision | undefined {

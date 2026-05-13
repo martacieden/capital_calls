@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
 import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
-import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconMail } from '@tabler/icons-react'
+import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconX, IconArrowRight, IconFileText } from '@tabler/icons-react'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
 import { UploadModal } from '@/components/pages/DecisionsPage'
 import { cn } from '@/lib/utils'
@@ -167,6 +167,149 @@ function OverviewKpiTile({
     )
 }
 
+// ─── log capital call modal ───────────────────────────────────────────────────
+
+const EXISTING_PDFS = [
+    'Meridian_CapCall_07_RE-Holding.pdf',
+    'Whitmore_CapCall_03_ThorntonTrust.pdf',
+    'WV2_CapCall_04_ThorntonHoldings.pdf',
+    'Whitmore_CapCall_05_Final_Trust.pdf',
+]
+
+function LogCapitalCallModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+    const [amount, setAmount] = useState('')
+    const [pct, setPct] = useState('')
+    const [accountLast4, setAccountLast4] = useState('')
+    const [routing, setRouting] = useState('')
+    const [selectedPdf, setSelectedPdf] = useState(EXISTING_PDFS[0] ?? '')
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        onCreated('CAPCAL-7')
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+            <div
+                className="relative w-full max-w-[480px] rounded-[var(--radius-xl)] bg-white shadow-2xl"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* header */}
+                <div className="flex items-center justify-between border-b border-[var(--color-neutral-4)] px-6 py-4">
+                    <h2 className="m-0 text-[16px] font-semibold text-[var(--color-black)]">Log Capital Call #5</h2>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] transition-colors"
+                    >
+                        <IconX size={16} stroke={2} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-6 py-5">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Call Amount ($)</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. 1,000,000"
+                                value={amount}
+                                onChange={e => setAmount(e.target.value)}
+                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Call % of Commitment</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. 20"
+                                value={pct}
+                                onChange={e => setPct(e.target.value)}
+                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Bank Account (last 4)</label>
+                            <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="e.g. 8841"
+                                value={accountLast4}
+                                onChange={e => setAccountLast4(e.target.value.replace(/\D/g, ''))}
+                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Routing Number</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. 021000021"
+                                value={routing}
+                                onChange={e => setRouting(e.target.value)}
+                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* PDF selection */}
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Capital Call Notice</label>
+                        <div className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] overflow-hidden">
+                            {EXISTING_PDFS.map(pdf => (
+                                <label
+                                    key={pdf}
+                                    className="flex cursor-pointer items-center gap-3 border-b border-[var(--color-neutral-4)] px-4 py-2.5 last:border-b-0 hover:bg-[var(--color-neutral-2)] transition-colors"
+                                >
+                                    <input
+                                        type="radio"
+                                        name="pdf"
+                                        value={pdf}
+                                        checked={selectedPdf === pdf}
+                                        onChange={() => setSelectedPdf(pdf)}
+                                        className="accent-[var(--color-accent-9)]"
+                                    />
+                                    <IconFileText size={14} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" />
+                                    <span className="text-[12px] text-[var(--color-neutral-11)] truncate">{pdf}</span>
+                                </label>
+                            ))}
+                            <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-neutral-2)] transition-colors">
+                                <input
+                                    type="radio"
+                                    name="pdf"
+                                    value="upload"
+                                    checked={selectedPdf === 'upload'}
+                                    onChange={() => setSelectedPdf('upload')}
+                                    className="accent-[var(--color-accent-9)]"
+                                />
+                                <IconPlus size={14} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" />
+                                <span className="text-[12px] text-[var(--color-neutral-9)]">Upload a new file…</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* actions */}
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
+                        >
+                            Log Capital Call
+                            <IconArrowRight size={14} stroke={2.5} />
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
 // ─── main component ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -179,6 +322,7 @@ interface Props {
 export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: Props) {
     /** Shared PDF/email intake modal — wired from shell header while List view can stay mounted separately */
     const [uploadModalOpen, setUploadModalOpen] = useState(false)
+    const [logModalOpen, setLogModalOpen] = useState(false)
     const [commitmentsLayout, setCommitmentsLayout] = useState<'cards' | 'table'>('cards')
 
     const openCommitmentDetail = useCallback(
@@ -255,6 +399,15 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     }}
                 />
             ) : null}
+            {logModalOpen ? (
+                <LogCapitalCallModal
+                    onClose={() => setLogModalOpen(false)}
+                    onCreated={id => {
+                        setLogModalOpen(false)
+                        setTimeout(() => onOpenDetail?.(id), 300)
+                    }}
+                />
+            ) : null}
 
             {/* ── Header ──────────────────────────────────────────────────── */}
             <div className={cn('px-[var(--spacing-6)] pb-0 bg-white shrink-0 border-b border-[var(--color-gray-4)]', hubLayout ? 'pt-4' : 'pt-[36px]')}>
@@ -282,9 +435,9 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     <ContentHeader
                         title="Capital Calls"
                         secondaryAction={{
-                            label: 'Import email +',
-                            onClick: () => setUploadModalOpen(true),
-                            icon: IconMail,
+                            label: 'Add info manually',
+                            onClick: () => setLogModalOpen(true),
+                            icon: IconPencil,
                         }}
                         onActionClick={() => setUploadModalOpen(true)}
                         actionLabel="New capital call"

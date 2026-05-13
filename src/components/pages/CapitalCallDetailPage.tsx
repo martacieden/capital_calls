@@ -374,7 +374,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
     ]
 
     return (
-        <div className="flex flex-col flex-1 h-full overflow-hidden">
+        <div className="flex flex-col flex-1 h-full overflow-hidden max-w-[1120px] w-full mx-auto">
 
             {/* ── Top nav bar ────────────────────────────────────────────────── */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-neutral-4)] bg-white shrink-0">
