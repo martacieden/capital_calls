@@ -73,15 +73,15 @@ export const MOCK_RESPONSES: Record<string, string> = {
     'concern': "Common estate planning risks identified:\n\n1. **Concentration risk** – significant exposure through single venture portfolio\n2. **Key person dependency** – grantor serving as sole trustee\n3. **Successor trustee planning** – consider age-appropriate alternatives\n4. **Tax law changes** – current exemption could be reduced\n5. **Cross-state compliance** – multi-state holdings require ongoing review",
     'summarize': "Estate overview:\n\nYou're managing 4 client families with combined assets of ~$2.52B. The Davis Family ($19.7M) has a straightforward RLT structure with a Children's Trust for milestone distributions. Henderson ($500M) uses nested LLC structures with GRAT series. Thornton ($2B) has the most complex structure with Dynasty Trusts across two marriages.\n\nAll estate plans are current and active.",
     'structure': "Trust structure summary:\n\n**Davis Family:**\nDavis Family RLT → Davis Holdings LLC → (Evergreen Terrace LLC, Davis Ventures LLC)\nDavis Family RLT → Children's Trust (created at death)\nDavis ILIT → Term Life Insurance ($5M)\n\n**Henderson & Thornton** families have more complex nested structures with multiple GRATs, SLATs, and Dynasty Trusts.",
-    'find': "What are you looking for? You can describe the asset by name, type, owner, or location.",
-    'relationship': "Here's how entities, assets, and policies connect across families:\n\n**Davis Family:**\nJames & Margaret Davis → Davis Family RLT → Davis Holdings LLC → Evergreen Terrace LLC, Davis Ventures LLC\nChildren's Trust → Emily (16), Michael (14) — milestone distributions at 18, 25, 30\nDavis ILIT → $5M Term Life Policy\n\n**Henderson Family:**\nRobert & Catherine Henderson → Henderson Dynasty Trust → 3 children, 6 grandchildren\nNested LLC structures with GRAT series for tax-efficient transfers\n\n**Thornton Family:**\nEdward III & Anastasia → Dynasty Trust I & II → 5 children (two marriages), 12 grandchildren\nThornton Capital Group LP → $15M allocation via Dynasty Trust I Schedule C",
+    'find': "What are you looking for? You can describe the fund, GP, deal memo, commitment, due date, or capital call amount.",
+    'relationship': "Investment exposure summary:\n\n**Capital calls:** 6 open notices across Greentech, Whitmore Capital, Ventures, and Real Assets.\n\n**Pipeline:** Sourcing → Screening → Diligence → Decision, with stalled deals flagged when last activity is older than 14 days.\n\n**Payment readiness:** Notices are matched to fund records, wire instructions are verified, and release status is tracked before funds move.",
 }
 
-export const DEFAULT_RESPONSE = "I can help you explore the estate data. Try asking about:\n\n- Trust structures and types\n- Beneficiary distributions\n- Total estate values\n- Timeline milestones\n- Risk factors and concerns"
+export const DEFAULT_RESPONSE = "I can help you with investment and capital-call workflows. Try asking about:\n\n- Pipeline status and blockers\n- Capital call approvals and due dates\n- Fund/entity exposure\n- Required next actions\n- Risk factors and stalled items"
 
 export const TIMELINE_KEYWORDS = ['timeline', 'distribution timeline', 'generate distribution']
 
-export const QUICK_PROMPTS = ['Help me find assets', 'Create new asset', 'Explain relationships']
+export const QUICK_PROMPTS = ['Find investment or call', 'Upload capital call', 'Explain fund exposure']
 
 // ─── Additional proactive notifications (Ref: FEEDBACK-SUMMARY.md §12d) ───
 

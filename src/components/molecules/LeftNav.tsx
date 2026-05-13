@@ -1,31 +1,39 @@
 import {
-    IconSearch,
-    IconBriefcase,
-    IconArrowRampRight,
-    IconCheckbox,
     IconFileText,
-    IconSitemap,
-    IconDots,
     IconBug,
-    IconCalendarEvent,
     IconHome,
-    IconChartDonut,
-    IconGraph,
+    IconGitBranch,
+    IconUsers,
+    IconReceipt,
 } from '@tabler/icons-react'
+import type { ComponentType } from 'react'
 import { FojoMascot } from '@/components/atoms/FojoMascot'
 
-const navItems = [
-    { icon: IconSearch, label: 'Search', id: 'search' },
-    { icon: IconHome, label: 'Home', id: 'home' },
-    { icon: IconSitemap, label: 'Assets', id: 'catalog' },
+interface NavItem {
+    icon: ComponentType<{ size?: number; stroke?: number; color?: string }>
+    label: string
+    id: string
+    /** Long tooltip — explains how this item differs from the others */
+    hint?: string
+}
+
+/** One Pipeline board: deal flow in every lane; capital-call cards in IC Review and Approved. */
+const navItems: NavItem[] = [
+    { icon: IconHome, label: 'Dashboard', id: 'home' },
+    {
+        icon: IconGitBranch,
+        label: 'Pipeline',
+        id: 'investment-pipeline',
+        hint: 'Deal flow and pipeline decisions.',
+    },
+    {
+        icon: IconReceipt,
+        label: 'Capital Calls',
+        id: 'capital-flows',
+        hint: 'Capital call workflow and approvals.',
+    },
+    { icon: IconUsers, label: 'Contacts', id: 'contacts' },
     { icon: IconFileText, label: 'Documents', id: 'documents' },
-    { icon: IconCheckbox, label: 'Tasks', id: 'tasks' },
-    { icon: IconArrowRampRight, label: 'Decisions', id: 'decisions' },
-    { icon: IconBriefcase, label: 'Projects', id: 'projects' },
-    { icon: IconChartDonut, label: 'Portfolio', id: 'portfolio' },
-    { icon: IconGraph, label: 'Private Inv.', id: 'portfolio-private' },
-    { icon: IconCalendarEvent, label: 'Timeline', id: 'timeline' },
-    { icon: IconDots, label: 'More', id: 'more' },
 ]
 
 interface LeftNavProps {
@@ -37,7 +45,7 @@ interface LeftNavProps {
     isFojoOpen?: boolean
 }
 
-export function LeftNav({ activeItem = 'catalog', onNavItemClick, navBadges, onFojoToggle, fojoUnreadCount = 0, isFojoOpen = false }: LeftNavProps) {
+export function LeftNav({ activeItem = 'home', onNavItemClick, navBadges, onFojoToggle, fojoUnreadCount = 0, isFojoOpen = false }: LeftNavProps) {
     return (
         <nav className="left-nav flex flex-col items-center justify-between shrink-0 py-[var(--spacing-2)]">
             <div className="flex flex-col items-center">
@@ -54,7 +62,7 @@ export function LeftNav({ activeItem = 'catalog', onNavItemClick, navBadges, onF
                         return (
                             <button
                                 key={item.id}
-                                title={item.label}
+                                title={item.hint ?? item.label}
                                 className={`relative flex w-full min-h-[40px] flex-col items-center justify-center overflow-hidden rounded-[var(--radius-md)] px-[var(--spacing-2)] py-[10px] transition-[background,transform,color,border-color,opacity] duration-150 ease-linear hover:bg-[var(--color-neutral-3)]${index > 0 ? ' mt-[var(--spacing-2)]' : ''}${isActive ? ' bg-[var(--color-blue-3)] hover:bg-[var(--color-blue-3)]' : ''}`}
                                 onClick={() => onNavItemClick?.(item.id)}
                             >

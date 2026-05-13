@@ -37,6 +37,7 @@ import {
     getPortfolioAllocationTooltipIntro,
 } from '@/data/thornton/portfolio-data'
 import { CAPITAL_CALL_COMMITMENTS, getTotalCalled } from '@/data/thornton/capital-calls-data'
+import { INVESTMENT_RECORDS } from '@/data/thornton/investments-data'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 import { thorntonAssets } from '@/data/thornton/assets'
 
@@ -50,6 +51,7 @@ interface ValuationsPageProps {
     onNavigateToAsset?: (id: string) => void
     onNavigateToTasks?: () => void
     onNavigateToTimeline?: () => void
+    onNavigateToInvestment?: (investmentId: string) => void
 }
 
 function formatValue(value: number): string {
@@ -120,6 +122,7 @@ export function ValuationsPage({
     onOpenPortfolioCategory,
     onNavigateToAsset,
     onNavigateToTimeline,
+    onNavigateToInvestment,
 }: ValuationsPageProps) {
     const [activeSector, setActiveSector] = useState<string | null>(null)
     const [activeGeoKey, setActiveGeoKey] = useState<string | null>(null)
@@ -403,7 +406,7 @@ export function ValuationsPage({
             {/* Portfolio Allocation + KPIs — side by side */}
             <div className="flex gap-3 items-stretch">
                 {/* Portfolio Allocation pie chart */}
-                <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 flex-1 min-w-0 shadow-sm">
+                <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="font-display text-base font-semibold text-[var(--color-black)]">Portfolio Allocation</h2>
                         <span className="text-sm text-[var(--color-neutral-11)]">{formatValue(currentDisplayTotal)}</span>
@@ -680,16 +683,22 @@ export function ValuationsPage({
             </div>
 
             {/* Capital Call Commitments — private investments only */}
-            {isPrivate && <CapitalCallsSection onNavigateToTimeline={onNavigateToTimeline} />}
+            {isPrivate && (
+                <CapitalCallsSection
+                    onNavigateToTimeline={onNavigateToTimeline}
+                    onNavigateToInvestment={onNavigateToInvestment}
+                />
+            )}
 
         </div>
     )
 }
 
 const FUND_CALL_COLORS: Record<string, string> = {
-    'whitmore-capital-i': '#059669',
+    'greentech-fund-iii': '#059669',
+    'whitmore-capital-i': '#005BE2',
     'whitmore-ventures-ii': '#8B5CF6',
-    'whitmore-real-assets-iii': '#005BE2',
+    'whitmore-real-assets-iii': '#93C5FD',
 }
 
 const CAPITAL_CALLS_CHART_THEME = {
@@ -705,7 +714,21 @@ const CAPITAL_CALLS_CHART_THEME = {
     grid: { line: { stroke: '#F0F0F3', strokeWidth: 1 } },
 }
 
-function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: () => void }) {
+function CapitalCallsSection({
+    onNavigateToTimeline,
+    onNavigateToInvestment,
+}: {
+    onNavigateToTimeline?: () => void
+    onNavigateToInvestment?: (investmentId: string) => void
+}) {
+    const commitmentToInvId = useMemo(() => {
+        const map: Record<string, string> = {}
+        INVESTMENT_RECORDS.forEach(inv => {
+            if (inv.commitmentDataId) map[inv.commitmentDataId] = inv.id
+        })
+        return map
+    }, [])
+
     const yearTotals = CAPITAL_CALL_COMMITMENTS.reduce<Record<number, number>>((acc, commitment) => {
         for (const call of commitment.calls) {
             if (call.status === 'paid') continue
@@ -747,7 +770,7 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
         : '—'
 
     return (
-        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 shadow-sm flex flex-col gap-5 w-full">
+        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-6 flex flex-col gap-5 w-full">
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
@@ -874,8 +897,15 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
                     const calledPct = c.totalCommitment > 0 ? (called / c.totalCommitment) * 100 : 0
                     const color = FUND_CALL_COLORS[c.id] ?? '#94A3B8'
                     const hasReceivedCall = c.calls.some(call => call.status === 'pending')
+                    const investmentId = commitmentToInvId[c.id]
+                    const isClickable = !!investmentId && !!onNavigateToInvestment
                     return (
-                        <div key={c.id} className="flex items-center gap-3 py-2.5">
+                        <div
+                            key={c.id}
+                            role={isClickable ? 'button' : undefined}
+                            onClick={() => { if (isClickable) onNavigateToInvestment!(investmentId) }}
+                            className={`flex items-center gap-3 py-2.5 rounded-[var(--radius-md)] -mx-1 px-1 transition-colors ${isClickable ? 'cursor-pointer hover:bg-[var(--color-neutral-2)]' : ''}`}
+                        >
                             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
                             <div className="flex-1 min-w-0 flex items-center gap-2">
                                 <span className="text-[13px] font-medium text-[var(--color-black)] truncate">
@@ -899,6 +929,9 @@ function CapitalCallsSection({ onNavigateToTimeline }: { onNavigateToTimeline?: 
                             </div>
                             <span className="text-[12px] tabular-nums text-[var(--color-neutral-10)] w-8 text-right shrink-0">{Math.round(calledPct)}%</span>
                             <span className="text-[12px] tabular-nums text-[var(--color-neutral-9)] w-14 text-right shrink-0">{formatValue(c.totalCommitment)}</span>
+                            {isClickable && (
+                                <IconChevronRight size={14} className="text-[var(--color-neutral-7)] shrink-0" />
+                            )}
                         </div>
                     )
                 })}

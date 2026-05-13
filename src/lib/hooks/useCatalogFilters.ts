@@ -28,6 +28,15 @@ export function useCatalogFilters(allItems: AnyCatalogItem[], allRelationships: 
     'missing-insurance': (item) => item.priorityStatus?.type === 'missing-insurance',
     'stale-valuation': (item) => item.priorityStatus?.type === 'stale-valuation',
     'missing-documents': (item) => item.priorityStatus?.type === 'missing-documents',
+    /** Tasks page keys — never match catalog rows */
+    'task-overdue': () => false,
+    'task-due-soon': () => false,
+    'task-high-priority': () => false,
+    /** Decisions page keys — never match catalog rows */
+    'decision-due-soon': () => false,
+    'decision-pending-approval': () => false,
+    'decision-high-value': () => false,
+    'decision-wire-ready': () => false,
   }), [linkedItemIds])
 
   const filterCounts = useMemo(() => {
@@ -38,6 +47,13 @@ export function useCatalogFilters(allItems: AnyCatalogItem[], allRelationships: 
       'missing-insurance': 0,
       'stale-valuation': 0,
       'missing-documents': 0,
+      'task-overdue': 0,
+      'task-due-soon': 0,
+      'task-high-priority': 0,
+      'decision-due-soon': 0,
+      'decision-pending-approval': 0,
+      'decision-high-value': 0,
+      'decision-wire-ready': 0,
     } satisfies Record<QuickFilterKey, number>
     for (const item of allItems) {
       for (const key of Object.keys(counts) as QuickFilterKey[]) {

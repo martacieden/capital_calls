@@ -737,6 +737,100 @@
   object-fit: cover;
 }
 
+/* Tasks list: multi-line cells vs global 40px catalog rows */
+.tasks-list-view {
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: var(--spacing-1);
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+}
+
+.tasks-list-view::-webkit-scrollbar {
+  display: revert;
+  width: 10px;
+  height: 10px;
+}
+
+.tasks-list-view .tasks-list-table {
+  table-layout: auto;
+}
+
+.tasks-list-view .list-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-neutral-2);
+  border-bottom-color: var(--color-gray-4);
+  box-shadow: inset 0 -1px 0 var(--color-gray-4);
+}
+
+.tasks-list-view .list-header-cell {
+  padding: 13px 14px;
+  vertical-align: middle;
+}
+
+.tasks-list-view .list-header-cell:first-child {
+  padding-left: calc(var(--spacing-4) + var(--spacing-2));
+}
+
+.tasks-list-view .list-header-cell:last-child {
+  padding-right: calc(var(--spacing-4) + var(--spacing-2));
+}
+
+.tasks-list-view .list-row {
+  border-bottom-color: var(--color-gray-4);
+}
+
+.tasks-list-view .list-row:hover {
+  background: var(--color-neutral-3);
+}
+
+.tasks-list-view .list-row:focus-visible {
+  outline: 2px solid var(--color-accent-9);
+  outline-offset: -2px;
+}
+
+.tasks-list-view .list-cell {
+  padding: 13px 14px;
+  height: auto;
+  min-height: 54px;
+  vertical-align: middle;
+}
+
+.tasks-list-view .tasks-list-group-row td {
+  padding-top: var(--spacing-3);
+  padding-bottom: var(--spacing-3);
+  padding-left: calc(var(--spacing-4) + var(--spacing-2));
+  min-height: 0;
+}
+
+.tasks-list-view tr.list-row .list-cell:first-child {
+  padding-left: calc(var(--spacing-4) + var(--spacing-2));
+}
+
+.tasks-list-view .tasks-list-actions-cell:last-child {
+  padding-right: calc(var(--spacing-4) + var(--spacing-2));
+}
+
+.tasks-list-view .tasks-list-actions {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.tasks-list-view .list-row:hover .tasks-list-actions,
+.tasks-list-view .tasks-list-actions:focus-within {
+  opacity: 1;
+}
+
+.tasks-list-view .list-cell--name {
+  gap: var(--spacing-3);
+}
+
+.tasks-list-view .list-avatar-mini {
+  border-radius: var(--radius-md);
+}
+
 /* ========== CONFIRM DIALOG BUTTONS ========== */
 .confirm-dialog__cancel {
   flex: 1;
@@ -795,6 +889,11 @@
 .toast--loading {
   background: var(--color-gray-12);
   color: var(--color-white);
+}
+
+.toast--info {
+  background: var(--color-accent-9);
+  color: var(--color-accent-contrast);
 }
 
 .toast__spinner {

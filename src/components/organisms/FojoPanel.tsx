@@ -256,19 +256,22 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                             </div>
                             <div className="welcome-text flex mt-[var(--spacing-4)] flex-col items-center">
                                 <h3>Hey, Sandra</h3>
-                                <p>How can I help you?</p>
+                                <p>Ask about pipeline, capital calls, or fund exposure.</p>
                             </div>
                         </div>
 
                         <div className="flex flex-col mt-[var(--spacing-6)] w-full items-center gap-1.5">
                             {(currentPage === 'detail' && currentItem
-                                ? ['Show linked objects', 'Find insurance', 'Summarize this page']
+                                ? ['Show linked funds', 'Review wire status', 'Summarize this call']
                                 : QUICK_PROMPTS
                             ).map((prompt) => {
                                 const PROMPT_ICONS: Record<string, React.ReactNode> = {
-                                    'Help me find assets': <IconSearch size={16} stroke={2} />,
-                                    'Create new asset': <IconPlus size={16} stroke={2} />,
-                                    'Explain relationships': <IconSitemap size={16} stroke={2} />,
+                                    'Find investment or call': <IconSearch size={16} stroke={2} />,
+                                    'Upload capital call': <IconPlus size={16} stroke={2} />,
+                                    'Explain fund exposure': <IconSitemap size={16} stroke={2} />,
+                                    'Show linked funds': <IconSitemap size={16} stroke={2} />,
+                                    'Review wire status': <IconSearch size={16} stroke={2} />,
+                                    'Summarize this call': <IconFileText size={16} stroke={2} />,
                                 }
                                 const icon = PROMPT_ICONS[prompt]
                                 return (
@@ -276,7 +279,7 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                                     key={prompt}
                                     className="rounded-full flex min-h-[32px] px-[var(--spacing-3)] items-center text-[13px] text-[var(--color-purple-text)] font-medium leading-[1.43] bg-[var(--color-purple-hover)] transition-[background] duration-150 hover:bg-[rgba(0,91,226,0.12)]"
                                     onClick={() => {
-                                        if (prompt === 'Create new asset') {
+                                        if (prompt === 'Upload capital call') {
                                             creation.startCreation()
                                         } else {
                                             chat.sendMessage(prompt)
@@ -497,7 +500,7 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                             ref={chat.inputRef}
                             type="text"
                             className="chat-input w-full border-none outline-none font-sans text-sm text-[var(--color-gray-12)] bg-transparent px-[var(--spacing-2)] py-0 leading-[1.47] block"
-                            placeholder={waitingForOther ? 'Type your answer...' : creation.phase === 'prompt' ? 'Describe your asset...' : 'Ask me anything, use @ to add context'}
+                            placeholder={waitingForOther ? 'Type your answer...' : creation.phase === 'prompt' ? 'Describe the capital call or drop a notice...' : 'Ask about a fund, deal, capital call, or payment'}
                             value={chat.inputValue}
                             onChange={e => chat.setInputValue(e.target.value)}
                             onKeyDown={(e) => {

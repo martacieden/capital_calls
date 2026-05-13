@@ -105,7 +105,7 @@ export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick,
                     </span>
                 )}
             </div>
-            {(onNewItemClick || secondaryAction) && (
+            {(onNewItemClick || secondaryAction || onActionClick) && (
                 <div className="flex shrink-0 items-center gap-[var(--spacing-2)]">
                     {secondaryAction && (() => {
                         const SecIcon = secondaryAction.icon ?? IconPlus

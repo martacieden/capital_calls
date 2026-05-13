@@ -1,46 +1,57 @@
 import { useState } from 'react'
 import {
     IconChevronLeft, IconExternalLink, IconShare, IconDotsVertical,
-    IconCheck, IconAlertTriangle, IconRobot,
+    IconCheck, IconAlertTriangle, IconRobot, IconFlag,
+    IconArrowRight,
 } from '@tabler/icons-react'
-import { getDecisionById } from '@/data/thornton/capital-call-decisions-data'
-import type { ApprovalStep } from '@/data/thornton/capital-call-decisions-data'
+import { getDecisionById, getCapitalCallPostDealStatus } from '@/data/thornton/capital-call-decisions-data'
+import type { CapitalCallPostDealStatus } from '@/data/thornton/capital-call-decisions-data'
 
-// ─── helpers ───────────────────────────────────────────────────────────────
+// ─── helpers ────────────────────────────────────────────────────────────────
 
 function fmt(v: number): string {
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`
     return `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+function fmtDisplay(v: number): string {
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`
+    return `$${v.toLocaleString('en-US')}`
+}
+
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-function daysUntil(iso: string): number {
-    return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+// ─── status model ────────────────────────────────────────────────────────────
+
+const STATUS_META: Record<CapitalCallPostDealStatus, { label: string; dot: string; text: string; bg: string }> = {
+    'awaiting-execution': { label: 'Awaiting e-sign',    dot: '#9CA3AF', text: '#374151', bg: '#F9FAFB' },
+    'uploaded':           { label: 'Uploaded',            dot: '#2563EB', text: '#1D4ED8', bg: '#EFF6FF' },
+    'verified':           { label: 'Verified',            dot: '#7C3AED', text: '#5B21B6', bg: '#F5F3FF' },
+    'ready-to-release':   { label: 'Ready to release',    dot: '#D97706', text: '#9A3412', bg: '#FFF7ED' },
+    'paid':               { label: 'Paid',                dot: '#059669', text: '#065F46', bg: '#ECFDF5' },
 }
 
-const STATUS_CONFIG: Record<string, { label: string; dot: string; text: string; bg: string }> = {
-    pending: { label: 'Pending', dot: '#F59E0B', text: '#92400E', bg: '#FFFBEB' },
-    approved: { label: 'Approved', dot: '#10B981', text: '#065F46', bg: '#ECFDF5' },
-    flagged: { label: 'Flagged', dot: '#EF4444', text: '#991B1B', bg: '#FEF2F2' },
-    'wire-ready': { label: 'Wire ready', dot: '#6366F1', text: '#3730A3', bg: '#EEF2FF' },
-    completed: { label: 'Completed', dot: '#6B7280', text: '#374151', bg: '#F9FAFB' },
+const STATUS_ORDER: CapitalCallPostDealStatus[] = [
+    'awaiting-execution', 'uploaded', 'verified', 'ready-to-release', 'paid',
+]
+
+const ADVANCE_LABELS: Record<CapitalCallPostDealStatus, string> = {
+    'awaiting-execution': 'Mark execution complete',
+    'uploaded':           'Mark as verified',
+    'verified':           'Mark ready to release',
+    'ready-to-release':   'Mark as paid',
+    'paid':               '',
 }
 
-// ─── sub-components ────────────────────────────────────────────────────────
-
-function Avatar({ step, size = 36 }: { step: ApprovalStep; size?: number }) {
-    return (
-        <div
-            className="rounded-full flex items-center justify-center text-white font-semibold shrink-0"
-            style={{ width: size, height: size, background: step.color, fontSize: size * 0.33 }}
-        >
-            {step.initials}
-        </div>
-    )
+function nextStatus(s: CapitalCallPostDealStatus): CapitalCallPostDealStatus | null {
+    const idx = STATUS_ORDER.indexOf(s)
+    return idx < STATUS_ORDER.length - 1 ? STATUS_ORDER[idx + 1]! : null
 }
+
+// ─── sub-components ──────────────────────────────────────────────────────────
 
 function MatchBadge({ status }: { status: 'match' | 'mismatch' | 'changed' }) {
     if (status === 'match') return (
@@ -63,7 +74,7 @@ function MatchBadge({ status }: { status: 'match' | 'mismatch' | 'changed' }) {
     )
 }
 
-// ─── PDF mock (shared between tabs, slightly different sizing) ──────────────
+// ─── PDF mock ────────────────────────────────────────────────────────────────
 
 function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, amount, commitment, createdDate, dueDate, callNumber, wireInstructions }: {
     pdfName: string
@@ -82,7 +93,6 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, amount, commitmen
     const commitmentPct = Math.round((amount / commitment) * 100)
     return (
         <div className="flex flex-col h-full overflow-y-auto bg-[#F8F8F9]">
-            {/* PDF header */}
             <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[var(--color-neutral-4)] shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-7 h-7 rounded-[6px] bg-[#FEE2E2] flex items-center justify-center shrink-0">
@@ -103,7 +113,6 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, amount, commitmen
                 </button>
             </div>
 
-            {/* PDF page */}
             <div className="p-4 flex-1">
                 <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[var(--color-neutral-3)] p-6 text-[11px] leading-[1.6]" style={{ fontFamily: 'Georgia, serif' }}>
                     {page === 1 ? (
@@ -206,7 +215,7 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, amount, commitmen
     )
 }
 
-// ─── Verify fields (demo data for CAPCAL-1) ────────────────────────────────
+// ─── Verify fields ────────────────────────────────────────────────────────────
 
 const VERIFY_FIELDS: Array<{
     label: string
@@ -214,24 +223,28 @@ const VERIFY_FIELDS: Array<{
     onFile: string
     status: 'match' | 'mismatch' | 'changed'
     note?: string
+    aiConfidence?: number
 }> = [
     {
         label: 'Fund / GP',
         noticeSays: 'Greentech Opportunities Fund III, L.P. / Meridian Capital Partners',
         onFile: 'Greentech Opportunities Fund III, L.P. / Meridian Capital Partners',
         status: 'match',
+        aiConfidence: 99,
     },
     {
         label: 'Limited Partner',
         noticeSays: 'Real Estate Holding LLC',
         onFile: 'Real Estate Holding LLC',
         status: 'match',
+        aiConfidence: 100,
     },
     {
         label: 'Amount called',
         noticeSays: '$500,000.00 USD',
         onFile: '$500,000.00 USD (10% of $5,000,000 commitment)',
         status: 'match',
+        aiConfidence: 98,
     },
     {
         label: 'Call number',
@@ -239,12 +252,14 @@ const VERIFY_FIELDS: Array<{
         onFile: '#7 of 12 · next in sequence',
         status: 'match',
         note: '6 prior calls drawn, sequence verified',
+        aiConfidence: 97,
     },
     {
         label: 'Funding deadline',
         noticeSays: 'May 30, 2026 · 5:00 PM ET',
         onFile: '— · T+22 days from notice',
         status: 'match',
+        aiConfidence: 96,
     },
     {
         label: 'Wire instructions',
@@ -252,10 +267,11 @@ const VERIFY_FIELDS: Array<{
         onFile: 'ABA 021000128 / Account ···· 4419 / First Republic Bank',
         status: 'match',
         note: 'Wire instructions unchanged from previous call',
+        aiConfidence: 94,
     },
 ]
 
-// ─── tab types ─────────────────────────────────────────────────────────────
+// ─── tab types ───────────────────────────────────────────────────────────────
 
 type TabId = 'overview' | 'verify' | 'activity'
 
@@ -265,19 +281,22 @@ const TABS: Array<{ id: TabId; label: string }> = [
     { id: 'activity', label: 'Activity' },
 ]
 
-// ─── main component ────────────────────────────────────────────────────────
+// ─── main component ──────────────────────────────────────────────────────────
 
 interface Props {
     id: string
     onBack: () => void
+    investmentId?: string
+    investmentName?: string
 }
 
-export function CapitalCallDetailPage({ id, onBack }: Props) {
+export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
     const decision = getDecisionById(id)
-    const [approvals, setApprovals] = useState(decision?.approvals ?? [])
+    const [localStatus, setLocalStatus] = useState<CapitalCallPostDealStatus>(
+        decision ? getCapitalCallPostDealStatus(decision) : 'uploaded'
+    )
     const [activeTab, setActiveTab] = useState<TabId>('overview')
     const [hoveredField, setHoveredField] = useState<number | null>(null)
-    const [localStatus, setLocalStatus] = useState(decision?.status ?? 'pending')
     const [localActivityLog, setLocalActivityLog] = useState(decision?.activityLog ?? [])
 
     if (!decision) {
@@ -288,37 +307,30 @@ export function CapitalCallDetailPage({ id, onBack }: Props) {
         )
     }
 
-    const approvedCount = approvals.filter(a => a.status === 'approved').length
-    const pendingApprovals = approvals.filter(a => a.status === 'pending').map(a => a.role)
-
-    function handleApprove(stepId: string) {
-        setApprovals(prev => prev.map(a =>
-            a.id === stepId
-                ? { ...a, status: 'approved' as const, timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }
-                : a,
-        ))
-    }
+    const currentDecision = decision
+    const statusMeta = STATUS_META[localStatus]
 
     function addActivity(actor: string, action: string, isAI = false) {
         const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         setLocalActivityLog(prev => [{ time, actor, action, isAI }, ...prev])
     }
 
-    function handleConfirmWire() {
-        setLocalStatus('wire-ready')
-        addActivity('Anastasiya Mudryk', 'Wire scheduled · verification complete, wire queued')
+    function advanceStatus() {
+        const next = nextStatus(localStatus)
+        if (!next) return
+        const label = ADVANCE_LABELS[localStatus]
+        setLocalStatus(next)
+        if (next === 'paid') {
+            addActivity('Finance Ops', `Wire executed · ${fmt(currentDecision.amount)} → ${currentDecision.wireInstructions.beneficiary}`)
+        } else {
+            addActivity('Anastasiya Mudryk', label)
+        }
     }
 
-    function handleExecuteWire() {
-        setLocalStatus('completed')
-        addActivity('Finance Ops', `Wire executed · ${fmt(decision.amount)} → ${decision.wireInstructions.beneficiary}`)
-    }
-
-    const days = daysUntil(decision.dueDate)
-    const paidPct = Math.round(decision.drawnBefore * 100)
-    const totalPct = Math.round(decision.drawnAfter * 100)
-    const callPct = totalPct - paidPct
     const commitmentPct = Math.round((decision.amount / decision.commitment) * 100)
+    const unfundedAmount = Math.round(decision.commitment * (1 - decision.drawnBefore))
+    const compactTitle = `Call #${decision.callNumber} · ${fmtDisplay(decision.amount)} capital call`
+    const compactFund = decision.fund.replace(', L.P.', '')
 
     const pdfProps = {
         pdfName: decision.pdfName,
@@ -334,10 +346,37 @@ export function CapitalCallDetailPage({ id, onBack }: Props) {
         wireInstructions: decision.wireInstructions,
     }
 
+    const validationChecks = [
+        {
+            id: 'math',
+            label: 'Math check',
+            description: `${commitmentPct}% × ${fmtDisplay(decision.commitment)} = ${fmtDisplay(decision.amount)}`,
+            pass: true,
+        },
+        {
+            id: 'ledger',
+            label: 'Ledger check',
+            description: `${fmtDisplay(unfundedAmount)} unfunded covers this call`,
+            pass: true,
+        },
+        {
+            id: 'bank',
+            label: 'Bank details',
+            description: 'Wire instructions match previous call on record',
+            pass: true,
+        },
+        {
+            id: 'execution',
+            label: 'Execution on record',
+            description: localStatus === 'awaiting-execution' ? 'Document execution pending' : 'Document execution confirmed',
+            pass: localStatus !== 'awaiting-execution',
+        },
+    ]
+
     return (
         <div className="flex flex-col flex-1 h-full overflow-hidden">
 
-            {/* ── Top nav bar ──────────────────────────────────────────────── */}
+            {/* ── Top nav bar ────────────────────────────────────────────────── */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-neutral-4)] bg-white shrink-0">
                 <div className="flex items-center gap-3 min-w-0 overflow-hidden">
                     <button
@@ -346,24 +385,21 @@ export function CapitalCallDetailPage({ id, onBack }: Props) {
                         className="flex items-center gap-1.5 text-[13px] text-[var(--color-neutral-10)] hover:text-[var(--color-black)] transition-colors shrink-0"
                     >
                         <IconChevronLeft size={16} stroke={2} />
-                        Decisions
+                        {investmentName ?? 'Pipeline'}
                     </button>
                     <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
-                    {(() => {
-                        const cfg = STATUS_CONFIG[localStatus] ?? STATUS_CONFIG.pending
-                        return (
-                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shrink-0 transition-all duration-300"
-                                style={{ background: cfg.bg, color: cfg.text }}>
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0 transition-colors duration-300" style={{ background: cfg.dot }} />
-                                {cfg.label}
-                            </span>
-                        )
-                    })()}
+                    <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shrink-0 transition-all duration-300"
+                        style={{ background: statusMeta.bg, color: statusMeta.text }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusMeta.dot }} />
+                        {statusMeta.label}
+                    </span>
                     <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
                     <span className="text-[12px] font-mono text-[var(--color-neutral-9)] shrink-0">{decision.id}</span>
                     <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
                     <span className="text-[12px] text-[var(--color-neutral-9)] shrink-0">
-                        Capital call · Call #{decision.callNumber} of {decision.totalCalls}
+                        Call #{decision.callNumber} of {decision.totalCalls}
                     </span>
                     <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
                     <span className="text-[12px] text-[var(--color-neutral-9)] shrink-0">
@@ -373,7 +409,7 @@ export function CapitalCallDetailPage({ id, onBack }: Props) {
 
                 <div className="flex items-center gap-2 shrink-0 ml-4">
                     <div className="flex items-center -space-x-1.5 mr-1">
-                        {approvals.slice(0, 3).map(a => (
+                        {decision.approvals.slice(0, 3).map(a => (
                             <div key={a.id} className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-semibold text-white" style={{ background: a.color }} title={a.name}>
                                 {a.initials}
                             </div>
@@ -393,23 +429,23 @@ export function CapitalCallDetailPage({ id, onBack }: Props) {
                 </div>
             </div>
 
-            {/* ── Title + tabs ─────────────────────────────────────────────── */}
-            <div className="px-6 pt-5 pb-0 bg-white shrink-0">
-                <h1 className="text-[28px] font-semibold text-[var(--color-black)] m-0 leading-[1.2] tracking-[-0.01em]">
-                    {decision.title}
+            {/* ── Title + stepper + tabs ──────────────────────────────────────── */}
+            <div className="px-6 pt-3.5 pb-0 bg-white shrink-0">
+                <h1 className="text-[24px] font-semibold text-[var(--color-black)] m-0 leading-[1.15] tracking-[-0.01em]">
+                    {compactTitle}
                 </h1>
-                <p className="m-0 mt-1.5 text-[14px] text-[var(--color-neutral-10)]">
-                    {decision.fund} · {decision.entity} · {decision.gp}
+                <p className="m-0 mt-1 text-[13px] text-[var(--color-neutral-10)] truncate">
+                    {compactFund} · {decision.entity} · {decision.gp}
                 </p>
 
-                {/* Tab bar */}
-                <div className="flex items-center gap-0 mt-4 border-b border-[var(--color-neutral-4)]">
+                {/* Tab bar — scroll on narrow widths so labels are not clipped */}
+                <div className="flex min-w-0 items-center gap-0 mt-2.5 border-b border-[var(--color-neutral-4)] overflow-x-auto overflow-y-hidden [scrollbar-width:thin]">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
                             type="button"
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+                            className={`shrink-0 px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
                                 activeTab === tab.id
                                     ? 'border-[var(--color-accent-9)] text-[var(--color-accent-9)]'
                                     : 'border-transparent text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-12)]'
@@ -426,327 +462,424 @@ export function CapitalCallDetailPage({ id, onBack }: Props) {
                 </div>
             </div>
 
-            {/* ── Tab bodies ───────────────────────────────────────────────── */}
+            {/* ── Tab bodies (flex-1, shrinks to accommodate footer) ──────────── */}
+            <div className="flex flex-1 overflow-hidden min-h-0">
 
-            {/* OVERVIEW TAB */}
-            {activeTab === 'overview' && (
-                <div className="flex flex-1 overflow-hidden">
-                    {/* Left: content cards */}
-                    <div className="flex flex-col gap-4 flex-[1.4] overflow-y-auto p-6">
+                {/* OVERVIEW TAB */}
+                {activeTab === 'overview' && (
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* Left: main content */}
+                        <div className="flex flex-col gap-4 flex-1 overflow-y-auto p-6 min-w-0">
 
-                        {/* The numbers */}
-                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                            <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-4">The numbers</h3>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1.5">Amount called</p>
-                                    <p className="m-0 text-[26px] font-semibold tabular-nums tracking-[-0.02em] text-[var(--color-black)] leading-none">
-                                        {fmt(decision.amount)}
-                                    </p>
-                                    <p className="m-0 text-[12px] text-[var(--color-neutral-9)] mt-1.5">
-                                        {commitmentPct}% of {fmt(decision.commitment)} commitment
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1.5">Funding deadline</p>
-                                    <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-black)] leading-none">
-                                        {new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </p>
-                                    <p className="m-0 text-[12px] text-[var(--color-neutral-9)] mt-1.5">
-                                        {days} days from today · 5:00 PM ET
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1.5">Drawn after this call</p>
-                                    <div className="flex items-baseline gap-2">
-                                        <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-black)] leading-none">{totalPct}%</p>
-                                        <p className="m-0 text-[13px] text-[var(--color-neutral-9)]">from {paidPct}%</p>
-                                    </div>
-                                    <div className="mt-2 h-1.5 rounded-full bg-[var(--color-neutral-3)] overflow-hidden flex">
-                                        <div className="h-full" style={{ width: `${paidPct}%`, background: '#005BE2' }} />
-                                        <div className="h-full" style={{ width: `${callPct}%`, background: '#93C5FD' }} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Approval workflow */}
-                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0">Approval workflow</h3>
-                                <span className="text-[12px] text-[var(--color-neutral-9)]">
-                                    {approvedCount} of {approvals.length} approvals
-                                    {pendingApprovals.length > 0 && ` · awaiting ${pendingApprovals.join(' and ')}`}
-                                </span>
-                            </div>
-                            <div className="flex gap-3">
-                                {approvals.map(step => (
-                                    <div
-                                        key={step.id}
-                                        className={`flex-1 rounded-[var(--radius-lg)] border p-3 transition-colors ${
-                                            step.status === 'approved'
-                                                ? 'border-[#D1FAE5] bg-[#F0FDF4]'
-                                                : 'border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)]'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2.5 mb-2">
-                                            <div className="relative">
-                                                <Avatar step={step} size={32} />
-                                                {step.status === 'approved' && (
-                                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#10B981] border border-white flex items-center justify-center">
-                                                        <IconCheck size={8} stroke={3} className="text-white" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="m-0 text-[12px] font-semibold text-[var(--color-black)] truncate">{step.name}</p>
-                                                <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{step.role}</p>
-                                            </div>
+                            {/* Call details */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-4">Call details</h3>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                    {([
+                                        ['Call amount', fmtDisplay(decision.amount)],
+                                        ['% of total commitment', `${commitmentPct}%`],
+                                        ['Due date', new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
+                                        ['Status', statusMeta.label],
+                                        ['Bank account (last 4)', decision.wireInstructions.account],
+                                        ['Routing number', decision.wireInstructions.aba],
+                                    ] as const).map(([label, value]) => (
+                                        <div key={label}>
+                                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mb-0.5">{label}</p>
+                                            <p className="m-0 text-[15px] font-semibold text-[var(--color-black)]">{value}</p>
                                         </div>
-                                        {step.status === 'approved' ? (
-                                            <p className="m-0 text-[11px] font-medium text-[#047857]">
-                                                Approved · {step.timestamp}
-                                            </p>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleApprove(step.id)}
-                                                className="w-full rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--color-neutral-11)] hover:bg-[var(--color-accent-9)] hover:text-white hover:border-[var(--color-accent-9)] transition-colors"
-                                            >
-                                                Approve
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Match to investment */}
-                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0">Match to investment</h3>
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ECFDF5] px-2.5 py-1 text-[11px] font-semibold text-[#065F46]">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                                    {decision.matchConfidence}% confidence
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[#1A1A2E] flex items-center justify-center text-white text-[15px] font-bold shrink-0">
-                                    G
+                                    ))}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="m-0 text-[14px] font-semibold text-[var(--color-black)]">{decision.matchedInvestmentName}</p>
-                                    <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">
-                                        {decision.matchedInvestmentId} · {decision.totalCalls}-call commitment series · {decision.priorCallsDrawn} of {decision.totalCalls} prior calls drawn
-                                    </p>
-                                </div>
-                                <button type="button" className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors shrink-0">
-                                    <IconExternalLink size={13} stroke={2} />
-                                    Open record
-                                </button>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Right: PDF */}
-                    <div className="w-[380px] shrink-0 border-l border-[var(--color-neutral-4)] overflow-hidden">
-                        <PdfMock {...pdfProps} />
-                    </div>
-                </div>
-            )}
+                            {/* Validation checks */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-3">Validation checks</h3>
+                                <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
+                                    {validationChecks.map(check => (
+                                        <div key={check.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${check.pass ? 'bg-[#ECFDF5]' : 'bg-[#FFFBEB]'}`}>
+                                                    {check.pass
+                                                        ? <IconCheck size={11} stroke={2.5} className="text-[#10B981]" />
+                                                        : <IconAlertTriangle size={11} stroke={2.5} className="text-[#D97706]" />
+                                                    }
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="m-0 text-[13px] font-medium text-[var(--color-black)]">{check.label}</p>
+                                                    <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{check.description}</p>
+                                                </div>
+                                            </div>
+                                            <span className={`text-[11px] font-semibold shrink-0 ml-3 ${check.pass ? 'text-[#047857]' : 'text-[#D97706]'}`}>
+                                                {check.pass ? 'Pass' : 'Pending'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
-            {/* VERIFY TAB */}
-            {activeTab === 'verify' && (
-                <div className="flex flex-1 overflow-hidden">
-                    {/* Left: PDF */}
-                    <div className="flex-[1.5] border-r border-[var(--color-neutral-4)] overflow-hidden">
-                        <PdfMock {...pdfProps} />
-                    </div>
-
-                    {/* Right: verify table */}
-                    <div className="w-[420px] shrink-0 overflow-y-auto bg-white">
-                        <div className="p-5">
-                            {/* Verify header */}
-                            <div className="mb-4">
-                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-1">
-                                    Verify against the document
+                            {/* Commitment ledger */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-4">
+                                    Commitment ledger · {compactFund}
                                 </h3>
-                                <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">
-                                    Hover a row to highlight in the notice. All fields match on-file data.
-                                </p>
-                            </div>
-
-                            {/* Summary pill */}
-                            <div className="flex items-center gap-2 mb-5 p-3 rounded-[var(--radius-lg)] bg-[#F0FDF4] border border-[#D1FAE5]">
-                                <IconCheck size={16} stroke={2.5} className="text-[#10B981] shrink-0" />
-                                <span className="text-[12px] font-semibold text-[#047857]">
-                                    {VERIFY_FIELDS.filter(f => f.status === 'match').length} of {VERIFY_FIELDS.length} fields verified · Wire instructions unchanged
-                                </span>
-                            </div>
-
-                            {/* Field rows */}
-                            <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
-                                {VERIFY_FIELDS.map((field, idx) => (
-                                    <div
-                                        key={field.label}
-                                        className={`py-3.5 px-3 -mx-3 rounded-[var(--radius-md)] transition-colors cursor-default ${
-                                            hoveredField === idx ? 'bg-[#EFF6FF]' : ''
-                                        }`}
-                                        onMouseEnter={() => setHoveredField(idx)}
-                                        onMouseLeave={() => setHoveredField(null)}
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] mt-0.5 shrink-0 w-[110px]">
-                                                {field.label}
+                                <div className="grid grid-cols-3 gap-4">
+                                    {([
+                                        ['Total commitment', fmtDisplay(decision.commitment), 'var(--color-black)'],
+                                        ['Paid-in capital', fmtDisplay(Math.round(decision.drawnBefore * decision.commitment)), '#047857'],
+                                        ['Unfunded', fmtDisplay(unfundedAmount), 'var(--color-neutral-10)'],
+                                    ] as const).map(([label, value, color]) => (
+                                        <div key={label}>
+                                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mb-1">{label}</p>
+                                            <p className="m-0 text-[24px] font-semibold tracking-[-0.02em] leading-none" style={{ color, fontFamily: 'var(--font-display)' }}>
+                                                {value}
                                             </p>
-                                            <MatchBadge status={field.status} />
                                         </div>
-                                        <div className="mt-2 grid grid-cols-2 gap-3">
-                                            <div>
-                                                <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mb-0.5">Notice says</p>
-                                                <p className="m-0 text-[12px] text-[var(--color-black)] leading-[1.4]">{field.noticeSays}</p>
-                                            </div>
-                                            <div>
-                                                <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mb-0.5">On file</p>
-                                                <p className="m-0 text-[12px] text-[var(--color-black)] leading-[1.4]">{field.onFile}</p>
-                                            </div>
-                                        </div>
-                                        {field.note && (
-                                            <p className="m-0 mt-1.5 text-[11px] text-[var(--color-neutral-9)] italic">{field.note}</p>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Payment status */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-4">Payment status</h3>
+                                <div
+                                    className="flex items-center gap-3 rounded-[var(--radius-lg)] p-3.5 border"
+                                    style={{ background: statusMeta.bg, borderColor: statusMeta.dot + '40' }}
+                                >
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: statusMeta.dot }} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="m-0 text-[13px] font-semibold" style={{ color: statusMeta.text }}>{statusMeta.label}</p>
+                                        {localStatus !== 'paid' && (
+                                            <p className="m-0 text-[12px] text-[var(--color-neutral-9)] mt-0.5">
+                                                Next: {ADVANCE_LABELS[localStatus]} · CIO and Investment Team to confirm.
+                                            </p>
                                         )}
                                     </div>
-                                ))}
-                            </div>
-
-                            {/* Verify footer — status-aware */}
-                            <div className="mt-6 pt-5 border-t border-[var(--color-neutral-4)]">
-                                {localStatus === 'completed' ? (
-                                    <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
-                                        <div className="w-7 h-7 rounded-full bg-[#10B981] flex items-center justify-center shrink-0">
-                                            <IconCheck size={14} stroke={2.5} color="white" />
-                                        </div>
-                                        <div>
-                                            <p className="m-0 text-[12px] font-semibold text-[#065F46]">Wire executed</p>
-                                            <p className="m-0 text-[11px] text-[#047857]">{fmt(decision.amount)} sent to {decision.wireInstructions.beneficiary}</p>
-                                        </div>
-                                    </div>
-                                ) : localStatus === 'wire-ready' ? (
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-3 rounded-[var(--radius-md)] bg-[#EEF2FF] border border-[#C7D2FE] px-3 py-2">
-                                            <span className="w-2 h-2 rounded-full bg-[#6366F1] shrink-0 animate-pulse" />
-                                            <p className="m-0 text-[11px] font-medium text-[#3730A3]">Wire queued · {fmt(decision.amount)} ready to send to {decision.wireInstructions.beneficiary}</p>
-                                        </div>
+                                    {localStatus === 'paid' && (
+                                        <IconCheck size={16} stroke={2.5} style={{ color: statusMeta.text, flexShrink: 0 }} />
+                                    )}
+                                </div>
+                                {localStatus !== 'paid' && (
+                                    <div className="flex items-center gap-2 mt-4">
                                         <button
                                             type="button"
-                                            onClick={handleExecuteWire}
-                                            className="w-full rounded-[var(--radius-md)] bg-[#4F46E5] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#4338CA] transition-colors"
+                                            onClick={advanceStatus}
+                                            className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
                                         >
-                                            Execute wire →
+                                            {ADVANCE_LABELS[localStatus]}
+                                            <IconArrowRight size={14} stroke={2.5} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                                        >
+                                            <IconFlag size={14} stroke={2} />
+                                            Flag
                                         </button>
                                     </div>
-                                ) : (
-                                    <div>
-                                        <p className="m-0 text-[12px] font-semibold text-[var(--color-neutral-11)] mb-3">Verification complete</p>
-                                        <div className="flex gap-2">
-                                            <button type="button" className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-2 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
-                                                Flag for review
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleConfirmWire}
-                                                className="flex-1 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-3 py-2 text-[12px] font-semibold text-white hover:opacity-90 transition-opacity"
-                                            >
-                                                Confirm &amp; schedule wire
-                                            </button>
-                                        </div>
-                                    </div>
                                 )}
                             </div>
+
                         </div>
-                    </div>
-                </div>
-            )}
 
-            {/* ACTIVITY TAB */}
-            {activeTab === 'activity' && (
-                <div className="flex-1 overflow-y-auto p-6 max-w-[720px]">
-                    <div className="mb-6">
-                        <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-1">Activity log</h3>
-                        <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">Full audit trail for this capital call decision.</p>
-                    </div>
+                        {/* Right sidebar */}
+                        <div className="w-[320px] shrink-0 border-l border-[var(--color-neutral-4)] overflow-y-auto p-5 flex flex-col gap-4 bg-[var(--color-neutral-1)]">
 
-                    <div className="flex flex-col">
-                        {localActivityLog.map((entry, idx) => (
-                            <div key={idx} className="flex gap-3 pb-5 relative">
-                                {/* Connector line */}
-                                {idx < localActivityLog.length - 1 && (
-                                    <div className="absolute left-[15px] top-[30px] w-px h-full bg-[var(--color-neutral-3)]" />
-                                )}
-
-                                {/* Avatar / icon */}
-                                <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-white z-10"
-                                    style={{ background: entry.isAI ? '#7C3AED' : '#0D9488' }}>
-                                    {entry.isAI
-                                        ? <IconRobot size={15} stroke={2} />
-                                        : entry.actor.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                    }
-                                </div>
-
-                                <div className="flex-1 pt-0.5">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        <span className="text-[13px] font-semibold text-[var(--color-black)]">{entry.actor}</span>
-                                        {entry.isAI && (
-                                            <span className="inline-flex items-center gap-0.5 rounded-full bg-[#F3E8FF] px-1.5 py-0.5 text-[10px] font-semibold text-[#6D28D9]">
-                                                AI
-                                            </span>
-                                        )}
-                                        <span className="text-[12px] text-[var(--color-neutral-9)]">{entry.time}</span>
+                            {/* Capital call notice */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-4">
+                                <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-3">Capital call notice</h3>
+                                <div className="flex items-center gap-2.5 p-3 rounded-[var(--radius-lg)] bg-[var(--color-neutral-2)] border border-[var(--color-neutral-3)]">
+                                    <div className="w-7 h-7 rounded-[6px] bg-[#FEE2E2] flex items-center justify-center shrink-0">
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                            <rect width="14" height="14" rx="3" fill="#EF4444" fillOpacity="0.1" />
+                                            <path d="M3 3.5h5.5L10 5v5.5H3V3.5z" stroke="#EF4444" strokeWidth="1.2" fill="none" />
+                                            <path d="M8.5 3.5V5H10" stroke="#EF4444" strokeWidth="1.2" />
+                                        </svg>
                                     </div>
-                                    <p className="m-0 text-[13px] text-[var(--color-neutral-11)]">{entry.action}</p>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="m-0 text-[12px] font-semibold text-[var(--color-black)] truncate">{decision.pdfName}</p>
+                                        <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{decision.pdfPages} pages · {decision.pdfSizeKb} KB</p>
+                                    </div>
+                                    <button type="button" className="flex items-center gap-1 text-[12px] font-medium text-[var(--color-accent-9)] hover:underline shrink-0">
+                                        <IconExternalLink size={13} stroke={2} />
+                                        Open
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('verify')}
+                                    className="mt-2.5 text-[12px] font-medium text-[var(--color-accent-9)] hover:underline"
+                                >
+                                    Verify document →
+                                </button>
+                            </div>
+
+                            {/* Wire approval */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0">Wire approval</h3>
+                                    <span
+                                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                        style={{ background: statusMeta.bg, color: statusMeta.text }}
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusMeta.dot }} />
+                                        {statusMeta.label}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    {decision.approvals.map((step, idx) => (
+                                        <div key={step.id} className="flex items-center gap-2.5">
+                                            <span className="w-5 h-5 rounded-full bg-[var(--color-neutral-3)] flex items-center justify-center text-[10px] font-bold text-[var(--color-neutral-10)] shrink-0 tabular-nums">
+                                                {idx + 1}
+                                            </span>
+                                            <div
+                                                className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white shrink-0"
+                                                style={{ background: step.color }}
+                                            >
+                                                {step.initials}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="m-0 text-[12px] font-medium text-[var(--color-black)] truncate">{step.name}</p>
+                                                <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{step.role}</p>
+                                            </div>
+                                            {step.status === 'approved' && (
+                                                <div className="w-5 h-5 rounded-full bg-[#ECFDF5] flex items-center justify-center shrink-0">
+                                                    <IconCheck size={11} stroke={2.5} className="text-[#10B981]" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
-                    </div>
 
-                    {/* Call history in fund context */}
-                    <div className="mt-6 pt-6 border-t border-[var(--color-neutral-4)]">
-                        <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-4">
-                            Call history — {decision.matchedInvestmentName}
-                        </h3>
-                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] overflow-hidden">
-                            {[...Array(decision.priorCallsDrawn)].map((_, i) => {
-                                const callNum = i + 1
-                                const isCurrent = callNum === decision.callNumber
-                                const year = 2022 + Math.floor(i / 2)
-                                const month = i % 2 === 0 ? 'Mar' : 'Sep'
-                                const amount = isCurrent ? decision.amount : Math.round((decision.commitment / decision.totalCalls) * (0.85 + Math.random() * 0.3))
-                                return (
-                                    <div key={callNum} className={`flex items-center justify-between px-4 py-3 border-b border-[var(--color-neutral-3)] last:border-b-0 ${isCurrent ? 'bg-[#F0FDF4]' : ''}`}>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${isCurrent ? 'bg-[#10B981]' : 'bg-[#005BE2]'}`} />
-                                            <div>
-                                                <p className="m-0 text-[13px] font-medium text-[var(--color-black)]">
-                                                    Call #{callNum}
-                                                    {isCurrent && <span className="ml-2 text-[11px] font-semibold text-[#047857]">← this call</span>}
-                                                </p>
-                                                <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
-                                                    {isCurrent ? formatDate(decision.dueDate) : `${month} ${year}`}
-                                                </p>
+                            {/* Recent activity */}
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0">Recent activity</h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('activity')}
+                                        className="text-[12px] font-medium text-[var(--color-accent-9)] hover:underline"
+                                    >
+                                        View all →
+                                    </button>
+                                </div>
+                                <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
+                                    {localActivityLog.slice(0, 4).map((entry, idx) => (
+                                        <div key={`${entry.time}-${idx}`} className="flex gap-2.5 py-2.5 first:pt-0 last:pb-0">
+                                            <div
+                                                className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white mt-0.5"
+                                                style={{ background: entry.isAI ? '#7C3AED' : '#0D9488' }}
+                                            >
+                                                {entry.isAI ? (
+                                                    <IconRobot size={12} stroke={2} />
+                                                ) : (
+                                                    entry.actor.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="m-0 text-[12px] font-semibold text-[var(--color-black)] truncate">{entry.actor}</p>
+                                                <p className="m-0 text-[11px] text-[var(--color-neutral-10)] leading-snug">{entry.action}</p>
+                                                <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mt-0.5">{entry.time}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="m-0 text-[13px] font-semibold tabular-nums text-[var(--color-black)]">
-                                                {fmt(isCurrent ? decision.amount : amount)}
-                                            </p>
-                                            <span className={`text-[10px] font-semibold ${isCurrent ? 'text-[#047857]' : 'text-[var(--color-accent-9)]'}`}>
-                                                {isCurrent ? 'Approved' : 'Paid'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                                    ))}
+                                </div>
+                            </div>
+
                         </div>
                     </div>
+                )}
+
+                {/* VERIFY TAB */}
+                {activeTab === 'verify' && (
+                    <div className="flex flex-1 overflow-hidden">
+                        <div className="flex-[1.5] border-r border-[var(--color-neutral-4)] overflow-hidden">
+                            <PdfMock {...pdfProps} />
+                        </div>
+
+                        <div className="w-[420px] shrink-0 overflow-y-auto bg-white">
+                            <div className="p-5">
+                                <div className="mb-4">
+                                    <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-1">
+                                        Verify against the document
+                                    </h3>
+                                    <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">
+                                        Hover a row to highlight in the notice. All fields match on-file data.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-5 p-3 rounded-[var(--radius-lg)] bg-[#F0FDF4] border border-[#D1FAE5]">
+                                    <IconCheck size={16} stroke={2.5} className="text-[#10B981] shrink-0" />
+                                    <span className="text-[12px] font-semibold text-[#047857]">
+                                        {VERIFY_FIELDS.filter(f => f.status === 'match').length} of {VERIFY_FIELDS.length} fields verified · Wire instructions unchanged
+                                    </span>
+                                </div>
+
+                                <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
+                                    {VERIFY_FIELDS.map((field, idx) => (
+                                        <div
+                                            key={field.label}
+                                            role="presentation"
+                                            className={`py-2.5 px-2 rounded-[var(--radius-md)] transition-colors ${hoveredField === idx ? 'bg-[#EFF6FF]' : ''}`}
+                                            onMouseEnter={() => setHoveredField(idx)}
+                                            onMouseLeave={() => setHoveredField(null)}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] mt-0.5 shrink-0 w-[118px]">
+                                                    {field.label}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                                    {field.aiConfidence != null ? (
+                                                        <span
+                                                            className="inline-flex items-center rounded bg-[#F3E8FF] px-1.5 py-0.5 text-[9px] font-bold text-[#5B21B6]"
+                                                            title="AI extraction confidence vs on-file schema"
+                                                        >
+                                                            AI {field.aiConfidence}%
+                                                        </span>
+                                                    ) : null}
+                                                    <MatchBadge status={field.status} />
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mb-0.5">Notice</p>
+                                                    <p className="m-0 text-[11px] text-[var(--color-black)] leading-[1.4]">{field.noticeSays}</p>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mb-0.5">On file</p>
+                                                    <p className="m-0 text-[11px] text-[var(--color-black)] leading-[1.4]">{field.onFile}</p>
+                                                </div>
+                                            </div>
+                                            {field.note && (
+                                                <p className="m-0 mt-1.5 text-[11px] text-[var(--color-neutral-9)] italic">{field.note}</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ACTIVITY TAB */}
+                {activeTab === 'activity' && (
+                    <div className="flex-1 overflow-y-auto p-6 max-w-[720px]">
+                        <div className="mb-6">
+                            <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-1">Activity log</h3>
+                            <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">Full audit trail for this capital call decision.</p>
+                        </div>
+
+                        <div className="flex flex-col">
+                            {localActivityLog.map((entry, idx) => (
+                                <div key={idx} className="flex gap-3 pb-5 relative">
+                                    {idx < localActivityLog.length - 1 && (
+                                        <div className="absolute left-[15px] top-[30px] w-px h-full bg-[var(--color-neutral-3)]" />
+                                    )}
+                                    <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-white z-10"
+                                        style={{ background: entry.isAI ? '#7C3AED' : '#0D9488' }}>
+                                        {entry.isAI
+                                            ? <IconRobot size={15} stroke={2} />
+                                            : entry.actor.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                        }
+                                    </div>
+                                    <div className="flex-1 pt-0.5">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="text-[13px] font-semibold text-[var(--color-black)]">{entry.actor}</span>
+                                            {entry.isAI && (
+                                                <span className="inline-flex items-center gap-0.5 rounded-full bg-[#F3E8FF] px-1.5 py-0.5 text-[10px] font-semibold text-[#6D28D9]">
+                                                    AI
+                                                </span>
+                                            )}
+                                            <span className="text-[12px] text-[var(--color-neutral-9)]">{entry.time}</span>
+                                        </div>
+                                        <p className="m-0 text-[13px] text-[var(--color-neutral-11)]">{entry.action}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 pt-6 border-t border-[var(--color-neutral-4)]">
+                            <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-4">
+                                Call history — {decision.matchedInvestmentName}
+                            </h3>
+                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] overflow-hidden">
+                                {[...Array(decision.priorCallsDrawn)].map((_, i) => {
+                                    const callNum = i + 1
+                                    const isCurrent = callNum === decision.callNumber
+                                    const year = 2022 + Math.floor(i / 2)
+                                    const month = i % 2 === 0 ? 'Mar' : 'Sep'
+                                    const amount = isCurrent ? decision.amount : Math.round((decision.commitment / decision.totalCalls) * (0.85 + Math.random() * 0.3))
+                                    return (
+                                        <div key={callNum} className={`flex items-center justify-between px-4 py-3 border-b border-[var(--color-neutral-3)] last:border-b-0 ${isCurrent ? 'bg-[#F0FDF4]' : ''}`}>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`w-2 h-2 rounded-full shrink-0 ${isCurrent ? 'bg-[#10B981]' : 'bg-[#005BE2]'}`} />
+                                                <div>
+                                                    <p className="m-0 text-[13px] font-medium text-[var(--color-black)]">
+                                                        Call #{callNum}
+                                                        {isCurrent && <span className="ml-2 text-[11px] font-semibold text-[#047857]">← this call</span>}
+                                                    </p>
+                                                    <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
+                                                        {isCurrent ? formatDate(decision.dueDate) : `${month} ${year}`}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="m-0 text-[13px] font-semibold tabular-nums text-[var(--color-black)]">
+                                                    {fmt(isCurrent ? decision.amount : amount)}
+                                                </p>
+                                                <span className={`text-[10px] font-semibold ${isCurrent ? 'text-[#047857]' : 'text-[var(--color-accent-9)]'}`}>
+                                                    {isCurrent ? statusMeta.label : 'Paid'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Footer ───────────────────────────────────────────────────── */}
+            {localStatus !== 'paid' ? (
+                <div className="shrink-0 border-t border-[var(--color-neutral-4)] bg-white px-6 py-3 flex items-center justify-between">
+                    <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        style={{ background: statusMeta.bg, color: statusMeta.text }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusMeta.dot }} />
+                        {statusMeta.label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                        >
+                            <IconFlag size={13} stroke={2} />
+                            Flag
+                        </button>
+                        <button
+                            type="button"
+                            onClick={advanceStatus}
+                            className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 transition-opacity"
+                        >
+                            {ADVANCE_LABELS[localStatus]}
+                            <IconArrowRight size={13} stroke={2.5} />
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="shrink-0 border-t border-[#D1FAE5] bg-[#F0FDF4] px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#10B981] flex items-center justify-center">
+                            <IconCheck size={13} stroke={2.5} className="text-white" />
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#065F46]">Wire executed</span>
+                        <span className="text-[12px] text-[#047857]">· {fmt(decision.amount)} sent to {decision.wireInstructions.beneficiary}</span>
+                    </div>
+                    <button type="button" className="text-[12px] font-medium text-[#047857] hover:underline">
+                        View reconciliation →
+                    </button>
                 </div>
             )}
         </div>

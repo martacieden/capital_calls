@@ -8,7 +8,7 @@ import type { AnyCatalogItem } from '@/data/types'
  * useFojoCreation — State machine for the Fojo creation flow.
  *
  * Flow:
- * 1. idle → user clicks "Create new asset" → prompt (Fojo asks for input)
+ * 1. idle → user clicks "Upload capital call" → prompt (Fojo asks for input)
  * 2. prompt → user types text or drops files → processing
  * 3. processing → pipeline steps appear one at a time as chat messages → qa (if needed) → done
  *
@@ -37,9 +37,9 @@ export interface CreationMessage {
 }
 
 const DEMO_FILES: AttachedFile[] = [
-    { id: 'demo-1', name: 'vehicle-title-tesla-x.pdf' },
-    { id: 'demo-2', name: 'property-deed-740-park.pdf' },
-    { id: 'demo-3', name: 'trust-amendment-2024.pdf' },
+    { id: 'demo-1', name: 'greentech-capital-call-notice.pdf' },
+    { id: 'demo-2', name: 'whitmore-capital-lpa.pdf' },
+    { id: 'demo-3', name: 'wire-instructions-confirmation.pdf' },
 ]
 
 export interface FojoCreationState {
@@ -263,7 +263,7 @@ export function useFojoCreation({ onItemsCreated, onPostNavigation }: UseFojoCre
     const startCreation = useCallback(() => {
         clearTimers()
         setPhase('prompt')
-        setMessages([{ id: nextId(), type: 'user-input', text: 'Create new asset' }])
+        setMessages([{ id: nextId(), type: 'user-input', text: 'Upload capital call' }])
         setCreatedItems([])
         setAttachedFiles([])
         setIsUploading(false)
@@ -278,7 +278,7 @@ export function useFojoCreation({ onItemsCreated, onPostNavigation }: UseFojoCre
                 {
                     id: nextId(),
                     type: 'fojo-text',
-                    text: "Tell me about the asset you'd like to add, or drop your documents below.\n\nI'll read it through, pull in details from public sources, and set up everything automatically.",
+                    text: "Drop a capital call notice, LPA, wire confirmation, or deal memo below.\n\nI'll extract the amount, due date, fund match, wire details, and release status so the call can move through review.",
                 },
                 {
                     id: nextId(),

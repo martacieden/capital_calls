@@ -26,14 +26,17 @@ import { DocumentsPage } from '@/components/pages/DocumentsPage'
 import { AssetDetailPage } from '@/components/pages/AssetDetailPage'
 import { TasksPage } from '@/components/pages/TasksPage'
 import { TaskDetailPage } from '@/components/pages/TaskDetailPage'
+import { InvestmentPipelineHubPage } from '@/components/pages/InvestmentPipelineHubPage'
 import { CapitalCallsPage } from '@/components/pages/CapitalCallsPage'
-import { DecisionsPage } from '@/components/pages/DecisionsPage'
 import { CapitalCallDetailPage } from '@/components/pages/CapitalCallDetailPage'
+import { InvestmentRecordPage } from '@/components/pages/InvestmentRecordPage'
+import { ContactsPage } from '@/components/pages/ContactsPage'
+import { getInvestmentById } from '@/data/thornton/investments-data'
 import { ToastContainer, showToast, updateToast } from '@/components/atoms/Toast'
 import { SearchOverlay } from '@/components/organisms/SearchOverlay'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 import { FojoMascot } from '@/components/atoms/FojoMascot'
-import type { AnyCatalogItem, DistributionEvent, AssetTimelineEvent, QuickFilterKey } from '@/data/types'
+import type { AnyCatalogItem, DistributionEvent, AssetTimelineEvent, QuickFilterKey, CatalogView } from '@/data/types'
 import type { CardActionType } from '@/components/molecules/CardActionsMenu'
 import { ActionPromptDropdown } from '@/components/molecules/ActionPromptDropdown'
 import type { PromptAnchorRect } from '@/lib/helpers/prompt-anchor'
@@ -87,16 +90,17 @@ function AppShell() {
   } = useFojo()
 
   // ── Local navigation state ──
-  const [activeView, setActiveView] = useState<'grid' | 'list' | 'map'>('grid')
-  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'capital-calls' | 'decisions' | 'capital-call-detail'>('home')
+  const [activeView, setActiveView] = useState<CatalogView>('grid')
+  const [activePage, setActivePage] = useState<'catalog' | 'timeline' | 'home' | 'portfolio' | 'portfolio-private' | 'portfolio-category-detail' | 'documents' | 'detail' | 'category-holdings' | 'tasks' | 'task-detail' | 'investment-pipeline' | 'capital-flows' | 'capital-call-detail' | 'investment-record' | 'contacts'>('home')
   const [holdingsCategoryKeys, setHoldingsCategoryKeys] = useState<string[]>([])
   const [holdingsCategoryLabel, setHoldingsCategoryLabel] = useState('')
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const [portfolioPanelCategoryId, setPortfolioPanelCategoryId] = useState<string | null>(null)
   const [portfolioDetailCategoryId, setPortfolioDetailCategoryId] = useState<string | null>(null)
-  const [previousPage, setPreviousPage] = useState<typeof activePage>('catalog')
+  const [previousPage, setPreviousPage] = useState<typeof activePage>('home')
   const [detailCapCallId, setDetailCapCallId] = useState<string | null>(null)
+  const [detailInvestmentId, setDetailInvestmentId] = useState<string | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [mapZoomTargetId, setMapZoomTargetId] = useState<string | null>(null)
@@ -143,6 +147,13 @@ function AppShell() {
   useEffect(() => {
     if (activePage !== 'portfolio' && activePage !== 'portfolio-private') setPortfolioPanelCategoryId(null)
     if (activePage !== 'portfolio-category-detail') setPortfolioDetailCategoryId(null)
+  }, [activePage])
+
+  useEffect(() => {
+    // Timeline/Tasks are temporarily hidden from the main flow.
+    if (activePage === 'timeline' || activePage === 'tasks' || activePage === 'task-detail') {
+      setActivePage('home')
+    }
   }, [activePage])
 
   const v3Empty = useDeferredUnmount(isProcessing, TIMING.v3EmptyUnmount)
@@ -678,81 +689,71 @@ function AppShell() {
     <div className={`app-shell${(isFullscreen || isDetailGraphExpanded) ? ' app-shell--map-fullscreen' : ''}${isTimelineExpanded ? ' app-shell--tl-fullscreen' : ''}${isFullscreenDetail ? ' app-shell--map-detail' : ''}${isTimelineDetail ? ' app-shell--tl-detail' : ''}${hasStrip ? ' app-shell--has-strip' : ''}${hasStripContent ? ' app-shell--strip-active' : ''}`}>
       <LeftNav
           activeItem={
-            activePage === 'task-detail' ? 'tasks'
-            : activePage === 'detail' ? 'catalog'
-            : activePage === 'capital-call-detail' ? 'decisions'
+            activePage === 'task-detail' ? 'home'
+            : activePage === 'detail' ? 'home'
+            : activePage === 'capital-call-detail' ? (previousPage === 'capital-flows' ? 'capital-flows' : 'investment-pipeline')
+            : activePage === 'investment-record' ? (previousPage === 'capital-flows' ? 'capital-flows' : 'investment-pipeline')
             : activePage === 'portfolio-category-detail'
-                ? (previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
+                ? 'home'
             : activePage === 'category-holdings'
-                ? (previousPage === 'portfolio-private' ? 'portfolio-private' : 'portfolio')
+                ? 'home'
             : activePage
           }
           navBadges={navBadges}
           onNavItemClick={(id) => {
               clearBadge(id)
-              if (id === 'search') setIsSearchOpen(true)
-              else if (id === 'timeline') setActivePage('timeline')
-              else if (id === 'catalog') setActivePage('catalog')
-              else if (id === 'home') setActivePage('home')
-              else if (id === 'portfolio') {
-                setPortfolioPanelCategoryId(null)
-                setPortfolioDetailCategoryId(null)
-                setActivePage('portfolio')
-              }
-              else if (id === 'portfolio-private') {
-                setPortfolioPanelCategoryId(null)
-                setPortfolioDetailCategoryId(null)
-                setActivePage('portfolio-private')
-              }
+              if (id === 'home') setActivePage('home')
               else if (id === 'documents') setActivePage('documents')
-              else if (id === 'tasks') setActivePage('tasks')
-              else if (id === 'capital-calls') setActivePage('capital-calls')
-              else if (id === 'decisions') setActivePage('decisions')
+              else if (id === 'contacts') setActivePage('contacts')
+              else if (id === 'investment-pipeline') setActivePage('investment-pipeline')
+              else if (id === 'capital-flows') setActivePage('capital-flows')
           }}
           onFojoToggle={() => setFojoForceOpen(!fojoForceOpen)}
           fojoUnreadCount={fojoUnreadCount}
           isFojoOpen={fojoVisibility === 'open'}
       />
 
-      <FojoPanel
-        visibility={fojoVisibility}
-        showCollapsedPreview={Boolean(portfolioPanelCategoryId) && activePage === 'portfolio' && !isSmallScreen}
-        onExpandFromPreview={() => setFojoForceOpen(true)}
-        onClose={() => {
-          setTimelineAssistSession(null)
-          // Closing Fojo should return the regular app shell with left nav.
-          setIsTimelineExpanded(false)
-          setFojoForceOpen(false)
-        }}
-        onUnreadCountChange={setFojoUnreadCount}
-        onOpenTimeline={handleOpenTimeline}
-        distributionSummary={distributionSummary}
-        onCreateItem={noop}
-        onCatalogUpdate={noop}
-        onItemsCreated={handleItemsCreatedWithPlaceholderClear}
-        onItemClick={navigateToDetail}
-        currentPage={activePage === 'portfolio-category-detail' ? 'portfolio' : activePage}
-        currentItem={activePage === 'detail' && detailItemId ? getItemById(detailItemId) : null}
-        triggerCreation={triggerCreation}
-        triggerCreationText={triggerCreationText}
-        triggerCreationHasFiles={triggerCreationHasFiles}
-        triggerCreationActionType={triggerCreationActionType}
-        triggerCreationScenarioId={triggerCreationScenarioId}
-        onTriggerCreationConsumed={consumeTriggerCreation}
-        isOverlay={isSmallScreen && fojoForceOpen}
-        pendingFojoQuery={pendingFojoQuery}
-        onPendingFojoQueryConsumed={consumePendingFojoQuery}
-        onPostNavigation={handlePostNavigation}
-        timelineAssistSession={timelineAssistSession}
-        onDismissTimelineAssist={() => setTimelineAssistSession(null)}
-        onTimelineAssistTaskCreated={registerTimelineAssistTask}
-        onTimelineAssistOpenTask={(taskId) => {
-          setPreviousPage('timeline')
-          setDetailTaskId(taskId)
-          setActivePage('task-detail')
-        }}
-        onClearTimelineAssist={() => setTimelineAssistSession(null)}
-      />
+      {activePage !== 'home' && (
+        <FojoPanel
+          visibility={fojoVisibility}
+          showCollapsedPreview={Boolean(portfolioPanelCategoryId) && activePage === 'portfolio' && !isSmallScreen}
+          onExpandFromPreview={() => setFojoForceOpen(true)}
+          onClose={() => {
+            setTimelineAssistSession(null)
+            // Closing Fojo should return the regular app shell with left nav.
+            setIsTimelineExpanded(false)
+            setFojoForceOpen(false)
+          }}
+          onUnreadCountChange={setFojoUnreadCount}
+          onOpenTimeline={handleOpenTimeline}
+          distributionSummary={distributionSummary}
+          onCreateItem={noop}
+          onCatalogUpdate={noop}
+          onItemsCreated={handleItemsCreatedWithPlaceholderClear}
+          onItemClick={navigateToDetail}
+          currentPage={activePage === 'portfolio-category-detail' ? 'portfolio' : activePage}
+          currentItem={activePage === 'detail' && detailItemId ? getItemById(detailItemId) : null}
+          triggerCreation={triggerCreation}
+          triggerCreationText={triggerCreationText}
+          triggerCreationHasFiles={triggerCreationHasFiles}
+          triggerCreationActionType={triggerCreationActionType}
+          triggerCreationScenarioId={triggerCreationScenarioId}
+          onTriggerCreationConsumed={consumeTriggerCreation}
+          isOverlay={isSmallScreen && fojoForceOpen}
+          pendingFojoQuery={pendingFojoQuery}
+          onPendingFojoQueryConsumed={consumePendingFojoQuery}
+          onPostNavigation={handlePostNavigation}
+          timelineAssistSession={timelineAssistSession}
+          onDismissTimelineAssist={() => setTimelineAssistSession(null)}
+          onTimelineAssistTaskCreated={registerTimelineAssistTask}
+          onTimelineAssistOpenTask={(taskId) => {
+            setPreviousPage('timeline')
+            setDetailTaskId(taskId)
+            setActivePage('task-detail')
+          }}
+          onClearTimelineAssist={() => setTimelineAssistSession(null)}
+        />
+      )}
 
       {(activePage === 'portfolio' || activePage === 'portfolio-private') && (
         <PortfolioCategoryDetailPanel
@@ -850,7 +851,11 @@ function AppShell() {
         </button>
       )}
 
-      <main className={`main-content${isAnyFullscreen ? ' main-content--map-expanded' : ''}`}>
+      <main
+        className={`main-content${isAnyFullscreen ? ' main-content--map-expanded' : ''}${
+          activePage === 'investment-pipeline' || activePage === 'capital-flows' ? ' main-content--pipeline-hub' : ''
+        }`}
+      >
         {!isOnboardingComplete && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--color-white)' }}>
             <OnboardingPage
@@ -865,13 +870,11 @@ function AppShell() {
 
         <div style={{ display: activePage === 'home' ? undefined : 'none', height: '100%' }}>
           <HomePage
-            isProcessing={isProcessing}
-            isOnboardingComplete={isOnboardingComplete}
-            onNavigate={(page) => setActivePage(page as 'catalog' | 'timeline' | 'home' | 'portfolio' | 'documents')}
-            items={allItems}
-            distributions={allDistributions}
-            isChatOpen={isChatOpen}
-            onUploadComplete={(scenarioId) => triggerCreationWithFiles('', true, undefined, scenarioId)}
+            onNavigate={(page) => setActivePage(page)}
+            onAskFojo={(prompt) => {
+              setPendingFojoQuery(prompt)
+              setFojoForceOpen(true)
+            }}
           />
         </div>
 
@@ -887,7 +890,6 @@ function AppShell() {
         ) : activePage === 'tasks' ? (
           <TasksPage
             onTaskClick={(taskId) => { setPreviousPage('tasks'); setDetailTaskId(taskId); setActivePage('task-detail') }}
-            isChatOpen={isChatOpen}
             externalTasks={externalTasks}
           />
         ) : activePage === 'detail' && detailItemId ? (
@@ -920,6 +922,11 @@ function AppShell() {
             onNavigateToAsset={(id) => navigateToDetail(id)}
             onNavigateToTasks={() => setActivePage('tasks')}
             onNavigateToTimeline={() => setActivePage('timeline')}
+            onNavigateToInvestment={(investmentId) => {
+              setDetailInvestmentId(investmentId)
+              setPreviousPage(activePage)
+              setActivePage('investment-record')
+            }}
             onNavigateToCatalogCategory={(categories) => {
               const labelMap: Record<string, string> = {
                 'investment': 'Private Investments',
@@ -947,6 +954,11 @@ function AppShell() {
             onNavigateToAsset={(id) => navigateToDetail(id)}
             onNavigateToTasks={() => setActivePage('tasks')}
             onNavigateToTimeline={() => setActivePage('timeline')}
+            onNavigateToInvestment={(investmentId) => {
+              setDetailInvestmentId(investmentId)
+              setPreviousPage(activePage)
+              setActivePage('investment-record')
+            }}
             onNavigateToCatalogCategory={(categories) => {
               const labelMap: Record<string, string> = {
                 'investment': 'Private Investments',
@@ -972,20 +984,56 @@ function AppShell() {
               setActivePage('detail')
             }}
           />
-        ) : activePage === 'capital-calls' ? (
-          <CapitalCallsPage />
-        ) : activePage === 'decisions' ? (
-          <DecisionsPage
+        ) : activePage === 'investment-pipeline' ? (
+          <InvestmentPipelineHubPage
+            onOpenCapitalCallDetail={(id) => {
+              setDetailCapCallId(id)
+              setPreviousPage('investment-pipeline')
+              setActivePage('capital-call-detail')
+            }}
+            onOpenDeal={(id) => {
+              setDetailInvestmentId(id)
+              setPreviousPage('investment-pipeline')
+              setActivePage('investment-record')
+            }}
+          />
+        ) : activePage === 'capital-flows' ? (
+          <CapitalCallsPage
             onOpenDetail={(id) => {
               setDetailCapCallId(id)
-              setPreviousPage('decisions')
+              setPreviousPage('capital-flows')
               setActivePage('capital-call-detail')
             }}
           />
         ) : activePage === 'capital-call-detail' && detailCapCallId ? (
           <CapitalCallDetailPage
             id={detailCapCallId}
-            onBack={() => setActivePage('decisions')}
+            investmentId={detailInvestmentId ?? undefined}
+            investmentName={detailInvestmentId ? getInvestmentById(detailInvestmentId)?.fundNameShort : undefined}
+            onBack={() => {
+              if (detailInvestmentId && previousPage === 'investment-record') {
+                setActivePage('investment-record')
+              } else if (previousPage === 'capital-flows') {
+                setActivePage('capital-flows')
+              } else {
+                setActivePage('investment-pipeline')
+              }
+            }}
+          />
+        ) : activePage === 'investment-record' && detailInvestmentId ? (
+          <InvestmentRecordPage
+            investmentId={detailInvestmentId}
+            backSource={previousPage === 'portfolio-private' ? 'portfolio-private' : previousPage === 'investment-pipeline' ? 'investment-pipeline' : 'portfolio'}
+            onBack={() => {
+              if (previousPage === 'investment-pipeline') setActivePage('investment-pipeline')
+              else if (previousPage === 'portfolio-private') setActivePage('portfolio-private')
+              else setActivePage('portfolio')
+            }}
+            onNavigateToCapCall={(capCallId) => {
+              setPreviousPage('investment-record')
+              setDetailCapCallId(capCallId)
+              setActivePage('capital-call-detail')
+            }}
           />
         ) : activePage === 'documents' ? (
           <DocumentsPage
@@ -994,6 +1042,8 @@ function AppShell() {
             onCollectionConsumed={() => setPendingCollection(null)}
             isChatOpen={isChatOpen}
           />
+        ) : activePage === 'contacts' ? (
+          <ContactsPage />
         ) : activePage === 'timeline' ? (
           <TimelinePage
             distributions={[...allDistributions, ...dynamicDistributions]}

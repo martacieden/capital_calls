@@ -23,8 +23,8 @@ interface UseFojoChatOptions {
     onCreateItem?: (categoryKey?: string) => void
 }
 
-const FOJO_CHAT_SESSION_KEY = 'fojo-chat-state-v1'
-const FOJO_CHAT_LOCAL_KEY = 'fojo-chat-state-persist-v1'
+const FOJO_CHAT_SESSION_KEY = 'fojo-chat-state-v2-capital-calls'
+const FOJO_CHAT_LOCAL_KEY = 'fojo-chat-state-persist-v2-capital-calls'
 
 type PersistedFojoChatState = {
     conversations: Conversation[]
@@ -287,13 +287,13 @@ export function useFojoChat({ onUnreadCountChange, onCatalogUpdate: _onCatalogUp
     const handleCreateAssetPrompt = useCallback(() => {
         const newConv: Conversation = {
             id: `user-conv-${Date.now()}`,
-            title: 'Create new asset',
+            title: 'Upload capital call',
             messages: [
-                { id: ++msgIdRef.current, role: 'user', text: 'Create new asset' },
+                { id: ++msgIdRef.current, role: 'user', text: 'Upload capital call' },
                 {
                     id: ++msgIdRef.current,
                     role: 'assistant',
-                    text: 'What type of asset would you like to create?',
+                    text: 'What would you like me to create from this capital call or investment document?',
                     actions: catalogCategories.map(cat => ({
                         label: cat.label,
                         key: cat.key,
@@ -367,14 +367,14 @@ export function useFojoChat({ onUnreadCountChange, onCatalogUpdate: _onCatalogUp
         const convIdForResponse = targetConvId
 
         // ── Search flow: initial prompt ──
-        if (text === 'Help me find assets') {
+        if (text === 'Find investment or call') {
             setSearchMode(true)
             setSearchConvId(convIdForResponse)
             setTimeout(() => {
                 appendMessageToConversation(convIdForResponse, {
                     id: ++msgIdRef.current,
                     role: 'assistant',
-                    text: "What are you looking for? Describe the asset — name, type, location, or any detail you remember.",
+                    text: "What are you looking for? Describe the fund, GP, deal, commitment, due date, or capital call you need help with.",
                 })
                 setIsTyping(false)
             }, 1800 + Math.random() * 400)
@@ -403,14 +403,14 @@ export function useFojoChat({ onUnreadCountChange, onCatalogUpdate: _onCatalogUp
         }
 
         // ── Relationship flow: initial prompt ──
-        if (text === 'Explain relationships') {
+        if (text === 'Explain fund exposure') {
             setRelationshipMode('ask')
             setRelationshipConvId(convIdForResponse)
             setTimeout(() => {
                 appendMessageToConversation(convIdForResponse, {
                     id: ++msgIdRef.current,
                     role: 'assistant',
-                    text: "What would you like to explore? Tell me an asset, entity, or person name.",
+                    text: "What would you like to explore? Tell me a fund, GP, deal, entity, or capital call name.",
                 })
                 setIsTyping(false)
             }, 1800 + Math.random() * 400)

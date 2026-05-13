@@ -59,8 +59,8 @@ export function FojoProvider({ children }: { children: ReactNode }) {
   const isSmallScreen = useBreakpoint(BREAKPOINTS.small)
   const { isOnboardingComplete, isProcessing, navBadges, completeOnboarding, clearBadge } = useOnboarding()
 
-  // Fojo panel state
-  const [fojoForceOpen, setFojoForceOpen] = useState(false)
+  // Fojo panel state (default open on app start)
+  const [fojoForceOpen, setFojoForceOpen] = useState(true)
   const [fojoUnreadCount, setFojoUnreadCount] = useState(0)
 
   // Creation trigger
@@ -86,7 +86,7 @@ export function FojoProvider({ children }: { children: ReactNode }) {
     skipNextFullscreenClose.current = true
   }, [])
 
-  // Fojo is always collapsed by default; only opens when explicitly triggered
+  // Fojo visibility is driven by onboarding + explicit open state
   const isAnyFullscreenView = isMapExpanded || isTimelineExpanded
   const fojoVisibility = useMemo<FojoVisibility>(() => {
     if (!isOnboardingComplete) return 'hidden'

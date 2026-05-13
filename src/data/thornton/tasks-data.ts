@@ -27,7 +27,11 @@ export interface Task {
     relatedAsset?: string
     relatedAssetId?: string
     relatedAssetType?: string
+    /** FO context: monetary or risk headline, e.g. "$4.2M yacht insurance" */
+    relatedValue?: string
     assignee: string
+    /** When set, UI shows multiple assignees (avatar stack); primary remains `assignee` for sorting */
+    assignees?: string[]
     assigneeRole?: string
     dueDate: string
     status: TaskStatus
@@ -82,6 +86,8 @@ export function taskFromCatalogItem(item: AnyCatalogItem): Task | null {
     const relatedAsset = f['Related Entity'] != null ? String(f['Related Entity']) : undefined
     const relatedAssetId = f['Related Entity Id'] != null ? String(f['Related Entity Id']).trim() : undefined
 
+    const relatedValue = f['Related Value'] != null ? String(f['Related Value']) : undefined
+
     return {
         id: item.id,
         title: item.name,
@@ -93,6 +99,7 @@ export function taskFromCatalogItem(item: AnyCatalogItem): Task | null {
         recurring: false,
         relatedAsset,
         relatedAssetId: relatedAssetId || undefined,
+        relatedValue,
         description: item.description ?? '',
         createdAt: item.createdAt.slice(0, 10),
     }
@@ -119,6 +126,8 @@ export const mockTasks: Task[] = [
         policyNumber: 'CHB-MAR-2024-7821',
         currentPremium: '$18,400/year',
         coverageAmount: '$4,200,000',
+        relatedValue: '$4.2M yacht insurance (Hull & Machinery)',
+        assignees: ['James Hartwell', 'Marco Delgado'],
         notes: 'Request updated vessel appraisal report before renewal. Last renewal included agreed value endorsement.',
         createdAt: '2025-01-15',
     },
@@ -142,6 +151,7 @@ export const mockTasks: Task[] = [
         estimatedCost: '$12,500',
         location: 'Fort Lauderdale, FL',
         lastCompleted: '2024-09-08',
+        relatedValue: '~$12.5K marine service scope',
         notes: 'Check starboard engine oil seal — minor leak reported by captain in October. Confirm with boatyard before haul-out.',
         createdAt: '2025-02-01',
     },
@@ -165,6 +175,7 @@ export const mockTasks: Task[] = [
         estimatedCost: '$68,000',
         location: 'Teterboro Airport (TEB), NJ',
         lastCompleted: '2024-03-28',
+        relatedValue: 'G700 · ~$68K inspection program',
         notes: 'Coordinate with pilot team to block calendar. Arrange charter backup for owner travel during downtime.',
         createdAt: '2025-03-01',
     },
@@ -186,6 +197,7 @@ export const mockTasks: Task[] = [
         contactEmail: 'r.calloway@sullcrom.com',
         contactPhone: '+1 (212) 558-4000',
         relatedTrust: 'The Whitmore Family Revocable Trust, 2019',
+        relatedValue: 'Art collection · ~$9.4M appraised (2024)',
         notes: "Bring latest appraisal reports from Sotheby's (Oct 2024). Discuss Basquiat piece separately — authentication still pending.",
         createdAt: '2025-01-20',
     },
@@ -206,6 +218,8 @@ export const mockTasks: Task[] = [
         lawFirm: 'Osler LLP (Vancouver)',
         contactEmail: 'i.fontaine@lenzstaehelin.com',
         estimatedLegalFee: '$45,000',
+        relatedValue: 'BC residence · title transfer · ~$45K legal',
+        assignees: ['Isabelle Fontaine', 'Richard Calloway'],
         notes: 'Deadline driven by upcoming Monaco tax residency review. Ensure coordination with Geneva family office team.',
         createdAt: '2025-03-15',
     },
@@ -228,6 +242,7 @@ export const mockTasks: Task[] = [
         serviceProvider: 'Lauderdale Marine Center',
         estimatedCost: '$8,500',
         location: 'Fort Lauderdale, FL',
+        relatedValue: 'Azimut 72 · ~$8.5K service',
         notes: 'Coordinate with captain to schedule haul-out window. Allow 5 days offline.',
         createdAt: '2026-04-01',
     },
@@ -250,6 +265,8 @@ export const mockTasks: Task[] = [
         relatedEventId: 'thn-d-demo-003',
         createdFrom: 'timeline',
         notes: 'Focus on capital gains from real estate disposals and carry-over losses.',
+        relatedValue: 'Household tax · multi-entity scope',
+        assignees: ['Michael Torres', 'Isabelle Fontaine'],
         createdAt: '2026-04-01',
     },
 ]

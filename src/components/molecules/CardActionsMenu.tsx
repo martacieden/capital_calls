@@ -39,7 +39,7 @@ interface ActionDef {
 
 const GRAPH_ACTIONS: ActionDef[] = [
     { type: 'create-task',     label: 'Create new task',        icon: IconCheckbox,     isAi: true },
-    { type: 'add-new-asset',   label: 'Create new asset', icon: IconPlus,         isAi: true },
+    { type: 'add-new-asset',   label: 'Add investment record', icon: IconPlus,         isAi: true },
     { type: 'change-relation', label: 'Update relationships',   icon: IconLink,         isAi: true },
     { type: 'edit-fields',     label: 'Edit details',           icon: IconPencil,       isAi: false },
     { type: 'open-detail',     label: 'Open details',           icon: IconExternalLink, isAi: false },

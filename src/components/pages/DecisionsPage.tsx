@@ -1,14 +1,86 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
-    IconPlus, IconChevronRight, IconX, IconUpload, IconSparkles, IconCheck,
-    IconLayoutGrid, IconList, IconSearch, IconAdjustmentsHorizontal,
-    IconChevronDown, IconArrowUp, IconArrowDown,
+    IconPlus,
+    IconX,
+    IconUpload,
+    IconSparkles,
+    IconCheck,
+    IconArrowUp,
+    IconArrowDown,
+    IconMail,
 } from '@tabler/icons-react'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
-import { CAPITAL_CALL_DECISIONS } from '@/data/thornton/capital-call-decisions-data'
-import type { DecisionStatus } from '@/data/thornton/capital-call-decisions-data'
+import { CatalogToolbar } from '@/components/organisms/CatalogToolbar'
+import type { DropdownItem, QuickFilterItem } from '@/components/organisms/CatalogToolbar'
+import type { CatalogView, QuickFilterKey } from '@/data/types'
+import { cn } from '@/lib/utils'
+import { CAPITAL_CALL_DECISIONS, capitalCallHasPendingApprovalStep } from '@/data/thornton/capital-call-decisions-data'
+import type { DecisionStatus, WorkflowStage } from '@/data/thornton/capital-call-decisions-data'
 
 // ─── constants ─────────────────────────────────────────────────────────────
+
+type WorkflowTagVariant = 'notion' | 'way2b1' | 'external' | 'ii'
+
+/** Maps internal workflow stages to diagram-style step labels & platform tags */
+const STAGE_META: Record<
+    WorkflowStage,
+    { step: string; line: string; tags: Array<{ label: string; variant: WorkflowTagVariant }> }
+> = {
+    'ai-match': {
+        step: '03',
+        line: 'Review materials — decks, data room output, and AI-assisted extraction.',
+        tags: [
+            { label: 'NOTION', variant: 'notion' },
+            { label: 'II', variant: 'ii' },
+        ],
+    },
+    'allocator-review': {
+        step: '06',
+        line: 'Due diligence — allocator notes and allocation alignment.',
+        tags: [{ label: 'NOTION', variant: 'notion' }],
+    },
+    approval: {
+        step: '14',
+        line: 'Principal review — family reviews opportunity and gives direction.',
+        tags: [{ label: 'WAY2B1', variant: 'way2b1' }],
+    },
+    'liquidity-check': {
+        step: '13',
+        line: 'Pending submission — liquidity readiness and cleanup gate.',
+        tags: [{ label: 'WAY2B1', variant: 'way2b1' }],
+    },
+    validation: {
+        step: '15',
+        line: 'Final due diligence — broker-dealer risk gate.',
+        tags: [{ label: 'WAY2B1', variant: 'way2b1' }],
+    },
+    execution: {
+        step: '18',
+        line: 'Investment execution — closing paperwork and wires.',
+        tags: [
+            { label: 'WAY2B1', variant: 'way2b1' },
+            { label: 'EXTERNAL', variant: 'external' },
+        ],
+    },
+}
+
+function WorkflowTag({ label, variant }: { label: string; variant: WorkflowTagVariant }) {
+    const cls =
+        variant === 'notion'
+            ? 'border border-[var(--color-gray-12)] bg-[var(--color-white)] text-[var(--color-gray-12)]'
+            : variant === 'way2b1'
+              ? 'border border-[var(--color-orange-hover)] bg-[var(--color-orange-1)] text-[var(--color-orange-9)]'
+              : variant === 'external'
+                ? 'border border-[var(--color-green-bright)]/25 bg-[var(--color-green-1)] text-[var(--color-green-9)]'
+                : 'border border-[var(--color-blue-3)] bg-[var(--color-blue-1)] text-[var(--color-accent-9)]'
+    return (
+        <span
+            className={`inline-flex items-center rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${cls}`}
+        >
+            {label}
+        </span>
+    )
+}
 
 const STATUS_FILTERS: Array<{ key: DecisionStatus | 'all'; label: string }> = [
     { key: 'all', label: 'All' },
@@ -136,7 +208,7 @@ interface UploadModalProps {
     onCreated: (id: string) => void
 }
 
-function UploadModal({ onClose, onCreated }: UploadModalProps) {
+export function UploadModal({ onClose, onCreated }: UploadModalProps) {
     const [phase, setPhase] = useState<UploadPhase>('drop')
     const [fileName, setFileName] = useState('')
     const [isDragging, setIsDragging] = useState(false)
@@ -464,12 +536,13 @@ function UploadModal({ onClose, onCreated }: UploadModalProps) {
 
 // ─── Decision Card (grid view) ─────────────────────────────────────────────
 
-function DecisionCard({ decision, isNew, onClick }: {
+export function DecisionCard({ decision, isNew, onClick }: {
     decision: typeof CAPITAL_CALL_DECISIONS[0]
     isNew: boolean
     onClick: () => void
 }) {
     const badge = STATUS_BADGE[decision.status]
+    const stage = STAGE_META[decision.stage]
     const days = daysUntil(decision.dueDate)
     const isUrgent = days <= 14 && decision.status === 'pending'
     const approvedCount = decision.approvals.filter(a => a.status === 'approved').length
@@ -480,24 +553,24 @@ function DecisionCard({ decision, isNew, onClick }: {
         <button
             type="button"
             onClick={onClick}
-            className={`group flex flex-col text-left rounded-[var(--radius-xl)] border bg-white transition-all hover:shadow-md hover:-translate-y-0.5 overflow-hidden ${
-                isNew ? 'border-[#10B981] ring-2 ring-[#D1FAE5]' : 'border-[var(--color-neutral-4)] hover:border-[var(--color-neutral-6)]'
+            className={`group flex flex-col text-left rounded-[var(--radius-lg)] border bg-white transition-all hover:shadow-[var(--shadow-toolbar)] overflow-hidden ${
+                isNew ? 'border-[var(--color-green-bright)] ring-1 ring-[var(--color-green-1)]' : 'border-[var(--color-gray-4)] hover:border-[var(--color-neutral-6)]'
             }`}
         >
-            {/* Card top strip — colored by status */}
-            <div className="h-1 w-full" style={{ background: badge.dot }} />
-
             <div className="flex flex-col gap-3 p-4 flex-1">
-                {/* Header row */}
+                {/* Step + status */}
                 <div className="flex items-start justify-between gap-2">
-                    <span
-                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                        style={{ background: badge.bg, color: badge.text }}
-                    >
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: badge.dot }} />
-                        {badge.label}
-                    </span>
-                    <span className="text-[10px] font-mono text-[var(--color-neutral-8)] shrink-0">{decision.id}</span>
+                    <span className="text-[12px] font-medium tabular-nums text-[var(--color-neutral-9)]">{stage.step}</span>
+                    <div className="flex flex-wrap items-center justify-end gap-1">
+                        {stage.tags.map(t => (
+                            <WorkflowTag key={t.label} label={t.label} variant={t.variant} />
+                        ))}
+                        <span
+                            className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--color-gray-4)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-gray-12)] bg-[var(--color-neutral-2)]"
+                        >
+                            {badge.label}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Title */}
@@ -505,10 +578,13 @@ function DecisionCard({ decision, isNew, onClick }: {
                     <p className="m-0 text-[14px] font-semibold text-[var(--color-black)] leading-[1.35] line-clamp-2">
                         {decision.title}
                     </p>
-                    <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mt-1 truncate">
-                        {decision.fund.replace(', L.P.', '')}
+                    <p className="m-0 text-[12px] text-[var(--color-neutral-10)] mt-1.5 leading-[1.45] line-clamp-2">
+                        {stage.line}
                     </p>
-                    <p className="m-0 text-[11px] text-[var(--color-neutral-8)] truncate">{decision.entity}</p>
+                    <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mt-1 truncate">
+                        {decision.fund.replace(', L.P.', '')} · {decision.entity}
+                    </p>
+                    <p className="m-0 text-[10px] font-mono text-[var(--color-neutral-8)] mt-0.5">{decision.id}</p>
                 </div>
 
                 {/* Amount + deadline */}
@@ -561,31 +637,56 @@ function DecisionCard({ decision, isNew, onClick }: {
 
 // ─── main page ─────────────────────────────────────────────────────────────
 
-type ViewMode = 'grid' | 'list'
 type SortKey = 'dueDate' | 'amount' | 'status'
 
-const QUICK_FILTERS = [
-    { label: 'Due soon', color: '#F59E0B', check: (d: typeof CAPITAL_CALL_DECISIONS[0]) => daysUntil(d.dueDate) <= 21 },
-    { label: 'Pending approval', color: '#F59E0B', check: (d: typeof CAPITAL_CALL_DECISIONS[0]) => d.status === 'pending' },
-    { label: 'High value', color: null, check: (d: typeof CAPITAL_CALL_DECISIONS[0]) => d.amount >= 500_000 },
-    { label: 'Wire ready', color: '#6366F1', check: (d: typeof CAPITAL_CALL_DECISIONS[0]) => d.status === 'wire-ready' },
-]
+function decisionMatchesQuickFilter(d: (typeof CAPITAL_CALL_DECISIONS)[0], key: QuickFilterKey): boolean {
+    switch (key) {
+        case 'decision-due-soon':
+            return daysUntil(d.dueDate) <= 21
+        case 'decision-pending-approval':
+            return d.status === 'pending'
+        case 'decision-high-value':
+            return d.amount >= 500_000
+        case 'decision-wire-ready':
+            return d.status === 'wire-ready'
+        default:
+            return false
+    }
+}
 
 interface Props {
     onOpenDetail: (id: string) => void
+    embedded?: boolean
+    /** Embedded under Capital Calls with Board/List switch — aligns copy and avoids a second «page» title feel */
+    embeddedMergeShell?: boolean
 }
 
-export function DecisionsPage({ onOpenDetail }: Props) {
+export function DecisionsPage({ onOpenDetail, embedded, embeddedMergeShell }: Props) {
     const [activeFilter, setActiveFilter] = useState<DecisionStatus | 'all'>('all')
-    const [viewMode, setViewMode] = useState<ViewMode>('grid')
-    const [search, setSearch] = useState('')
+    const [activeView, setActiveView] = useState<CatalogView>('list')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [activeFunds, setActiveFunds] = useState<string[]>([])
     const [sortKey, setSortKey] = useState<SortKey>('dueDate')
     const [sortAsc, setSortAsc] = useState(true)
-    const [activeQuick, setActiveQuick] = useState<string | null>(null)
+    const [activeQuickFilters, setActiveQuickFilters] = useState<Set<QuickFilterKey>>(new Set())
     const [showUpload, setShowUpload] = useState(false)
     const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null)
 
-    const pendingDecisions = CAPITAL_CALL_DECISIONS.filter(d => d.status === 'pending')
+    const toggleQuickFilter = useCallback((key: QuickFilterKey) => {
+        setActiveQuickFilters(prev => {
+            const next = new Set(prev)
+            if (next.has(key)) next.delete(key)
+            else next.add(key)
+            return next
+        })
+    }, [])
+
+    const fundDropdownItems: DropdownItem[] = useMemo(() => {
+        const names = [...new Set(CAPITAL_CALL_DECISIONS.map(d => d.fund))].sort((a, b) => a.localeCompare(b))
+        return names.map(fund => ({ key: fund, label: fund }))
+    }, [])
+
+    const pendingDecisions = CAPITAL_CALL_DECISIONS.filter(capitalCallHasPendingApprovalStep)
     const pendingCount = pendingDecisions.length
     const totalPending = pendingDecisions.reduce((s, d) => s + d.amount, 0)
     const kpiTotalAmt = CAPITAL_CALL_DECISIONS.reduce((s, d) => s + d.amount, 0)
@@ -598,19 +699,58 @@ export function DecisionsPage({ onOpenDetail }: Props) {
         { label: 'Next deadline', value: kpiNextDueLabel, sub: kpiNextDueDays <= 14 ? `${kpiNextDueDays} days — urgent` : `${kpiNextDueDays} days`, color: kpiNextDueDays <= 14 ? '#D97706' : null },
     ]
 
-    const quickCounts = QUICK_FILTERS.map(qf => CAPITAL_CALL_DECISIONS.filter(qf.check).length)
+    const baseFiltered = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase()
+        return CAPITAL_CALL_DECISIONS.filter(d => activeFunds.length === 0 || activeFunds.includes(d.fund))
+            .filter(d => activeFilter === 'all' || d.status === activeFilter)
+            .filter(
+                d =>
+                    !q ||
+                    d.title.toLowerCase().includes(q) ||
+                    d.fund.toLowerCase().includes(q) ||
+                    d.entity.toLowerCase().includes(q)
+            )
+    }, [activeFunds, activeFilter, searchQuery])
 
-    const filtered = CAPITAL_CALL_DECISIONS
-        .filter(d => activeFilter === 'all' || d.status === activeFilter)
-        .filter(d => !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.fund.toLowerCase().includes(search.toLowerCase()) || d.entity.toLowerCase().includes(search.toLowerCase()))
-        .filter(d => !activeQuick || QUICK_FILTERS.find(qf => qf.label === activeQuick)?.check(d))
-        .sort((a, b) => {
+    const quickCounts = useMemo(() => {
+        let dueSoon = 0
+        let pendingApproval = 0
+        let highValue = 0
+        let wireReady = 0
+        for (const d of baseFiltered) {
+            if (daysUntil(d.dueDate) <= 21) dueSoon++
+            if (d.status === 'pending') pendingApproval++
+            if (d.amount >= 500_000) highValue++
+            if (d.status === 'wire-ready') wireReady++
+        }
+        return { dueSoon, pendingApproval, highValue, wireReady }
+    }, [baseFiltered])
+
+    const decisionQuickFilters: QuickFilterItem[] = useMemo(
+        () => [
+            { key: 'decision-due-soon', label: 'Due soon', count: quickCounts.dueSoon, isAlert: true },
+            { key: 'decision-pending-approval', label: 'Pending approval', count: quickCounts.pendingApproval, isAlert: true },
+            { key: 'decision-high-value', label: 'High value', count: quickCounts.highValue },
+            { key: 'decision-wire-ready', label: 'Wire ready', count: quickCounts.wireReady },
+        ],
+        [quickCounts]
+    )
+
+    const filtered = useMemo(() => {
+        let rows = [...baseFiltered]
+        if (activeQuickFilters.size > 0) {
+            const keys = [...activeQuickFilters]
+            rows = rows.filter(d => keys.some(k => decisionMatchesQuickFilter(d, k)))
+        }
+        rows.sort((a, b) => {
             let cmp = 0
             if (sortKey === 'dueDate') cmp = a.dueDate.localeCompare(b.dueDate)
             if (sortKey === 'amount') cmp = a.amount - b.amount
             if (sortKey === 'status') cmp = a.status.localeCompare(b.status)
             return sortAsc ? cmp : -cmp
         })
+        return rows
+    }, [baseFiltered, activeQuickFilters, sortKey, sortAsc])
 
     function toggleSort(key: SortKey) {
         if (sortKey === key) setSortAsc(v => !v)
@@ -631,41 +771,117 @@ export function DecisionsPage({ onOpenDetail }: Props) {
     }
 
     return (
-        <div className="flex flex-col flex-1 gap-0 pt-[36px] pb-8 max-w-[1120px] w-full mx-auto px-[var(--spacing-6)]">
+        <div
+            className={cn(
+                'flex flex-col flex-1 min-h-0 w-full mx-auto',
+                embeddedMergeShell
+                    ? 'gap-0 pt-2 px-[var(--spacing-6)] pb-[var(--spacing-5)] max-w-none'
+                    : embedded
+                        ? 'gap-[var(--spacing-5)] pt-6 px-[var(--spacing-6)] pb-[var(--spacing-5)] max-w-none'
+                        : 'gap-[var(--spacing-5)] pt-9 px-[var(--spacing-6)] pb-[var(--spacing-5)] max-w-[1120px]',
+            )}
+        >
+            {!embeddedMergeShell ? (
+                <ContentHeader
+                    title="Decisions"
+                    itemCount={CAPITAL_CALL_DECISIONS.length}
+                    secondaryAction={{
+                        label: 'Import email +',
+                        onClick: () => setShowUpload(true),
+                        icon: IconMail,
+                    }}
+                    onActionClick={() => setShowUpload(true)}
+                    actionLabel="New capital call"
+                    actionIcon={IconPlus}
+                />
+            ) : null}
 
-            {/* ── Page header ──────────────────────────────────────────── */}
-            <div className="flex items-start justify-between mb-4">
-                <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] m-0 mb-1">
-                        Investment Workflow
+            {!embeddedMergeShell ? (
+                <div className="-mt-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] m-0">
+                        Investment workflow
                     </p>
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-[28px] font-semibold text-[var(--color-black)] m-0 tracking-[-0.01em]">Decisions</h1>
-                        <span className="rounded-full bg-[var(--color-neutral-3)] px-2 py-0.5 text-[12px] font-semibold text-[var(--color-neutral-10)]">
-                            {CAPITAL_CALL_DECISIONS.length}
-                        </span>
-                    </div>
+                    <p className="text-[13px] text-[var(--color-neutral-11)] m-0 mt-1 leading-snug max-w-[720px]">
+                        {embedded ? (
+                            <>
+                                Catalogue view with filters and uploads for the active capital-call records in this workspace. Use <strong className="font-[var(--font-weight-semibold)]">Board</strong> in the tabs above when you want the Kanban.
+                            </>
+                        ) : (
+                            <>
+                                <span className="text-[var(--color-gray-12)] font-[var(--font-weight-medium)]">Open Capital calls in the sidebar</span>
+                                {' '}
+                                (<strong className="font-[var(--font-weight-semibold)]">Investment pipeline</strong> → Capital calls) for the Kanban board, list tools, and forecasts.
+                            </>
+                        )}
+                    </p>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                    <button
-                        type="button"
-                        onClick={() => setShowUpload(true)}
-                        className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
-                    >
-                        Import email +
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setShowUpload(true)}
-                        className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-3 py-2 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
-                    >
-                        <IconPlus size={15} stroke={2.5} />
-                        New capital call
-                    </button>
-                </div>
+            ) : null}
+
+            <div
+                className={cn(
+                    'sticky top-[calc(-1*var(--spacing-4))] z-10 bg-[var(--color-white)] pb-[var(--spacing-4)] [&>*]:mt-0',
+                    embeddedMergeShell
+                        ? 'pt-0'
+                        : 'pt-[var(--spacing-4)] -mt-[var(--spacing-5)]',
+                )}
+            >
+                <CatalogToolbar
+                    activeView={activeView}
+                    onViewChange={setActiveView}
+                    activeOrgs={[]}
+                    onOrgsChange={() => {}}
+                    activeCategory={activeFunds}
+                    onCategoryChange={setActiveFunds}
+                    dropdownItems={fundDropdownItems}
+                    dropdownLabel="Fund"
+                    dropdownAllLabel="All funds"
+                    viewOptions={['list', 'grid']}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    searchPlaceholder="Search decisions…"
+                    quickFilterItems={decisionQuickFilters}
+                    activeQuickFilters={activeQuickFilters}
+                    onQuickFilterChange={toggleQuickFilter}
+                    primaryAction={
+                        <label className="flex items-center gap-2 shrink-0 text-[13px] text-[var(--color-neutral-11)] mr-1">
+                            <span className="hidden sm:inline whitespace-nowrap">Status</span>
+                            <select
+                                className="h-8 max-w-[180px] rounded-[var(--radius-md)] border border-[var(--color-gray-4)] bg-[var(--color-white)] px-2 text-[13px] text-[var(--color-gray-12)] outline-none cursor-pointer focus:border-[var(--color-accent-9)] font-[inherit]"
+                                value={activeFilter}
+                                onChange={e => setActiveFilter(e.target.value as DecisionStatus | 'all')}
+                                aria-label="Filter by status"
+                            >
+                                {STATUS_FILTERS.map(f => (
+                                    <option key={f.key} value={f.key}>
+                                        {f.label}
+                                        {f.key !== 'all'
+                                            ? ` (${CAPITAL_CALL_DECISIONS.filter(d => d.status === f.key).length})`
+                                            : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    }
+                />
             </div>
 
-            {/* ── KPI summary bar ─────────────────────────────────────── */}
+            {/* ── Action banner ────────────────────────────────────────── */}
+            {pendingCount > 0 && activeQuickFilters.size === 0 && !searchQuery.trim() && activeFilter === 'all' && (
+                <div className="rounded-[var(--radius-xl)] border border-[var(--color-blue-3)] bg-[var(--color-blue-1)] px-4 py-3 flex items-center justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[var(--color-accent-9)] shrink-0" />
+                        <span className="text-[13px] font-semibold text-[var(--color-accent-10)]">
+                            {pendingCount} capital call{pendingCount > 1 ? 's' : ''} pending your approval
+                        </span>
+                        <span className="text-[13px] text-[var(--color-accent-9)]">— {fmt(totalPending)} total</span>
+                    </div>
+                    <button type="button" onClick={() => setActiveFilter('pending')} className="text-[12px] font-semibold text-[var(--color-accent-9)] hover:underline">
+                        Review →
+                    </button>
+                </div>
+            )}
+
+            {/* ── KPI summary bar (below filters — summary before list) ─ */}
             <div className="flex items-stretch gap-3 mb-6">
                 {kpis.map((kpi) => (
                     <div key={kpi.label} className="flex-1 rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white px-4 py-3">
@@ -676,136 +892,24 @@ export function DecisionsPage({ onOpenDetail }: Props) {
                 ))}
             </div>
 
-            {/* ── Toolbar ──────────────────────────────────────────────── */}
-            <div className="flex items-center gap-2 mb-2">
-                {/* Fund dropdown */}
-                <button type="button" className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-1.5 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
-                    Fund
-                    <IconChevronDown size={14} stroke={2} className="text-[var(--color-neutral-9)]" />
-                </button>
-
-                {/* Status dropdown */}
-                <button type="button" className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-1.5 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
-                    Status
-                    <IconChevronDown size={14} stroke={2} className="text-[var(--color-neutral-9)]" />
-                </button>
-
-                {/* Filters */}
-                <button type="button" className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-1.5 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
-                    <IconAdjustmentsHorizontal size={15} stroke={1.75} className="text-[var(--color-neutral-9)]" />
-                    Filters
-                </button>
-
-                {/* Search */}
-                <div className="relative flex-1 max-w-[240px]">
-                    <IconSearch size={14} stroke={2} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral-8)]" />
-                    <input
-                        type="text"
-                        placeholder="Search"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="w-full rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white pl-8 pr-3 py-1.5 text-[13px] text-[var(--color-neutral-11)] placeholder:text-[var(--color-neutral-8)] outline-none focus:border-[var(--color-accent-9)] transition-colors"
-                    />
-                </div>
-
-                <div className="flex-1" />
-
-                {/* View toggles */}
-                <div className="flex items-center rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white p-0.5">
-                    <button
-                        type="button"
-                        onClick={() => setViewMode('list')}
-                        title="List view"
-                        className={`flex items-center justify-center w-7 h-7 rounded-[5px] transition-colors ${viewMode === 'list' ? 'bg-[var(--color-neutral-3)] text-[var(--color-black)]' : 'text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-2)]'}`}
-                    >
-                        <IconList size={15} stroke={1.75} />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setViewMode('grid')}
-                        title="Grid view"
-                        className={`flex items-center justify-center w-7 h-7 rounded-[5px] transition-colors ${viewMode === 'grid' ? 'bg-[var(--color-neutral-3)] text-[var(--color-black)]' : 'text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-2)]'}`}
-                    >
-                        <IconLayoutGrid size={15} stroke={1.75} />
-                    </button>
-                </div>
-            </div>
-
-            {/* ── Quick filter chips ───────────────────────────────────── */}
-            <div className="flex items-center gap-2 mb-5">
-                {QUICK_FILTERS.map((qf, idx) => {
-                    const count = quickCounts[idx]
-                    const isActive = activeQuick === qf.label
-                    const isAlert = !!qf.color && count > 0
-                    return (
-                        <button
-                            key={qf.label}
-                            type="button"
-                            onClick={() => setActiveQuick(isActive ? null : qf.label)}
-                            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium border transition-colors ${
-                                isActive
-                                    ? 'border-[var(--color-accent-9)] bg-[var(--color-blue-1)] text-[var(--color-accent-9)]'
-                                    : isAlert
-                                        ? 'border-[#FDE68A] bg-[#FFFBEB] text-[#92400E] hover:bg-[#FEF3C7]'
-                                        : 'border-[var(--color-neutral-4)] bg-white text-[var(--color-neutral-10)] hover:bg-[var(--color-neutral-2)]'
-                            }`}
-                        >
-                            {isAlert && !isActive && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: qf.color! }} />}
-                            {qf.label}
-                            <span className={`font-semibold ${isAlert && !isActive ? 'text-[#B45309]' : ''}`}>· {count}</span>
-                        </button>
-                    )
-                })}
-            </div>
-
-            {/* ── Action banner ────────────────────────────────────────── */}
-            {pendingCount > 0 && !activeQuick && !search && activeFilter === 'all' && (
-                <div className="rounded-[var(--radius-xl)] border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 flex items-center justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#F59E0B] shrink-0" />
-                        <span className="text-[13px] font-semibold text-[#92400E]">
-                            {pendingCount} capital call{pendingCount > 1 ? 's' : ''} pending your approval
-                        </span>
-                        <span className="text-[13px] text-[#B45309]">— {fmt(totalPending)} total</span>
-                    </div>
-                    <button type="button" onClick={() => setActiveFilter('pending')} className="text-[12px] font-semibold text-[#B45309] hover:underline">
-                        Review →
-                    </button>
-                </div>
-            )}
-
-            {/* ── Status tabs ──────────────────────────────────────────── */}
-            <div className="flex items-center gap-1 border-b border-[var(--color-neutral-4)] mb-5">
-                {STATUS_FILTERS.map(f => (
-                    <button
-                        key={f.key}
-                        type="button"
-                        onClick={() => setActiveFilter(f.key)}
-                        className={`px-3 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                            activeFilter === f.key
-                                ? 'border-[var(--color-accent-9)] text-[var(--color-accent-9)]'
-                                : 'border-transparent text-[var(--color-neutral-10)] hover:text-[var(--color-neutral-12)]'
-                        }`}
-                    >
-                        {f.label}
-                        {f.key !== 'all' && (
-                            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-[var(--color-neutral-3)] px-1.5 text-[10px] font-semibold text-[var(--color-neutral-10)]">
-                                {CAPITAL_CALL_DECISIONS.filter(d => d.status === f.key).length}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
-
             {/* ── Content ──────────────────────────────────────────────── */}
             {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <p className="text-[14px] text-[var(--color-neutral-9)] m-0">No decisions match your filters.</p>
-                    <button type="button" onClick={() => { setSearch(''); setActiveFilter('all'); setActiveQuick(null) }} className="text-[12px] font-semibold text-[var(--color-accent-9)] hover:underline">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSearchQuery('')
+                            setActiveFilter('all')
+                            setActiveFunds([])
+                            setActiveQuickFilters(new Set())
+                        }}
+                        className="text-[12px] font-semibold text-[var(--color-accent-9)] hover:underline"
+                    >
                         Clear filters
                     </button>
                 </div>
-            ) : viewMode === 'grid' ? (
+            ) : activeView === 'grid' ? (
                 /* ── GRID VIEW ── */
                 <div className="grid grid-cols-3 gap-4">
                     {filtered.map(decision => (
@@ -829,27 +933,38 @@ export function DecisionsPage({ onOpenDetail }: Props) {
                     </button>
                 </div>
             ) : (
-                /* ── LIST VIEW ── */
-                <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] overflow-hidden">
-                    <div className="grid grid-cols-[minmax(0,2.4fr)_1fr_1fr_120px_100px_48px] px-5 py-3 border-b border-[var(--color-neutral-3)] bg-[var(--color-neutral-2)]">
-                        <button type="button" onClick={() => toggleSort('dueDate')} className="text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] hover:text-[var(--color-black)]">
-                            Decision
-                        </button>
-                        <button type="button" onClick={() => toggleSort('amount')} className="text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] hover:text-[var(--color-black)]">
-                            Amount <SortIcon k="amount" />
-                        </button>
-                        <button type="button" onClick={() => toggleSort('dueDate')} className="text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] hover:text-[var(--color-black)]">
+                /* ── LIST VIEW (workflow-style rows) ── */
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] bg-[var(--color-white)] overflow-hidden">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 border-b border-[var(--color-gray-4)]">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] shrink-0">
+                            Sort by
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => toggleSort('dueDate')}
+                            className={`text-[13px] font-medium border-none bg-transparent cursor-pointer px-0 py-0 ${sortKey === 'dueDate' ? 'text-[var(--color-accent-9)]' : 'text-[var(--color-neutral-11)] hover:text-[var(--color-gray-12)]'}`}
+                        >
                             Due date <SortIcon k="dueDate" />
                         </button>
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">Call</span>
-                        <button type="button" onClick={() => toggleSort('status')} className="text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] hover:text-[var(--color-black)]">
+                        <button
+                            type="button"
+                            onClick={() => toggleSort('amount')}
+                            className={`text-[13px] font-medium border-none bg-transparent cursor-pointer px-0 py-0 ${sortKey === 'amount' ? 'text-[var(--color-accent-9)]' : 'text-[var(--color-neutral-11)] hover:text-[var(--color-gray-12)]'}`}
+                        >
+                            Amount <SortIcon k="amount" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => toggleSort('status')}
+                            className={`text-[13px] font-medium border-none bg-transparent cursor-pointer px-0 py-0 ${sortKey === 'status' ? 'text-[var(--color-accent-9)]' : 'text-[var(--color-neutral-11)] hover:text-[var(--color-gray-12)]'}`}
+                        >
                             Status <SortIcon k="status" />
                         </button>
-                        <span />
                     </div>
 
                     {filtered.map(decision => {
                         const badge = STATUS_BADGE[decision.status]
+                        const stage = STAGE_META[decision.stage]
                         const days = daysUntil(decision.dueDate)
                         const isUrgent = days <= 14 && decision.status === 'pending'
                         const isNew = decision.id === newlyCreatedId
@@ -858,88 +973,69 @@ export function DecisionsPage({ onOpenDetail }: Props) {
                                 key={decision.id}
                                 type="button"
                                 onClick={() => onOpenDetail(decision.id)}
-                                className={`w-full grid grid-cols-[minmax(0,2.4fr)_1fr_1fr_120px_100px_48px] items-center px-5 py-4 border-b border-[var(--color-neutral-3)] last:border-b-0 transition-colors text-left group ${
-                                    isNew ? 'bg-[#F0FDF4]' : 'hover:bg-[var(--color-neutral-2)]'
+                                className={`w-full flex gap-4 sm:gap-5 px-5 py-4 border-b border-[var(--color-gray-4)] last:border-b-0 transition-colors text-left group items-start ${
+                                    isNew ? 'bg-[var(--color-green-1)]/40' : 'hover:bg-[var(--color-neutral-2)]'
                                 }`}
                             >
-                                <div className="min-w-0 pr-4">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <span className="text-[13px] font-semibold text-[var(--color-black)] truncate">
-                                            {decision.title}
-                                        </span>
-                                        <span className="text-[11px] font-mono text-[var(--color-neutral-9)] shrink-0">
-                                            {decision.id}
-                                        </span>
+                                <span className="w-8 sm:w-9 shrink-0 text-[13px] font-medium tabular-nums text-[var(--color-neutral-9)] pt-0.5">
+                                    {stage.step}
+                                </span>
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                        <span className="text-[14px] font-semibold text-[var(--color-black)]">{decision.title}</span>
                                         {isNew && (
                                             <span className="inline-flex items-center gap-0.5 rounded-full bg-[#DCFCE7] px-1.5 py-0.5 text-[10px] font-semibold text-[#065F46] shrink-0">
                                                 <IconSparkles size={9} />
-                                                Just created
+                                                New
                                             </span>
                                         )}
+                                        <span className="text-[10px] font-mono text-[var(--color-neutral-9)] shrink-0">{decision.id}</span>
                                     </div>
-                                    <p className="m-0 text-[12px] text-[var(--color-neutral-10)] truncate mt-0.5">
+                                    <p className="m-0 text-[13px] text-[var(--color-neutral-10)] mt-1 leading-snug">{stage.line}</p>
+                                    <p className="m-0 text-[12px] text-[var(--color-neutral-9)] mt-1 truncate">
                                         {decision.fund} · {decision.entity}
                                     </p>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                        {stage.tags.map(t => (
+                                            <WorkflowTag key={t.label} label={t.label} variant={t.variant} />
+                                        ))}
+                                        <span
+                                            className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--color-gray-4)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-gray-12)] bg-[var(--color-neutral-2)]"
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: badge.dot }} />
+                                            {badge.label}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <span className="text-[14px] font-semibold tabular-nums text-[var(--color-black)]">
-                                        {fmt(decision.amount)}
-                                    </span>
-                                    <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
-                                        {Math.round((decision.amount / decision.commitment) * 100)}% of commitment
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <span className={`text-[13px] font-medium ${isUrgent ? 'text-[#B45309]' : 'text-[var(--color-black)]'}`}>
+                                <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 text-right min-w-[100px]">
+                                    <span className="text-[14px] font-semibold tabular-nums text-[var(--color-black)]">{fmt(decision.amount)}</span>
+                                    <span className={`text-[12px] ${isUrgent ? 'text-[#B45309] font-medium' : 'text-[var(--color-neutral-10)]'}`}>
                                         {formatDue(decision.dueDate)}
+                                        {days <= 21 ? ` · ${days}d` : ''}
                                     </span>
-                                    <p className={`m-0 text-[11px] ${isUrgent ? 'text-[#D97706]' : 'text-[var(--color-neutral-9)]'}`}>
-                                        {days > 0 ? `${days} days` : 'Today'}{isUrgent ? ' — urgent' : ''}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <span className="text-[13px] text-[var(--color-neutral-11)]">
-                                        #{decision.callNumber} of {decision.totalCalls}
-                                    </span>
-                                    <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
-                                        {decision.priorCallsDrawn} drawn
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <span
-                                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                                        style={{ background: badge.bg, color: badge.text }}
-                                    >
-                                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: badge.dot }} />
-                                        {badge.label}
+                                    <span className="text-[11px] text-[var(--color-neutral-9)]">
+                                        Call #{decision.callNumber}/{decision.totalCalls}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-center">
-                                    <IconChevronRight size={16} className="text-[var(--color-neutral-7)] group-hover:text-[var(--color-neutral-11)] transition-colors" />
+                                <div className="shrink-0 pt-0.5 text-[var(--color-neutral-7)] group-hover:text-[var(--color-neutral-11)] transition-colors" aria-hidden>
+                                    <IconPlus size={18} stroke={2} />
                                 </div>
                             </button>
                         )
-                    })
-                }
-            </div>
+                    })}
+                </div>
             )}
 
-            <p className="text-[11px] text-[var(--color-neutral-9)] text-center m-0">
-                {CAPITAL_CALL_DECISIONS.length} decisions · Fojo automatically matches PDFs to investment records
-            </p>
-
-            {/* Upload modal */}
-            {showUpload && (
+            {/* Upload modal (shell opens this when embeddedMergeShell; otherwise local header buttons) */}
+            {showUpload && !embeddedMergeShell ? (
                 <UploadModal
                     onClose={() => setShowUpload(false)}
                     onCreated={handleCreated}
                 />
-            )}
+            ) : null}
         </div>
     )
 }

@@ -128,7 +128,7 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
 
                 {tooltip && hoveredSlice && (
                     <div
-                        className="pointer-events-none absolute z-10 bg-[var(--color-black)] text-white rounded-lg px-3 py-2 text-xs shadow-lg w-72 max-w-[min(320px,85vw)] text-left"
+                        className="pointer-events-none absolute z-10 bg-[var(--color-black)] text-white rounded-lg px-3 py-2 text-xs w-72 max-w-[min(320px,85vw)] text-left border border-white/15"
                         style={{
                             left: tooltip.x + 12,
                             top: tooltip.y - 36,

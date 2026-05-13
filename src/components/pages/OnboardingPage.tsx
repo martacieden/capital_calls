@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { IconChevronRight, IconCloudUpload, IconFileText, IconList, IconShieldLock, IconX, IconSitemap, IconCalendarEvent, IconChartDonut, IconBriefcase } from '@tabler/icons-react'
+import { IconChevronRight, IconCloudUpload, IconFileText, IconList, IconShieldLock, IconX, IconBriefcase, IconCheck, IconBolt } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
 interface OnboardingPageProps {
@@ -9,32 +9,32 @@ interface OnboardingPageProps {
 const DOCS = [
     {
         icon: IconFileText,
-        label: 'Trust documents',
-        description: "People, trusts, entities, and how they connect to each other",
+        label: 'Capital call notices',
+        description: "Funding deadlines, call amounts, wire details, and matching fund records",
     },
     {
         icon: IconList,
-        label: 'Inventory lists',
-        description: "Vehicles, jewelry, art, collectibles, and other personal property",
+        label: 'Fund documents',
+        description: "LP agreements, subscriptions, amendments, and commitment schedules",
     },
     {
         icon: IconShieldLock,
-        label: 'Insurance policies',
-        description: "Coverage gaps and renewals we can catch early",
+        label: 'Wire instructions',
+        description: "Beneficiary, bank, routing, SWIFT, and reference fields to verify before release",
     },
     {
         icon: IconBriefcase,
-        label: 'Investment documents',
-        description: "Capital call notices, LP agreements, and fund subscriptions",
+        label: 'Pipeline materials',
+        description: "Deal memos, diligence files, IC notes, and approved investment records",
     },
 ]
 
 const DEMO_FILES = [
-    { name: 'family-trust-agreement.pdf',     id: 'demo-1' },
-    { name: 'dynasty-trust-i-agreement.pdf',  id: 'demo-4' },
-    { name: 'dynasty-trust-ii-agreement.pdf', id: 'demo-5' },
-    { name: 'inventory-list-2026.pdf',        id: 'demo-2' },
-    { name: 'insurance-policies.pdf',         id: 'demo-3' },
+    { name: 'greentech-capital-call-notice.pdf', id: 'demo-1' },
+    { name: 'whitmore-capital-lpa.pdf',          id: 'demo-2' },
+    { name: 'fund-subscription-schedule.pdf',    id: 'demo-3' },
+    { name: 'wire-instructions-confirmation.pdf', id: 'demo-4' },
+    { name: 'investment-committee-memo.pdf',     id: 'demo-5' },
 ]
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
@@ -115,11 +115,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             <div className="onboarding-left flex-[0_0_56%] flex items-center justify-center px-[120px] py-[100px] overflow-y-auto scrollbar-none">
                 <div className="onboarding-content max-w-[480px] w-full flex flex-col gap-10">
                     <div className="onboarding-headline">
-                        <h1>Understand your estate</h1>
+                        <h1>Understand every capital call</h1>
                         <p className="text-[16px] text-[var(--color-neutral-11)] leading-[1.6] tracking-[-0.006em]">
-                            Instead of setting up every person, entity, and asset by hand,
-                            drop in your trust and estate documents. Fojo will read them
-                            and map out your entire estate automatically.
+                            Drop in capital call notices, fund agreements, and investment files.
+                            Fojo will extract the key terms, match each notice to the right fund,
+                            verify payment details, and build your investment workflow automatically.
                         </p>
                     </div>
 
@@ -162,8 +162,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                         <div className="w-12 h-12 flex items-center justify-center rounded-[10px] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] mb-1">
                             <IconCloudUpload size={22} stroke={1.5} color="var(--color-neutral-11)" />
                         </div>
-                        <div className="text-[15px] font-semibold text-[var(--color-neutral-12)] tracking-[-0.01em]">Drop files here, or click to browse</div>
-                        <div className="text-[13px] text-[var(--color-neutral-11)] tracking-[-0.005em]">PDF, Word, or CSV files · up to 50MB each</div>
+                        <div className="text-[15px] font-semibold text-[var(--color-neutral-12)] tracking-[-0.01em]">Drop capital call files here, or click to browse</div>
+                        <div className="text-[13px] text-[var(--color-neutral-11)] tracking-[-0.005em]">PDF, Word, or CSV files · notices, LPAs, memos, wire docs</div>
                     </div>
 
                     {files.length > 0 && (
@@ -203,99 +203,84 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     </div>
                     <div className="onboarding-previews flex flex-col gap-[18px] relative">
 
-                        {/* Card 1 — Entity Graph */}
+                        {/* Card 1 — Extracted notice fields */}
                         <div className="onboarding-preview-card onboarding-preview-card--blue" ref={el => { cardRefs.current[0] = el }}>
                             <div className="onboarding-preview-card__inner">
                                 <div className="onboarding-preview-card__header flex items-center gap-2.5">
                                     <div className="onboarding-preview-card__icon onboarding-preview-card__icon--blue w-6 h-6 rounded-[4px] flex items-center justify-center shrink-0 bg-[var(--color-card-blue-bg)] text-[var(--color-card-blue)]">
-                                        <IconSitemap size={14} stroke={2} />
+                                        <IconFileText size={14} stroke={2} />
                                     </div>
-                                    <span className="onboarding-preview-card__label font-sans text-sm font-[var(--font-weight-bold)] text-[var(--color-neutral-12)] tracking-[-0.01em]">Entities & Assets</span>
-                                    <span className="onboarding-preview-card__meta text-xs text-[var(--color-neutral-11)] ml-auto">76 records</span>
+                                    <span className="onboarding-preview-card__label font-sans text-sm font-[var(--font-weight-bold)] text-[var(--color-neutral-12)] tracking-[-0.01em]">Extracted Notice</span>
+                                    <span className="onboarding-preview-card__meta text-xs text-[var(--color-neutral-11)] ml-auto">94% confidence</span>
                                 </div>
-                                <svg
-                                    viewBox="0 0 300 78"
-                                    className="onboarding-mini-graph-svg"
-                                    aria-hidden="true"
-                                >
-                                    {/* Root node */}
-                                    <rect className="onb-svg-node onb-svg-node--1" x="110" y="0" width="80" height="24" rx="8" fill="var(--color-card-blue)" />
-                                    <text className="onb-svg-node onb-svg-node--1" x="150" y="15.5" textAnchor="middle" fill="white" fontSize="10" fontFamily="Inter, sans-serif" fontWeight="600">Grantor</text>
-
-                                    {/* Branches */}
-                                    <path className="onb-svg-line" d="M150 24 L150 36 M51 36 L249 36 M51 36 L51 46 M150 36 L150 46 M249 36 L249 46" fill="none" stroke="var(--color-card-blue)" strokeWidth="1.2" />
-
-                                    {/* Child nodes — all same style: light blue bg, blue text */}
-                                    <rect className="onb-svg-node onb-svg-node--2" x="9" y="46" width="84" height="22" rx="7" fill="var(--color-card-blue-bg)" stroke="var(--color-card-blue)" strokeWidth="1" />
-                                    <text className="onb-svg-node onb-svg-node--2" x="51" y="61" textAnchor="middle" fill="var(--color-blue-dark)" fontSize="9" fontFamily="Inter, sans-serif" fontWeight="500">Family Trust</text>
-
-                                    <rect className="onb-svg-node onb-svg-node--3" x="105" y="46" width="90" height="22" rx="7" fill="var(--color-card-blue-bg)" stroke="var(--color-card-blue)" strokeWidth="1" />
-                                    <text className="onb-svg-node onb-svg-node--3" x="150" y="61" textAnchor="middle" fill="var(--color-blue-dark)" fontSize="9" fontFamily="Inter, sans-serif" fontWeight="500">Holding Entity</text>
-
-                                    <rect className="onb-svg-node onb-svg-node--4" x="207" y="46" width="84" height="22" rx="7" fill="var(--color-card-blue-bg)" stroke="var(--color-card-blue)" strokeWidth="1" />
-                                    <text className="onb-svg-node onb-svg-node--4" x="249" y="61" textAnchor="middle" fill="var(--color-blue-dark)" fontSize="9" fontFamily="Inter, sans-serif" fontWeight="500">Beneficiary</text>
-
-                                    {/* Traveling dots along branches */}
-                                    <circle className="onb-svg-dot" r="2.5" fill="var(--color-card-blue)" />
-                                    <circle className="onb-svg-dot onb-svg-dot--2" r="2.5" fill="var(--color-card-blue)" />
-                                </svg>
-                                <div className="text-xs text-[var(--color-neutral-11)] tracking-[-0.005em]">People, trusts, entities — all mapped automatically</div>
-                            </div>
-                        </div>
-
-                        {/* Card 2 — Distribution Timeline */}
-                        <div className="onboarding-preview-card onboarding-preview-card--purple" ref={el => { cardRefs.current[1] = el }}>
-                            <div className="onboarding-preview-card__inner">
-                                <div className="onboarding-preview-card__header flex items-center gap-2.5">
-                                    <div className="onboarding-preview-card__icon onboarding-preview-card__icon--purple w-6 h-6 rounded-[4px] flex items-center justify-center shrink-0 bg-[var(--color-card-green-bg)] text-[var(--color-card-green)]">
-                                        <IconCalendarEvent size={14} stroke={2} />
-                                    </div>
-                                    <span className="onboarding-preview-card__label font-sans text-sm font-[var(--font-weight-bold)] text-[var(--color-neutral-12)] tracking-[-0.01em]">Distribution Timeline</span>
-                                    <span className="onboarding-preview-card__meta text-xs text-[var(--color-neutral-11)] ml-auto">24 events</span>
-                                </div>
-                                <div className="onboarding-mini-timeline flex flex-col gap-0">
+                                <div className="flex flex-col gap-2 text-xs">
                                     {[
-                                        { year: 'Year 1', name: 'Trust income begins', amount: '$X/yr' },
-                                        { year: 'Year 3', name: 'Beneficiary distribution', amount: '$XM' },
-                                        { year: 'Year 8', name: 'Age-based milestone', amount: '$XM' },
-                                    ].map((row, i) => (
-                                        <div key={i} className="onboarding-mini-timeline-row" style={{ animationDelay: `${0.5 + i * 0.1}s` }}>
-                                            <div className="onboarding-mini-timeline__dot" />
-                                            <span className="onboarding-mini-timeline__year font-[var(--font-weight-bold)] text-[var(--color-neutral-11)] min-w-[38px] text-xs">{row.year}</span>
-                                            <span className="onboarding-mini-timeline__name flex-1 min-w-0 text-[var(--color-neutral-11)]">{row.name}</span>
-                                            <span className="onboarding-mini-timeline__amount font-[var(--font-weight-bold)] text-[var(--color-card-green)] min-w-[42px] text-right text-xs">{row.amount}</span>
+                                        ['Fund', 'Greentech Opp. Fund III'],
+                                        ['Amount', '$500,000'],
+                                        ['Due date', 'May 30, 2026'],
+                                        ['Call #', '7 of 12'],
+                                    ].map(([label, value]) => (
+                                        <div key={label} className="flex items-center justify-between gap-3 rounded-[6px] border border-[var(--color-neutral-3)] bg-white px-2.5 py-2">
+                                            <span className="font-semibold uppercase tracking-[0.06em] text-[10px] text-[var(--color-neutral-9)]">{label}</span>
+                                            <span className="font-semibold text-[var(--color-neutral-12)] text-right">{value}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Card 3 — Valuations */}
+                        {/* Card 2 — Verification checklist */}
+                        <div className="onboarding-preview-card onboarding-preview-card--purple" ref={el => { cardRefs.current[1] = el }}>
+                            <div className="onboarding-preview-card__inner">
+                                <div className="onboarding-preview-card__header flex items-center gap-2.5">
+                                    <div className="onboarding-preview-card__icon onboarding-preview-card__icon--purple w-6 h-6 rounded-[4px] flex items-center justify-center shrink-0 bg-[var(--color-card-green-bg)] text-[var(--color-card-green)]">
+                                        <IconCheck size={14} stroke={2} />
+                                    </div>
+                                    <span className="onboarding-preview-card__label font-sans text-sm font-[var(--font-weight-bold)] text-[var(--color-neutral-12)] tracking-[-0.01em]">Verification</span>
+                                    <span className="onboarding-preview-card__meta text-xs text-[var(--color-neutral-11)] ml-auto">5 of 5 matched</span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {[
+                                        'Fund name matches subscription',
+                                        'Amount matches commitment schedule',
+                                        'Wire beneficiary unchanged',
+                                        'Routing and account verified',
+                                    ].map(item => (
+                                        <div key={item} className="flex items-center gap-2 text-xs text-[var(--color-neutral-11)]">
+                                            <span className="w-4 h-4 rounded-[4px] bg-[#ECFDF5] text-[#059669] flex items-center justify-center shrink-0">
+                                                <IconCheck size={11} stroke={2.5} />
+                                            </span>
+                                            <span>{item}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card 3 — Release queue */}
                         <div className="onboarding-preview-card onboarding-preview-card--teal" ref={el => { cardRefs.current[2] = el }}>
                             <div className="onboarding-preview-card__inner">
                                 <div className="onboarding-preview-card__header flex items-center gap-2.5">
                                     <div className="onboarding-preview-card__icon onboarding-preview-card__icon--teal w-6 h-6 rounded-[4px] flex items-center justify-center shrink-0 bg-[var(--color-card-pink-bg)] text-[var(--color-card-pink)]">
-                                        <IconChartDonut size={14} stroke={2} />
+                                        <IconBolt size={14} stroke={2} />
                                     </div>
-                                    <span className="onboarding-preview-card__label font-sans text-sm font-[var(--font-weight-bold)] text-[var(--color-neutral-12)] tracking-[-0.01em]">Asset Allocation</span>
-                                    <span className="onboarding-preview-card__meta text-xs text-[var(--color-neutral-11)] ml-auto">$985M – $1.2B</span>
+                                    <span className="onboarding-preview-card__label font-sans text-sm font-[var(--font-weight-bold)] text-[var(--color-neutral-12)] tracking-[-0.01em]">Release Queue</span>
+                                    <span className="onboarding-preview-card__meta text-xs text-[var(--color-neutral-11)] ml-auto">2 ready</span>
                                 </div>
-                                <div className="onboarding-mini-valuations flex flex-col gap-2.5">
+                                <div className="flex flex-col gap-2">
                                     {[
-                                        { label: 'Liquid', pct: 85, value: '$340M', delay: 0.6 },
-                                        { label: 'Real Estate', pct: 62, value: '$217M', delay: 0.7 },
-                                        { label: 'Private Equity', pct: 62, value: '$217M', delay: 0.8 },
-                                        { label: 'Discretionary', pct: 55, value: '$211M', delay: 0.9 },
-                                    ].map((row, i) => (
-                                        <div key={i} className="onboarding-mini-bar-row flex items-center gap-2.5 text-xs leading-normal">
-                                            <span className="onboarding-mini-bar-row__label min-w-[80px] text-[var(--color-neutral-11)] text-xs">{row.label}</span>
-                                            <div className="onboarding-mini-bar-row__track flex-1 h-1.5 bg-[rgba(219,39,119,0.18)] rounded-[4px] overflow-hidden">
-                                                <div
-                                                    className="onboarding-mini-bar"
-                                                    style={{ '--bar-width': `${row.pct}%`, animationDelay: `${row.delay}s` } as React.CSSProperties}
-                                                />
+                                        { fund: 'Whitmore Capital I', amount: '$2.0M', status: 'Ready' },
+                                        { fund: 'Greentech Fund III', amount: '$500K', status: 'Review' },
+                                        { fund: 'Real Assets III', amount: '$1.5M', status: 'Pending' },
+                                    ].map(row => (
+                                        <div key={row.fund} className="flex items-center justify-between gap-2 rounded-[6px] bg-white border border-[var(--color-neutral-3)] px-2.5 py-2">
+                                            <div className="min-w-0">
+                                                <p className="m-0 text-xs font-semibold text-[var(--color-neutral-12)] truncate">{row.fund}</p>
+                                                <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{row.amount}</p>
                                             </div>
-                                            <span className="onboarding-mini-bar-row__value min-w-[38px] text-right font-[var(--font-weight-bold)] text-[var(--color-neutral-11)] text-xs">{row.value}</span>
+                                            <span className="rounded-[4px] bg-[var(--color-neutral-3)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-neutral-10)]">
+                                                {row.status}
+                                            </span>
                                         </div>
                                     ))}
                                 </div>

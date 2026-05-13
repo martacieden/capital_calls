@@ -20,6 +20,7 @@
 .main-content {
   display: flex;
   min-width: 240px;
+  min-height: 0;
   padding: var(--spacing-4) var(--spacing-8) var(--spacing-6);
   margin-top: calc(-1 * var(--spacing-4));
   margin-bottom: calc(-1 * var(--spacing-4));
@@ -28,6 +29,11 @@
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* Full-height hub: nested panes own vertical scroll (kanban, tables) */
+.main-content.main-content--pipeline-hub {
+  overflow: hidden;
 }
 
 .main-content::-webkit-scrollbar {

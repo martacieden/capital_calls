@@ -6,7 +6,7 @@ import { LeftNav } from '../../components/molecules/LeftNav'
  *
  * ### What it does
  * Vertical sidebar navigation with icon-only nav items (Search, Home, Assets, Documents,
- * Tasks, Decisions, Projects, Portfolio, Timeline, More), a Way2B1 logo, bug report button,
+ * Tasks, Pipeline (deal flow + capital calls hub), Portfolio, Private Inv., Timeline, More), a Way2B1 logo, bug report button,
  * Fojo AI chat toggle with animated mascot and unread badge, and user avatar button.
  *
  * ### Key behaviors
@@ -29,7 +29,7 @@ const meta: Meta<typeof LeftNav> = {
   argTypes: {
     activeItem: {
       control: 'select',
-      options: ['search', 'home', 'catalog', 'documents', 'tasks', 'decisions', 'projects', 'portfolio', 'timeline', 'more'],
+      options: ['search', 'home', 'catalog', 'documents', 'tasks', 'investment-pipeline', 'portfolio', 'portfolio-private', 'timeline', 'more'],
       description: 'Currently active navigation item',
     },
     onNavItemClick: { action: 'nav-clicked', description: 'Callback when a nav item is clicked' },

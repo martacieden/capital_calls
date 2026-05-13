@@ -21,6 +21,28 @@ export interface CapitalCallCommitment {
 
 export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
     {
+        id: 'greentech-fund-iii',
+        fundName: 'Greentech Opp. Fund III',
+        fundType: 'Private Equity',
+        vintage: '2024',
+        totalCommitment: 5_000_000,
+        calls: [
+            { id: 'gf3-1', callNumber: 1, dueDate: '2024-06-15', amount: 350_000, status: 'paid' },
+            { id: 'gf3-2', callNumber: 2, dueDate: '2024-09-15', amount: 350_000, status: 'paid' },
+            { id: 'gf3-3', callNumber: 3, dueDate: '2025-01-15', amount: 350_000, status: 'paid' },
+            { id: 'gf3-4', callNumber: 4, dueDate: '2025-05-15', amount: 350_000, status: 'paid' },
+            { id: 'gf3-5', callNumber: 5, dueDate: '2025-09-15', amount: 350_000, status: 'paid' },
+            { id: 'gf3-6', callNumber: 6, dueDate: '2026-01-15', amount: 350_000, status: 'paid' },
+            { id: 'gf3-7', callNumber: 7, dueDate: '2026-05-30', amount: 500_000, status: 'pending' },
+            { id: 'gf3-8',  callNumber: 8,  dueDate: '2026-09-15', amount: 450_000, status: 'upcoming' },
+            { id: 'gf3-9',  callNumber: 9,  dueDate: '2027-03-15', amount: 450_000, status: 'upcoming' },
+            { id: 'gf3-10', callNumber: 10, dueDate: '2027-09-15', amount: 350_000, status: 'upcoming' },
+            { id: 'gf3-11', callNumber: 11, dueDate: '2028-03-15', amount: 350_000, status: 'upcoming' },
+            { id: 'gf3-12', callNumber: 12, dueDate: '2028-09-15', amount: 350_000, status: 'upcoming' },
+        ],
+        yearlyPacing: { '2026': 500_000, '2027': 900_000, '2028': 700_000 },
+    },
+    {
         id: 'whitmore-capital-i',
         fundName: 'Whitmore Capital Fund I',
         fundType: 'Private Equity',

@@ -4,6 +4,7 @@ import {
     IconFilter,
     IconList,
     IconLayoutGrid,
+    IconLayoutKanban,
     IconSchema,
     IconX,
     IconPlus,
@@ -60,6 +61,8 @@ interface CatalogToolbarProps {
     searchPlaceholder?: string
     showDropdownClear?: boolean
     disableQuickFilters?: boolean
+    /** When set (e.g. read-only KPI chips), neutral chips use white + border instead of gray fill */
+    quickFilterChipsLight?: boolean
     onAddCategory?: (label: string, icon: string) => void
 }
 
@@ -76,6 +79,7 @@ const VIEW_ICONS: Record<CatalogView, { icon: typeof IconList; title: string }> 
     list: { icon: IconList, title: 'List view' },
     grid: { icon: IconLayoutGrid, title: 'Grid view' },
     map: { icon: IconSchema, title: 'Map view' },
+    kanban: { icon: IconLayoutKanban, title: 'Kanban board' },
 }
 
 export function CatalogToolbar({
@@ -92,6 +96,7 @@ export function CatalogToolbar({
     searchPlaceholder = 'Search items…',
     showDropdownClear = true,
     disableQuickFilters = false,
+    quickFilterChipsLight = false,
     onAddCategory,
 }: CatalogToolbarProps) {
     const [showCreateMenu, setShowCreateMenu] = useState(false)
@@ -164,11 +169,14 @@ export function CatalogToolbar({
                     }).map(({ key, label, count, isAlert }) => {
                         const isActive = activeQuickFilters?.has(key as QuickFilterKey)
                         const isAlertActive = isAlert && count != null && count > 0
+                        const neutralMuted = quickFilterChipsLight
+                            ? 'border border-[var(--color-gray-4)] bg-[var(--color-white)] text-[var(--color-gray-12)]'
+                            : 'bg-[var(--color-neutral-3)] text-[var(--color-gray-12)] hover:bg-[var(--color-blue-3)]'
                         const chipColors = isActive
                             ? 'bg-[var(--color-accent-9)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-10)]'
                             : isAlertActive
                                 ? 'bg-[var(--color-orange-1)] text-[var(--color-orange-9)] hover:bg-[var(--color-orange-hover)]'
-                                : 'bg-[var(--color-neutral-3)] text-[var(--color-gray-12)] hover:bg-[var(--color-blue-3)]'
+                                : neutralMuted
 
                         return disableQuickFilters ? (
                             <span

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { IconCheck, IconX } from '@tabler/icons-react'
+import { IconCheck, IconInfoCircle, IconX } from '@tabler/icons-react'
 
-type ToastType = 'success' | 'error' | 'loading'
+type ToastType = 'success' | 'error' | 'loading' | 'info'
 
 interface ToastAction {
     label: string
@@ -67,6 +67,7 @@ export function ToastContainer() {
                     {toast.type === 'success' && <IconCheck size={16} stroke={2.5} />}
                     {toast.type === 'error' && <IconX size={16} stroke={2.5} />}
                     {toast.type === 'loading' && <div className="toast__spinner" />}
+                    {toast.type === 'info' && <IconInfoCircle size={16} stroke={2.25} />}
                     <span>{toast.text}</span>
                     {toast.action && (
                         <button className="toast__action" onClick={toast.action.onClick}>

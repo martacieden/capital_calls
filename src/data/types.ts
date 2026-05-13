@@ -294,7 +294,7 @@ export type AnyCatalogItem = Person | Trust | BusinessEntity | Asset | CatalogIt
 // VIEW STATE
 // ─────────────────────────────────────────────
 
-export type CatalogView = 'grid' | 'list' | 'map'
+export type CatalogView = 'grid' | 'list' | 'map' | 'kanban'
 
 export type QuickFilterKey =
     | 'recently-updated'
@@ -303,3 +303,17 @@ export type QuickFilterKey =
     | 'missing-insurance'
     | 'stale-valuation'
     | 'missing-documents'
+    /** Tasks page — overdue (due before today, not Done) */
+    | 'task-overdue'
+    /** Tasks page — due within 7 days */
+    | 'task-due-soon'
+    /** Tasks page — High priority */
+    | 'task-high-priority'
+    /** Decisions page — capital calls due within 21 days */
+    | 'decision-due-soon'
+    /** Decisions page — pending approval */
+    | 'decision-pending-approval'
+    /** Decisions page — amount threshold */
+    | 'decision-high-value'
+    /** Decisions page — wire-ready status */
+    | 'decision-wire-ready'
