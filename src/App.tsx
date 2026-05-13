@@ -17,7 +17,6 @@ import { UnifiedTimelineStrip } from '@/components/molecules/UnifiedTimelineStri
 import { thorntonAssetTimeline } from '@/data/thornton/asset-timeline'
 import { TimelinePage } from '@/components/pages/TimelinePage'
 import { HomePage } from '@/components/pages/HomePage'
-import { OnboardingPage } from '@/components/pages/OnboardingPage'
 import { ValuationsPage } from '@/components/pages/ValuationsPage'
 import { PortfolioCategoryDetailPanel } from '@/components/organisms/PortfolioCategoryDetailPanel'
 import { PortfolioCategoryDetailPage } from '@/components/pages/PortfolioCategoryDetailPage'
@@ -84,7 +83,7 @@ function AppShell() {
     triggerCreationWithFiles, consumeTriggerCreation,
     pendingFojoQuery, setPendingFojoQuery, consumePendingFojoQuery,
     pendingCollection, setPendingCollection,
-    isOnboardingComplete, isProcessing, navBadges, completeOnboarding, clearBadge,
+    isProcessing, navBadges, clearBadge,
     isMapExpanded, setIsMapExpanded, isTimelineExpanded, setIsTimelineExpanded,
     keepFojoOpenForNextExpand,
   } = useFojo()
@@ -856,18 +855,6 @@ function AppShell() {
           activePage === 'investment-pipeline' || activePage === 'capital-flows' ? ' main-content--pipeline-hub' : ''
         }`}
       >
-        {!isOnboardingComplete && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--color-white)' }}>
-            <OnboardingPage
-              onComplete={() => {
-                completeOnboarding()
-                setActiveOrgs(['org-thornton'])
-                setActivePage('home')
-              }}
-            />
-          </div>
-        )}
-
         <div style={{ display: activePage === 'home' ? undefined : 'none', height: '100%' }}>
           <HomePage
             onNavigate={(page) => setActivePage(page)}

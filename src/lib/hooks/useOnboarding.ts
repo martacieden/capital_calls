@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
 export function useOnboarding() {
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false)
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [navBadges, setNavBadges] = useState<Set<string>>(new Set())
 
