@@ -38,3 +38,4 @@ Front-end prototype for an **estate intelligence catalog**: assets, entities, do
 - `src/styles/` — Global CSS and design tokens
 
 Everything is **client-side**; there is no backend or real authentication in this repo.
+# capital_calls
