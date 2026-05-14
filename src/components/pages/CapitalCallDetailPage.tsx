@@ -238,13 +238,13 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
                         Fund-level pacing filtered to {commitment.fundName}.
                     </p>
                 </div>
-                <div className="shrink-0 rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-3 py-1.5 text-right">
+                <div className="shrink-0 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-3 py-1.5 text-right">
                     <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">This call</p>
                     <p className="m-0 text-[13px] font-semibold tabular-nums text-[var(--color-black)]">{fmtDisplay(decisionAmount)}</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] p-4">
                     <h4 className="m-0 text-[13px] font-semibold text-[var(--color-black)]">Annual Capital Calls</h4>
                     <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{fmtDisplay(annualTotal)} projected across remaining years</p>
@@ -352,9 +352,9 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, gp, amount, commi
     const [page, setPage] = useState(1)
     const commitmentPct = Math.round((amount / commitment) * 100)
     return (
-        <div className="flex flex-col h-full overflow-y-auto bg-[#F8F8F9]">
-            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[var(--color-neutral-4)] shrink-0">
-                <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-[#F8F8F9]">
+            <div className="flex w-full min-w-0 shrink-0 items-center justify-between gap-3 border-b border-[var(--color-neutral-4)] bg-white px-4 py-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
                     <div className="w-7 h-7 rounded-[var(--radius-md)] bg-[#FEE2E2] flex items-center justify-center shrink-0">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                             <rect width="14" height="14" rx="3" fill="#EF4444" fillOpacity="0.1" />
@@ -367,14 +367,19 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, gp, amount, commi
                         <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{pdfPages} pages · {pdfSizeKb} KB</p>
                     </div>
                 </div>
-                <button type="button" className="flex items-center gap-1 text-[12px] font-medium text-[var(--color-accent-9)] hover:underline shrink-0 ml-2">
-                    <IconExternalLink size={13} stroke={2} />
+                <a
+                    href={`#pdf-${encodeURIComponent(pdfName)}`}
+                    className="flex shrink-0 items-center gap-1 text-[12px] font-medium text-[var(--color-accent-9)] hover:underline"
+                    onClick={(e) => e.preventDefault()}
+                >
                     Open
-                </button>
+                    <IconExternalLink size={13} stroke={2} aria-hidden />
+                </a>
             </div>
 
-            <div className="p-4 flex-1">
-                <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[var(--color-neutral-3)] p-6 text-[11px] leading-[1.6]" style={{ fontFamily: 'Georgia, serif' }}>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="p-4">
+                <div className="bg-white rounded-[var(--radius-lg)] p-6 text-[11px] leading-[1.6]" style={{ fontFamily: 'Georgia, serif' }}>
                     {page === 1 ? (
                         <>
                             <div className="border-b border-[#E5E7EB] pb-4 mb-4">
@@ -467,6 +472,7 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, gp, amount, commi
                         Next ›
                     </button>
                 </div>
+            </div>
             </div>
         </div>
     )
@@ -564,7 +570,6 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
 
     const commitmentPct = Math.round((decision.amount / decision.commitment) * 100)
     const unfundedAmount = Math.round(decision.commitment * (1 - decision.drawnBefore))
-    const paidInAmount = Math.round(decision.drawnBefore * decision.commitment)
     const accountLast4 = decision.wireInstructions.account.slice(-4)
     const compactTitle = `Call #${decision.callNumber} · ${fmtDisplay(decision.amount)} capital call`
     const compactFund = decision.fund.replace(', L.P.', '')
@@ -614,7 +619,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
     ]
 
     return (
-        <div className="flex flex-col flex-1 h-full overflow-hidden max-w-[1120px] w-full mx-auto">
+        <div className="relative flex flex-col flex-1 h-full overflow-hidden max-w-[1120px] w-full mx-auto">
 
             {/* ── Header ─────────────────────────────────────────────────────── */}
             <div className="px-6 pt-9 pb-5 bg-white shrink-0">
@@ -639,7 +644,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                     <span className="font-mono text-[12px] text-[var(--color-neutral-9)]">{decision.id}</span>
                 </nav>
 
-                <div className="mt-4 flex w-full items-start justify-between gap-4 overflow-visible">
+                <div className="mt-4 flex w-full flex-wrap items-start justify-between gap-4 overflow-visible">
                     <div className="min-w-0">
                         <h1 className="m-0 min-w-0 truncate font-display text-[28px] font-black leading-[1.25] tracking-[-0.02em] text-[var(--color-gray-12)] [-webkit-text-stroke:0.3px_currentColor]">
                             {compactTitle}
@@ -718,12 +723,12 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
             </div>
 
             {/* ── Body ────────────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-                <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-6">
+            <div className={cn('flex-1 min-h-0 overflow-y-auto px-6', localStatus !== 'paid' ? 'pb-28' : 'pb-6')}>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
                     <div className="flex min-w-0 flex-col gap-5">
                         <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
                             <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Details</h3>
-                            <div className="mt-5 grid grid-cols-2 gap-x-16 gap-y-4">
+                            <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:gap-x-16">
                                 {([
                                     ['Call amount', fmtDisplay(decision.amount)],
                                     ['% of total commitment', `${commitmentPct}%`],
@@ -732,7 +737,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                                     ['Bank account (last 4)', `••••${accountLast4}`],
                                     ['Routing number', decision.wireInstructions.aba],
                                 ] as const).map(([label, value]) => (
-                                    <div key={label} className="grid grid-cols-[132px_minmax(0,1fr)] items-center gap-3">
+                                    <div key={label} className="grid grid-cols-[minmax(0,1fr)] items-start gap-1.5 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-center sm:gap-3">
                                         <p className="m-0 text-[13px] text-[var(--color-neutral-10)]">{label}</p>
                                         <span className="inline-flex min-w-0 w-fit max-w-full rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[14px] font-semibold text-[var(--color-black)] tabular-nums">
                                             <span className="truncate">{value}</span>
@@ -742,34 +747,9 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                             </div>
                         </section>
 
-                        <div className="flex flex-col gap-5">
-                            <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
-                                <div className="min-w-0">
-                                    <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Commitment ledger</h3>
-                                    <p className="m-0 mt-1 text-[12px] leading-snug text-[var(--color-neutral-10)]">
-                                        {decision.matchedInvestmentName}
-                                    </p>
-                                </div>
-                                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                    {([
-                                        ['Total commitment', fmtDisplay(decision.commitment)],
-                                        ['Paid-in capital', fmtDisplay(paidInAmount)],
-                                        ['Unfunded', fmtDisplay(unfundedAmount)],
-                                    ] as const).map(([label, value]) => (
-                                        <div
-                                            key={label}
-                                            className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-white px-3 py-3"
-                                        >
-                                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{label}</p>
-                                            <p className="m-0 mt-1.5 text-[16px] font-semibold tabular-nums text-[var(--color-black)]">
-                                                {value}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
+                        <DetailCallAnalytics commitment={matchedCommitment} decisionAmount={decision.amount} />
 
-                            <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+                        <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Validation checks</h3>
                                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
@@ -805,9 +785,6 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                                     ))}
                                 </div>
                             </section>
-                        </div>
-
-                        <DetailCallAnalytics commitment={matchedCommitment} decisionAmount={decision.amount} />
 
                         {decision.activityLog.length > 0 && (
                             <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
@@ -834,19 +811,8 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                     </div>
 
                     <aside className="flex min-w-0 flex-col gap-4">
-                        <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
-                            <div className="flex items-center justify-between gap-3">
-                                <h3 className="m-0 text-[14px] font-semibold text-[var(--color-black)]">Capital call notice</h3>
-                                <button type="button" className="flex items-center gap-1 text-[12px] font-medium text-[var(--color-neutral-10)] hover:text-[var(--color-black)]">
-                                    Open
-                                    <IconExternalLink size={13} stroke={2} />
-                                </button>
-                            </div>
-                            <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white px-3 py-2">
-                                <p className="m-0 truncate text-[12px] font-semibold text-[var(--color-black)]">{decision.pdfName}</p>
-                                <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{decision.pdfPages} pages · {decision.pdfSizeKb} KB</p>
-                            </div>
-                            <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)]">
+                        <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white">
+                            <div className="h-[420px] overflow-hidden bg-[#F8F8F9]">
                                 <PdfMock {...pdfProps} />
                             </div>
                         </section>
@@ -895,9 +861,9 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
             </div>
 
             {localStatus !== 'paid' ? (
-                <div className="shrink-0 border-t border-[var(--color-neutral-3)] bg-white px-6 py-3">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-6 pb-4 pt-2">
                     <div
-                        className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-4 py-3 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.16)] sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                        className="pointer-events-auto mx-auto flex max-w-full flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-4 py-3 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.16)] sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                         role="region"
                         aria-label="Next step"
                     >
