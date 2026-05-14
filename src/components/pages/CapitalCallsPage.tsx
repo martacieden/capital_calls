@@ -4,8 +4,10 @@ import { ResponsiveLine } from '@nivo/line'
 import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
-import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconX, IconArrowRight, IconFileText, IconCloudUpload, IconSearch, IconLayoutGrid, IconTable } from '@tabler/icons-react'
+import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconX, IconArrowRight, IconFileText, IconCloudUpload, IconLayoutGrid, IconTable } from '@tabler/icons-react'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
+import { ToolbarSearchInput } from '@/components/atoms/ToolbarSearchInput'
+import { ToolbarDropdown } from '@/components/atoms/ToolbarDropdown'
 import { UploadModal } from '@/components/pages/DecisionsPage'
 import { cn } from '@/lib/utils'
 import {
@@ -353,6 +355,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
     const [commitmentsLayout, setCommitmentsLayout] = useState<'cards' | 'table'>('cards')
     const [noticeSearch, setNoticeSearch] = useState('')
     const [noticeStatusFilter, setNoticeStatusFilter] = useState<'all' | CapitalCallPostDealStatus>('all')
+    const [showAllNotices, setShowAllNotices] = useState(false)
 
     const openCommitmentDetail = useCallback(
         (commitmentId: string) => {
@@ -382,7 +385,10 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
 
     const yearlyCallStatus = useMemo(() =>
         Object.fromEntries(FORECAST_YEARS.map(year => {
-            let paid = 0; let pending = 0; let upcoming = 0
+            let paid = 0
+            let pending = 0
+            let upcoming = 0
+
             CAPITAL_CALL_COMMITMENTS.forEach(fund => {
                 fund.calls.forEach(call => {
                     if (!call.dueDate.startsWith(year)) return
@@ -391,6 +397,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     if (call.status === 'upcoming') upcoming += call.amount
                 })
             })
+
             return [year, { paid, pending, upcoming }]
         })), [],
     )
@@ -435,10 +442,12 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
             return searchable.includes(query)
         })
     }, [noticeSearch, noticeStatusFilter])
+    const visibleNotices = showAllNotices ? filteredNotices : filteredNotices.slice(0, 8)
+    const hiddenNoticesCount = Math.max(0, filteredNotices.length - visibleNotices.length)
 
     return (
         <div className={cn(
-            'capital-activities-scroll flex flex-col flex-1 min-h-0 h-full overflow-y-auto overflow-x-hidden bg-[var(--color-white)] gap-[var(--spacing-5)] max-w-[1120px] w-full mx-auto px-[var(--spacing-6)] pb-[var(--spacing-5)]',
+            'capital-activities-scroll flex flex-col flex-1 min-h-0 h-full overflow-y-auto overflow-x-hidden bg-[var(--color-white)] gap-[var(--spacing-7)] max-w-[1120px] w-full mx-auto px-[var(--spacing-6)] pb-[var(--spacing-6)]',
             hubLayout ? 'pt-4' : 'pt-9',
         )}>
             {uploadModalOpen ? (
@@ -461,7 +470,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
             ) : null}
 
             {/* ── Header ──────────────────────────────────────────────────── */}
-            <div className="bg-white shrink-0">
+            <div className="order-[-2] bg-white shrink-0">
                 {hubLayout && onBackToPipeline ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                         <button
@@ -485,7 +494,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     ) : null}
                     <ContentHeader
                         title="Capital Activities"
-                        actionLabel="Add"
+                        actionLabel="New capital call"
                         actionIcon={IconPlus}
                         actionDropdownItems={[
                             {
@@ -507,9 +516,9 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 w-full">
                         <OverviewKpiTile label="Total committed" value={fmt(totalCommitted)} />
                         <OverviewKpiTile label="Remaining unfunded" value={fmt(totalRemaining)} />
-                        <OverviewKpiTile label={`This year (${CURRENT_YEAR})`} value={fmt(thisYearTotal)} />
+                        <OverviewKpiTile label={`Called YTD (${CURRENT_YEAR})`} value={fmt(thisYearTotal)} />
                         <OverviewKpiTile
-                            label="Open call notices"
+                            label="Open notices"
                             value={String(CAPITAL_CALL_DECISIONS.length)}
                             sub={`${fmt(totalActiveAmount)} · ${CAPITAL_CALL_COMMITMENTS.length} funds`}
                         />
@@ -531,7 +540,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="order-[1] grid grid-cols-2 gap-4">
                             <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
                                 <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-0.5">Annual Capital Calls</h3>
                                 <p className="text-[12px] text-[var(--color-neutral-10)] m-0 mb-4">Projected liabilities by year, broken down by fund</p>
@@ -653,7 +662,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                             </div>
                     </div>
 
-                    <div>
+                    <div className="order-[2]">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                             <div>
                                 <h2 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Capital call notices</h2>
@@ -662,32 +671,29 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex min-w-[220px] items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-2">
-                                    <IconSearch size={14} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" />
-                                    <input
-                                        type="search"
-                                        value={noticeSearch}
-                                        onChange={(e) => setNoticeSearch(e.target.value)}
-                                        placeholder="Search calls, funds, entities"
-                                        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[12px] text-[var(--color-black)] outline-none placeholder:text-[var(--color-neutral-8)]"
-                                    />
-                                </div>
-                                <select
-                                    value={noticeStatusFilter}
-                                    onChange={(e) => setNoticeStatusFilter(e.target.value as 'all' | CapitalCallPostDealStatus)}
-                                    className="h-[34px] rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 text-[12px] font-medium text-[var(--color-neutral-11)] outline-none"
-                                >
-                                    {NOTICE_STATUS_OPTIONS.map((status) => (
-                                        <option key={status} value={status}>
-                                            {status === 'all' ? 'All statuses' : NOTICE_STATUS_META[status].label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <ToolbarSearchInput
+                                    value={noticeSearch}
+                                    onChange={setNoticeSearch}
+                                    placeholder="Search calls, funds..."
+                                />
+                                <ToolbarDropdown
+                                    label="Status"
+                                    items={NOTICE_STATUS_OPTIONS.filter((status): status is CapitalCallPostDealStatus => status !== 'all').map((status) => ({
+                                        key: status,
+                                        label: NOTICE_STATUS_META[status].label,
+                                    }))}
+                                    selectedKeys={noticeStatusFilter === 'all' ? [] : [noticeStatusFilter]}
+                                    onSelect={(keys) => {
+                                        const [nextStatus] = keys
+                                        setNoticeStatusFilter((nextStatus as CapitalCallPostDealStatus | undefined) ?? 'all')
+                                    }}
+                                    allOptionLabel="All statuses"
+                                />
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            {filteredNotices.map((notice) => {
+                            {visibleNotices.map((notice) => {
                                 const status = getCapitalCallPostDealStatus(notice)
                                 const meta = NOTICE_STATUS_META[status]
                                 return (
@@ -695,7 +701,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                         key={notice.id}
                                         type="button"
                                         onClick={() => onOpenDetail?.(notice.id)}
-                                        className="group grid w-full grid-cols-[minmax(360px,2fr)_minmax(140px,0.9fr)_minmax(84px,0.75fr)_minmax(84px,0.75fr)_auto] items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-5 py-4 text-left outline-none transition-colors hover:border-[var(--color-neutral-5)] hover:bg-[var(--color-neutral-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent-9)] focus-visible:ring-offset-2"
+                                        className="group grid w-full grid-cols-[minmax(360px,2fr)_minmax(140px,0.9fr)_minmax(84px,0.75fr)_minmax(84px,0.75fr)_auto] items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-5 py-3 text-left outline-none transition-colors hover:border-[var(--color-neutral-5)] hover:bg-[var(--color-neutral-2)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent-9)] focus-visible:ring-offset-2"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="w-2 self-stretch rounded-full shrink-0" style={{ background: meta.dot }} />
@@ -706,7 +712,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                                         {notice.id}
                                                     </span>
                                                 </div>
-                                                <p className="m-0 mt-1 truncate text-[12px] text-[var(--color-neutral-10)]">
+                                                <p className="m-0 mt-0.5 truncate text-[12px] text-[var(--color-neutral-10)]">
                                                     {notice.fund} · {notice.entity}
                                                 </p>
                                             </div>
@@ -714,7 +720,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                         <div>
                                             <p className="m-0 text-[11px] text-[var(--color-neutral-9)] uppercase tracking-[0.05em] font-medium">Status</p>
                                             <span
-                                                className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold"
+                                                className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold"
                                                 style={{ background: meta.bg, color: meta.text }}
                                             >
                                                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.dot }} />
@@ -731,6 +737,16 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                 )
                             })}
 
+                            {hiddenNoticesCount > 0 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllNotices(true)}
+                                    className="rounded-[var(--radius-xl)] border border-dashed border-[var(--color-neutral-4)] bg-white px-5 py-3 text-center text-[13px] font-semibold text-[var(--color-neutral-10)] transition-colors hover:border-[var(--color-neutral-5)] hover:bg-[var(--color-neutral-2)]"
+                                >
+                                    Show more +{hiddenNoticesCount}
+                                </button>
+                            ) : null}
+
                             {filteredNotices.length === 0 ? (
                                 <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--color-neutral-4)] bg-white px-5 py-8 text-center text-[13px] text-[var(--color-neutral-9)]">
                                     No capital call notices match the current filters.
@@ -739,10 +755,11 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                         </div>
                     </div>
 
-                    <div>
+                    <div className="order-[3]">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                             <h2 className="text-[17px] font-semibold text-[var(--color-black)] m-0">Capital Calls (Commitments)</h2>
                             <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-[12px] text-[var(--color-neutral-10)]">{CAPITAL_CALL_COMMITMENTS.length} funds</span>
                                 <div className="flex items-center gap-0.5 rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] bg-[var(--color-white)] p-0.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                                     {([
                                         { id: 'cards' as const, label: 'Cards', icon: IconLayoutGrid },
@@ -757,10 +774,10 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                             aria-label={`Show ${mode.label.toLowerCase()} view`}
                                             title={mode.label}
                                             className={cn(
-                                                'flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border-none text-[var(--color-gray-12)] transition-colors',
+                                                'flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border-none transition-colors',
                                                 commitmentsLayout === mode.id
                                                     ? 'bg-[var(--color-accent-3)] text-[var(--color-accent-9)] font-medium hover:bg-[var(--color-accent-3)]'
-                                                    : 'bg-transparent text-[var(--color-gray-12)] hover:bg-[var(--color-neutral-3)]',
+                                                    : 'bg-transparent text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] hover:text-[var(--color-neutral-11)]',
                                             )}
                                         >
                                             <ModeIcon size={16} stroke={2} />
@@ -839,18 +856,15 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                         ) : (
                             <div className="list-view">
                                 <div className="max-h-[min(70vh,560px)] overflow-auto">
-                                    <table className="list-table min-w-[920px]">
+                                    <table className="list-table min-w-[760px]">
                                         <thead className="sticky top-0 z-[1] bg-[var(--color-white)]">
                                             <tr className="list-header-row">
                                                 <th className="list-header-cell list-header-cell--name">Fund</th>
-                                                <th className="list-header-cell w-[88px]">Vintage</th>
-                                                <th className="list-header-cell min-w-[120px]">Type</th>
-                                                <th className="list-header-cell min-w-[128px]">Call status</th>
                                                 <th className="list-header-cell text-right">Commitment</th>
                                                 <th className="list-header-cell text-right">Called</th>
                                                 <th className="list-header-cell text-right">Remaining</th>
                                                 <th className="list-header-cell text-right w-[88px]">% Called</th>
-                                                <th className="list-header-cell text-right w-[88px]">Actions</th>
+                                                <th className="list-header-cell text-right w-[36px]" aria-label="Open detail" />
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -871,21 +885,18 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                                                 openCommitmentDetail(fund.id)
                                                             }
                                                         }}
-                                                        className="list-row cursor-pointer"
+                                                        className="list-row group cursor-pointer"
                                                     >
                                                         <td className="list-cell list-cell--name">
                                                             <div className="flex items-center gap-3 min-w-0">
                                                                 <span className="w-1.5 self-stretch min-h-[36px] rounded-full shrink-0" style={{ background: FUND_COLORS[fund.id] }} />
-                                                                <span className="font-semibold text-[var(--color-black)] truncate">{fund.fundName.replace('Whitmore ', '')}</span>
+                                                                <div className="min-w-0">
+                                                                    <p className="m-0 truncate font-semibold text-[var(--color-black)]">{fund.fundName.replace('Whitmore ', '')}</p>
+                                                                    <p className="m-0 mt-0.5 truncate text-[11px] font-normal text-[var(--color-neutral-9)]">
+                                                                        {fund.fundType} · {fund.vintage} · {hasReceivedCall ? 'Call received' : 'No active call'}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                        </td>
-                                                        <td className="list-cell text-[var(--color-neutral-11)] tabular-nums">{fund.vintage}</td>
-                                                        <td className="list-cell text-[var(--color-neutral-11)]">{fund.fundType}</td>
-                                                        <td className="list-cell">
-                                                            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-neutral-11)]">
-                                                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: hasReceivedCall ? 'var(--color-neutral-8)' : 'var(--color-neutral-6)' }} />
-                                                                {hasReceivedCall ? 'Call received' : 'No active call'}
-                                                            </span>
                                                         </td>
                                                         <td className="list-cell text-right font-semibold tabular-nums text-[var(--color-black)]">{fmt(fund.totalCommitment)}</td>
                                                         <td className="list-cell text-right tabular-nums text-[var(--color-neutral-11)]">{fmt(called)}</td>
@@ -894,24 +905,7 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                                         </td>
                                                         <td className="list-cell text-right tabular-nums text-[var(--color-black)]">{pctCalled}%</td>
                                                         <td className="list-cell text-right">
-                                                            <div className="inline-flex items-center justify-end gap-1">
-                                                                <button
-                                                                    type="button"
-                                                                    className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] transition-colors"
-                                                                    aria-label="Edit fund"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <IconPencil size={15} stroke={2} />
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="p-1.5 rounded-[var(--radius-md)] text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] transition-colors"
-                                                                    aria-label="Remove fund"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <IconTrash size={15} stroke={2} />
-                                                                </button>
-                                                            </div>
+                                                            <IconArrowRight size={14} stroke={2} className="ml-auto text-[var(--color-neutral-7)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--color-accent-9)]" />
                                                         </td>
                                                     </tr>
                                                 )
@@ -923,78 +917,77 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                         )}
                     </div>
 
-                    <div className="list-view rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] overflow-hidden !mt-0 !p-0">
-                            <div className="px-5 py-4 border-b border-[var(--color-neutral-3)] bg-white">
-                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-0.5">Year-by-Year Schedule</h3>
-                                <p className="text-[12px] text-[var(--color-neutral-10)] m-0">Detailed projected calls per fund</p>
-                            </div>
-                            <table className="list-table">
-                                <thead>
-                                    <tr className="list-header-row">
-                                        <th className="list-header-cell list-header-cell--name w-[80px]">Year</th>
-                                        <th className="list-header-cell w-[120px]">Status</th>
-                                        {CAPITAL_CALL_COMMITMENTS.map(fund => (
-                                            <th key={fund.id} className="list-header-cell text-right">
-                                                {fund.fundName.replace('Whitmore ', '').split(' Fund')[0]}
-                                            </th>
-                                        ))}
-                                        <th className="list-header-cell text-right bg-[var(--color-card-orange-bg)] text-[var(--color-card-orange)]">Total</th>
-                                        <th className="list-header-cell text-right">Cumulative</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(() => {
-                                        let cumulative = 0
-                                        return FORECAST_YEARS.map(year => {
-                                            const rowTotal = CAPITAL_CALL_COMMITMENTS.reduce((s, f) => s + (f.yearlyPacing[year] ?? 0), 0)
-                                            const status = yearlyCallStatus[year]
-                                            const isPaid = (status?.paid ?? 0) > 0 && rowTotal > 0 && (status?.pending ?? 0) === 0 && (status?.upcoming ?? 0) === 0
-                                            const isConfirmed = (status?.pending ?? 0) > 0
-                                            const statusLabel = isPaid ? 'Paid' : isConfirmed ? 'Confirmed' : 'Forecast'
-                                            const trafficColor = rowTotal > 2_000_000 ? '#B91C1C' : rowTotal > 1_000_000 ? '#B45309' : '#059669'
-                                            cumulative += rowTotal
-                                            return (
-                                                <tr
-                                                    key={year}
-                                                    className={cn(
-                                                        'list-row',
-                                                        year === CURRENT_YEAR && 'bg-[var(--color-blue-1)]/40',
-                                                    )}
-                                                >
-                                                    <td className="list-cell list-cell--name font-semibold text-[var(--color-black)]">
-                                                        <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                                                            <span>{year}</span>
-                                                            {year === CURRENT_YEAR && (
-                                                                <span className="inline-flex items-center rounded-full bg-[var(--color-accent-3)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--color-accent-11)]">
-                                                                    Now
-                                                                </span>
-                                                            )}
-                                                        </div>
+                    <div className="order-[4] list-view rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] overflow-hidden" style={{ flex: 'none', overflowY: 'visible', marginTop: 0, paddingTop: 0, paddingBottom: 0 }}>
+                        <div className="px-5 py-4 border-b border-[var(--color-neutral-3)]">
+                            <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-0.5">Year-by-Year Schedule</h3>
+                            <p className="text-[12px] text-[var(--color-neutral-10)] m-0">Detailed projected calls per fund</p>
+                        </div>
+                        <table className="list-table">
+                            <thead>
+                                <tr className="list-header-row">
+                                    <th className="list-header-cell list-header-cell--name !h-[42px] !py-3 w-[112px]">Year</th>
+                                    <th className="list-header-cell !h-[42px] !py-3 w-[120px]">Status</th>
+                                    {CAPITAL_CALL_COMMITMENTS.map(fund => (
+                                        <th key={fund.id} className="list-header-cell !h-[42px] !py-3 text-right">
+                                            {fund.fundName.replace('Whitmore ', '').split(' Fund')[0]}
+                                        </th>
+                                    ))}
+                                    <th className="list-header-cell !h-[42px] !py-3 text-right bg-[var(--color-card-orange-bg)] text-[var(--color-card-orange)]">Total</th>
+                                    <th className="list-header-cell !h-[42px] !py-3 text-right">Cumulative</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(() => {
+                                    let cumulative = 0
+                                    return FORECAST_YEARS.slice(0, 4).map(year => {
+                                        const rowTotal = CAPITAL_CALL_COMMITMENTS.reduce((s, f) => s + (f.yearlyPacing[year] ?? 0), 0)
+                                        const status = yearlyCallStatus[year]
+                                        const isPaid = (status?.paid ?? 0) > 0 && rowTotal > 0 && (status?.pending ?? 0) === 0 && (status?.upcoming ?? 0) === 0
+                                        const isConfirmed = (status?.pending ?? 0) > 0
+                                        const statusLabel = isPaid ? 'Paid' : isConfirmed ? 'Confirmed' : 'Forecast'
+                                        const trafficColor = rowTotal > 2_000_000 ? '#B91C1C' : rowTotal > 1_000_000 ? '#B45309' : '#059669'
+                                        cumulative += rowTotal
+                                        return (
+                                            <tr
+                                                key={year}
+                                                className={cn(
+                                                    'list-row',
+                                                    year === CURRENT_YEAR && 'bg-[var(--color-blue-1)]/40',
+                                                )}
+                                            >
+                                                <td className="list-cell list-cell--name !h-[54px] font-semibold text-[var(--color-black)]">
+                                                    <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                                        <span>{year}</span>
+                                                        {year === CURRENT_YEAR && (
+                                                            <span className="inline-flex items-center rounded-full bg-[var(--color-accent-3)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--color-accent-11)]">Now</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="list-cell !h-[54px]">
+                                                    <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-neutral-2)] px-2.5 py-1.5">
+                                                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: trafficColor }} />
+                                                        <span className="text-[11px] font-semibold text-[var(--color-neutral-11)]">{statusLabel}</span>
+                                                    </div>
+                                                </td>
+                                                {CAPITAL_CALL_COMMITMENTS.map(fund => (
+                                                    <td key={fund.id} className="list-cell !h-[54px] text-right text-[var(--color-neutral-11)] tabular-nums">
+                                                        {fund.yearlyPacing[year] ? fmt(fund.yearlyPacing[year]) : '—'}
                                                     </td>
-                                                    <td className="list-cell">
-                                                        <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-neutral-2)] px-2 py-1">
-                                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: trafficColor }} />
-                                                            <span className="text-[11px] font-semibold text-[var(--color-neutral-11)]">{statusLabel}</span>
-                                                        </div>
-                                                    </td>
-                                                    {CAPITAL_CALL_COMMITMENTS.map(fund => (
-                                                        <td key={fund.id} className="list-cell text-right text-[var(--color-neutral-11)] tabular-nums">
-                                                            {fund.yearlyPacing[year] ? fmt(fund.yearlyPacing[year]) : '—'}
-                                                        </td>
-                                                    ))}
-                                                    <td className="list-cell text-right font-semibold text-[var(--color-card-orange)] tabular-nums bg-[var(--color-card-orange-bg)]">
-                                                        {rowTotal ? fmt(rowTotal) : '—'}
-                                                    </td>
-                                                    <td className="list-cell text-right text-[var(--color-neutral-10)] tabular-nums">
-                                                        {cumulative ? fmt(cumulative) : '—'}
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })
-                                    })()}
-                                </tbody>
-                            </table>
+                                                ))}
+                                                <td className="list-cell !h-[54px] text-right font-semibold text-[var(--color-card-orange)] tabular-nums bg-[var(--color-card-orange-bg)]">
+                                                    {rowTotal ? fmt(rowTotal) : '—'}
+                                                </td>
+                                                <td className="list-cell !h-[54px] text-right text-[var(--color-neutral-10)] tabular-nums">
+                                                    {cumulative ? fmt(cumulative) : '—'}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                })()}
+                            </tbody>
+                        </table>
                     </div>
+
         </div>
     )
 }
