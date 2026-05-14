@@ -1,4 +1,21 @@
 export type InvestmentStatus = 'active' | 'fully-deployed' | 'realized' | 'monitoring'
+
+export interface MonitoringEvent {
+    date: string
+    title: string
+    description: string
+    type: 'report' | 'capital-call' | 'payment'
+}
+
+export interface MonitoringData {
+    irr: string
+    tvpi: string
+    nav: number
+    reportDate: string
+    gpUpdates: MonitoringEvent[]
+    portfolioCompanies: Array<{ name: string; status: 'on-track' | 'watch-list' }>
+    nextEvents: Array<{ label: string; date: string; urgent?: boolean }>
+}
 export type InvestmentPipelineStage = 'sourcing' | 'initial-review' | 'due-diligence' | 'ic-review' | 'approved' | 'declined'
 
 export interface InvestmentDocument {
@@ -42,6 +59,7 @@ export interface InvestmentRecord {
     documents: InvestmentDocument[]
     pipelineStage: InvestmentPipelineStage
     approvals: InvestmentApproval[]
+    monitoring?: MonitoringData
 }
 
 export const INVESTMENT_RECORDS: InvestmentRecord[] = [
@@ -76,6 +94,28 @@ export const INVESTMENT_RECORDS: InvestmentRecord[] = [
             { step: 3, role: 'CEO Authorization', name: 'Margaret Whitmore', initials: 'MW', avatarBg: '#FEF3C7', status: 'pending' },
             { step: 4, role: 'Principal Sign-off',name: 'Robert Thornton',   initials: 'RT', avatarBg: '#D1FAE5', status: 'pending' },
         ],
+        monitoring: {
+            irr: '+11.2%',
+            tvpi: '1.17×',
+            nav: 2_450_000,
+            reportDate: 'Q1 2026',
+            gpUpdates: [
+                { date: 'Apr 10, 2026', title: 'Q1 2026 Investor Report', description: 'NAV $2.45M · IRR 11.2% · 3 new portfolio cos.', type: 'report' },
+                { date: 'May 8, 2026',  title: 'Capital Call #7 received', description: '$500K · Due May 30, 2026', type: 'capital-call' },
+                { date: 'Jan 15, 2026', title: 'Capital Call #6 paid', description: '$475K wired · confirmed by custodian', type: 'payment' },
+                { date: 'Jan 10, 2026', title: 'Q4 2025 Investor Report', description: 'NAV $2.3M · IRR 10.8%', type: 'report' },
+            ],
+            portfolioCompanies: [
+                { name: 'EcoGrid Systems', status: 'on-track' },
+                { name: 'Meridian Solar', status: 'on-track' },
+                { name: 'ClearWater Tech', status: 'watch-list' },
+            ],
+            nextEvents: [
+                { label: 'Call #7 due', date: 'May 30, 2026', urgent: true },
+                { label: 'Q2 2026 report', date: '~Jun 30, 2026' },
+                { label: 'Call #8 forecast', date: 'Sep 2026' },
+            ],
+        },
     },
     {
         id: 'INV-2023-007',
@@ -103,6 +143,28 @@ export const INVESTMENT_RECORDS: InvestmentRecord[] = [
         ],
         pipelineStage: 'due-diligence',
         approvals: [],
+        monitoring: {
+            irr: '+8.7%',
+            tvpi: '1.09×',
+            nav: 2_100_000,
+            reportDate: 'Q4 2025',
+            gpUpdates: [
+                { date: 'Jan 15, 2026', title: 'Q4 2025 Investor Report', description: 'NAV $2.1M · TVPI 1.09×', type: 'report' },
+                { date: 'May 10, 2026', title: 'Capital Call #3 received', description: '$875K · Due Jun 15, 2026', type: 'capital-call' },
+                { date: 'Apr 15, 2026', title: 'Capital Call #2 paid', description: '$875K wired · confirmed by custodian', type: 'payment' },
+                { date: 'Nov 8, 2025',  title: 'Q3 2025 Investor Report', description: 'NAV $1.95M · TVPI 1.04×', type: 'report' },
+            ],
+            portfolioCompanies: [
+                { name: 'Thornton Infrastructure', status: 'on-track' },
+                { name: 'Global Energy Corridor', status: 'on-track' },
+                { name: 'Southeast Logistics Hub', status: 'watch-list' },
+            ],
+            nextEvents: [
+                { label: 'Call #3 due', date: 'Jun 15, 2026', urgent: true },
+                { label: 'LP side letter renewal', date: 'Jun 1, 2026' },
+                { label: 'Q1 2026 report', date: '~May 2026' },
+            ],
+        },
     },
 ]
 

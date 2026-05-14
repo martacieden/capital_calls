@@ -36,7 +36,7 @@ function formatCompact(value: number): string {
 function CustomBarTooltip({ data, value, color }: BarTooltipProps<BarRow>) {
     return (
         <div
-            className="rounded-lg px-3 py-2 shadow-lg border border-[var(--color-neutral-4)]"
+            className="rounded-[var(--radius-lg)] px-3 py-2 shadow-lg border border-[var(--color-neutral-4)]"
             style={{ background: 'white', minWidth: 140 }}
         >
             <div className="flex items-center gap-2 mb-1">

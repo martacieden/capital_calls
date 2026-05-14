@@ -40,7 +40,7 @@ function HoldingThumb({ holding }: { holding: PortfolioHolding }) {
     const showImg = Boolean(holding.image?.trim()) && !imgFailed
 
     return (
-        <div className="w-10 h-10 rounded-lg bg-[var(--color-neutral-3)] overflow-hidden flex items-center justify-center shrink-0 border border-[var(--color-neutral-4)]">
+        <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--color-neutral-3)] overflow-hidden flex items-center justify-center shrink-0 border border-[var(--color-neutral-4)]">
             {showImg ? (
                 <img
                     src={holding.image}
@@ -126,7 +126,7 @@ export function PortfolioHoldingsTable({
     const sortableTh = (key: SortKey, label: string, align: 'left' | 'right') => {
         const active = enableColumnSort && sortKey === key
         const clsBase =
-            `py-2 text-xs font-medium${active ? ' text-[var(--color-gray-12)]' : ' text-[var(--color-neutral-9)]'} ${align === 'right' ? 'pl-2 text-right' : 'pl-1 text-left'}`
+            `list-header-cell${active ? ' text-[var(--color-gray-12)]' : ''} ${align === 'right' ? 'text-right' : 'text-left'}`
         if (!enableColumnSort) {
             return (
                 <th scope="col" className={clsBase}>
@@ -156,8 +156,8 @@ export function PortfolioHoldingsTable({
     const rowClass = onRowClick ? 'cursor-pointer hover:bg-[var(--color-neutral-2)]' : ''
 
     return (
-        <div className="overflow-x-auto -mx-1 px-1">
-            <table className="w-full border-collapse text-sm min-w-0">
+        <div className="list-view overflow-x-auto">
+            <table className="list-table min-w-0">
                 <colgroup>
                     <col className="w-8" />
                     <col className="w-12" />
@@ -167,17 +167,17 @@ export function PortfolioHoldingsTable({
                     <col className="w-14 sm:w-16" />
                 </colgroup>
                 <thead>
-                    <tr className="border-b border-[var(--color-neutral-3)]">
-                        <th scope="col" className="py-2 pr-2 text-right text-xs font-medium text-[var(--color-neutral-9)]">#</th>
-                        <th scope="col" className="py-2 px-1 text-left text-xs font-medium text-[var(--color-neutral-9)]">
+                    <tr className="list-header-row">
+                        <th scope="col" className="list-header-cell text-right">#</th>
+                        <th scope="col" className="list-header-cell">
                             <span className="sr-only">Preview</span>
                         </th>
                         {sortableTh('name', 'Name', 'left')}
-                        <th scope="col" className="py-2 pl-2 text-left text-xs font-medium text-[var(--color-neutral-9)]">{detailColLabel}</th>
+                        <th scope="col" className="list-header-cell">{detailColLabel}</th>
                         {sortableTh('value', 'Value', 'right')}
                         <th
                             scope="col"
-                            className={`py-2 pl-2 text-right text-xs font-medium whitespace-nowrap ${
+                            className={`list-header-cell text-right whitespace-nowrap ${
                                 enableColumnSort && sortKey === 'pct'
                                     ? 'text-[var(--color-gray-12)]'
                                     : 'text-[var(--color-neutral-9)]'
@@ -204,23 +204,23 @@ export function PortfolioHoldingsTable({
                         <tr
                             key={h.id}
                             onClick={() => onRowClick?.(h.id)}
-                            className={`border-b border-[var(--color-neutral-3)] transition-colors ${rowClass}`}
+                            className={`list-row ${rowClass}`}
                         >
-                            <td className="py-2.5 pr-2 align-middle text-right text-xs font-mono text-[var(--color-neutral-8)]">{i + 1}</td>
-                            <td className="py-2.5 px-1 align-middle">
+                            <td className="list-cell text-right text-xs font-mono text-[var(--color-neutral-8)]">{i + 1}</td>
+                            <td className="list-cell">
                                 <HoldingThumb holding={h} />
                             </td>
-                            <td className="py-2.5 pl-1 align-middle min-w-0">
+                            <td className="list-cell list-cell--name min-w-0">
                                 <div className="font-medium text-[var(--color-black)] truncate text-sm">{h.name}</div>
                                 <div className="text-xs text-[var(--color-neutral-10)] mt-0.5 truncate">{h.type} · {h.sector}</div>
                             </td>
-                            <td className="py-2.5 pl-2 align-middle min-w-0 text-xs text-[var(--color-neutral-10)] truncate">
+                            <td className="list-cell min-w-0 text-xs text-[var(--color-neutral-10)] truncate">
                                 {holdingsDetailCell(h, categoryId)}
                             </td>
-                            <td className="py-2.5 pl-2 align-middle text-right tabular-nums font-semibold text-[var(--color-black)] text-sm whitespace-nowrap">
+                            <td className="list-cell text-right tabular-nums font-semibold text-[var(--color-black)] text-sm whitespace-nowrap">
                                 {formatValue(h.value)}
                             </td>
-                            <td className="py-2.5 pl-2 align-middle text-right whitespace-nowrap">
+                            <td className="list-cell text-right whitespace-nowrap">
                                 <span className="text-xs font-medium px-1.5 py-0.5 rounded inline-block tabular-nums bg-[var(--color-neutral-3)] text-[var(--color-neutral-11)]">
                                     {h.portfolioPercentage}%
                                 </span>

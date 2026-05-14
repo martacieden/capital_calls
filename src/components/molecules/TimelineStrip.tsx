@@ -42,7 +42,7 @@ export function TimelineStrip({ distributions, getItemById, trustId, trustName, 
 
     return (
         <div className={cn(
-            'tl-strip absolute bottom-3 z-[5] bg-[var(--color-white)] border border-[var(--color-gray-4)] rounded-[8px] shadow-[var(--shadow-subtle)] px-[var(--spacing-5)] py-3 pb-3.5',
+            'tl-strip absolute bottom-3 z-[5] bg-[var(--color-white)] border border-[var(--color-gray-4)] rounded-[var(--radius-lg)] shadow-[var(--shadow-subtle)] px-[var(--spacing-5)] py-3 pb-3.5',
             !hasContent && 'tl-strip--empty flex items-center justify-center gap-[var(--spacing-2)] !py-1.5 text-[13px] font-[var(--font-weight-regular)] text-[var(--color-neutral-9)]',
             !hasContent && !isChatOpen && '!left-[96px]',
         )}>

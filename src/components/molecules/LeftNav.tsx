@@ -28,9 +28,9 @@ const navItems: NavItem[] = [
     },
     {
         icon: IconReceipt,
-        label: 'Capital Calls',
+        label: 'Capital Activities',
         id: 'capital-flows',
-        hint: 'Capital call workflow and approvals.',
+        hint: 'Post-deal capital call workflow, notices, and payments.',
     },
     { icon: IconUsers, label: 'Contacts', id: 'contacts' },
     { icon: IconFileText, label: 'Documents', id: 'documents' },
@@ -89,7 +89,7 @@ export function LeftNav({ activeItem = 'home', onNavItemClick, navBadges, onFojo
                 >
                     <FojoMascot size="100%" className="block rounded-full" animated={!isFojoOpen} />
                     {fojoUnreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[5px] bg-[var(--color-red-9)] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-red-1)] animate-badge-pulse">
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[var(--radius-md)] bg-[var(--color-red-9)] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-red-1)] animate-badge-pulse">
                             {fojoUnreadCount > 9 ? '9+' : fojoUnreadCount}
                         </span>
                     )}

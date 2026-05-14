@@ -28,7 +28,7 @@ export function AssetTimelineStrip({ events, assetName }: AssetTimelineStripProp
     if (sorted.length === 0) return null
 
     return (
-        <div className="tl-strip absolute bottom-3 z-[5] bg-[var(--color-white)] border border-[var(--color-gray-4)] rounded-[8px] shadow-[var(--shadow-subtle)] px-[var(--spacing-5)] py-3 pb-3.5">
+        <div className="tl-strip absolute bottom-3 z-[5] bg-[var(--color-white)] border border-[var(--color-gray-4)] rounded-[var(--radius-lg)] shadow-[var(--shadow-subtle)] px-[var(--spacing-5)] py-3 pb-3.5">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                     <IconCalendarEvent size={14} stroke={2} color="var(--color-accent-9)" />

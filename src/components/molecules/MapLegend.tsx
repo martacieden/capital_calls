@@ -23,7 +23,7 @@ export function MapLegend({ items }: MapLegendProps) {
     }, [items])
 
     return (
-        <div className="w-[220px] bg-[var(--color-white)] border border-[var(--color-gray-4)] rounded-lg shadow-[var(--shadow-subtle)] overflow-hidden">
+        <div className="w-[220px] bg-[var(--color-white)] border border-[var(--color-gray-4)] rounded-[var(--radius-lg)] shadow-[var(--shadow-subtle)] overflow-hidden">
             <button
                 className="flex items-center justify-between w-full px-2.5 py-1.5 text-[13px] font-[var(--font-weight-medium)] text-[var(--color-gray-12)] bg-[var(--color-white)] border-none transition-colors duration-[120ms] hover:bg-[var(--color-neutral-3)]"
                 onClick={() => setIsOpen(prev => !prev)}
@@ -40,7 +40,7 @@ export function MapLegend({ items }: MapLegendProps) {
                         {nodeTypes.map(nt => (
                             <div key={nt.label} className="flex items-center gap-2">
                                 <span
-                                    className={`shrink-0 w-3 h-3 ${nt.shape === 'circle' ? 'rounded-full' : 'rounded-[4px]'}`}
+                                    className={`shrink-0 w-3 h-3 ${nt.shape === 'circle' ? 'rounded-full' : 'rounded-[var(--radius-sm)]'}`}
                                     style={{ background: nt.color }}
                                 />
                                 <span className="text-[13px] text-[var(--color-neutral-11)] whitespace-nowrap">{nt.label}</span>

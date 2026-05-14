@@ -80,7 +80,7 @@ export function AssetTimelineNode({ event, position, showYearLabel, isCurrentYea
                         <div className="flex items-start gap-2 mb-0.5">
                             <div className="text-[17px] font-[800] text-[var(--color-gray-12)] leading-[1.2] tracking-[-0.022em] flex-1">{event.label}</div>
                             {event.recurring && (
-                                <span className="shrink-0 mt-0.5 inline-flex items-center h-[18px] px-1.5 rounded-[4px] bg-[var(--color-neutral-3)] text-[10px] font-[600] text-[var(--color-neutral-10)] leading-none whitespace-nowrap">
+                                <span className="shrink-0 mt-0.5 inline-flex items-center h-[18px] px-1.5 rounded-[var(--radius-sm)] bg-[var(--color-neutral-3)] text-[10px] font-[600] text-[var(--color-neutral-10)] leading-none whitespace-nowrap">
                                     Recurring
                                 </span>
                             )}

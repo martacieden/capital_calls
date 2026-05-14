@@ -513,13 +513,13 @@ export function ValuationsPage({
                             <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">
                                 {activeGeoItemCount} asset{activeGeoItemCount === 1 ? '' : 's'} in this region
                             </p>
-                            <div className="rounded-lg border border-[var(--color-neutral-4)] overflow-hidden">
-                                <table className="w-full border-collapse text-[12px]">
+                            <div className="list-view">
+                                <table className="list-table">
                                     <thead>
-                                        <tr className="border-b border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)]">
-                                            <th className="px-3 py-2 text-left font-semibold text-[var(--color-neutral-11)]">Category</th>
-                                            <th className="px-3 py-2 text-left font-semibold text-[var(--color-neutral-11)]">Asset</th>
-                                            <th className="px-3 py-2 text-right font-semibold text-[var(--color-neutral-11)]">Value</th>
+                                        <tr className="list-header-row">
+                                            <th className="list-header-cell">Category</th>
+                                            <th className="list-header-cell list-header-cell--name">Asset</th>
+                                            <th className="list-header-cell text-right">Value</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -529,9 +529,9 @@ export function ValuationsPage({
                                             return (
                                                 <tr
                                                     key={asset.id}
-                                                    className="border-b border-[var(--color-neutral-3)] last:border-b-0 hover:bg-[var(--color-neutral-2)]"
+                                                    className="list-row"
                                                 >
-                                                    <td className="px-3 py-2 align-middle">
+                                                    <td className="list-cell">
                                                         <button
                                                             type="button"
                                                             onClick={() => {
@@ -550,7 +550,7 @@ export function ValuationsPage({
                                                             {categoryLabel}
                                                         </button>
                                                     </td>
-                                                    <td className="px-3 py-2 align-middle">
+                                                    <td className="list-cell list-cell--name">
                                                         <button
                                                             type="button"
                                                             onClick={() => onNavigateToAsset?.(asset.id)}
@@ -560,7 +560,7 @@ export function ValuationsPage({
                                                             {asset.name}
                                                         </button>
                                                     </td>
-                                                    <td className="px-3 py-2 align-middle text-right tabular-nums text-[var(--color-neutral-10)]">
+                                                    <td className="list-cell text-right tabular-nums text-[var(--color-neutral-10)]">
                                                         {formatValue(asset.value ?? 0)}
                                                     </td>
                                                 </tr>
@@ -568,7 +568,7 @@ export function ValuationsPage({
                                         })}
                                         {geoAssetRows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={3} className="px-3 py-2 text-[11px] text-[var(--color-neutral-9)]">
+                                                <td colSpan={3} className="list-cell text-[11px] text-[var(--color-neutral-9)]">
                                                     No assets in this filter.
                                                 </td>
                                             </tr>

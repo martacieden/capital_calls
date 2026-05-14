@@ -37,7 +37,7 @@
 /* Base upload zone styles (used in FojoPanel without Tailwind) */
 .onboarding-upload-zone {
   border: 1.5px dashed #D0D2DA;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 40px 24px;
   display: flex;
   flex-direction: column;
@@ -76,7 +76,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px 6px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: white;
   border: 1px solid var(--color-neutral-4);
   font-size: 12px;
@@ -96,7 +96,7 @@
 .onboarding-file-chip__icon {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: #EBF3FF;
   display: flex;
   align-items: center;
@@ -125,7 +125,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-neutral-11);
   cursor: pointer;
@@ -151,7 +151,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: var(--radius-2xl);
   background: white;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   margin-bottom: 4px;
@@ -183,7 +183,7 @@
 .glass-card {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 1px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -227,7 +227,7 @@
 .doc-drop {
   position: relative;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   overflow: hidden;
   background: white;
@@ -311,7 +311,7 @@
 .doc-drop__bar-fill {
   width: 0%;
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--color-purple);
   position: relative;
   overflow: hidden;
@@ -430,7 +430,7 @@
 .onboarding-preview-card {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 1px;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.03),
@@ -446,7 +446,7 @@
 /* Inner content wrapper for the white inset */
 .onboarding-preview-card__inner {
   background: rgba(255, 255, 255, 0.82);
-  border-radius: 7px;
+  border-radius: var(--radius-lg);
   padding: 20px 22px;
   display: flex;
   flex-direction: column;
@@ -539,7 +539,7 @@
 /* ---- Mini Valuations Bars ---- */
 .onboarding-mini-bar {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: #DB2777;
   width: var(--bar-width);
   transform-origin: left center;

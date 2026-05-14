@@ -50,7 +50,7 @@ function CustomTooltip({
 
     return (
         <div
-            className="rounded-lg px-3 py-2 shadow-lg border border-[var(--color-neutral-4)]"
+            className="rounded-[var(--radius-lg)] px-3 py-2 shadow-lg border border-[var(--color-neutral-4)]"
             style={{ background: 'white', minWidth: 140 }}
         >
             <div className="text-[11px] font-medium text-[var(--color-neutral-10)] mb-1">

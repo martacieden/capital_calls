@@ -308,7 +308,7 @@ export function MockFileBrowser({ onFileSelect, onClose }: MockFileBrowserProps)
                                 <IconDots size={17} stroke={1.5} />
                             </button>
                             <div
-                                className="flex items-center gap-1 rounded-lg px-2 h-7 ml-1 min-w-[140px]"
+                                className="flex items-center gap-1 rounded-[var(--radius-lg)] px-2 h-7 ml-1 min-w-[140px]"
                                 style={{ background: 'rgba(0,0,0,0.06)' }}
                             >
                                 <IconSearch size={14} stroke={2} color="#8E8E93" />
@@ -331,7 +331,7 @@ export function MockFileBrowser({ onFileSelect, onClose }: MockFileBrowserProps)
                                                 type="button"
                                                 onClick={() => setSelectedId(file.id)}
                                                 onDoubleClick={handleOpen}
-                                                className="flex flex-col items-stretch gap-2 p-1 rounded-lg border-0 bg-transparent cursor-default text-left min-w-0"
+                                                className="flex flex-col items-stretch gap-2 p-1 rounded-[var(--radius-lg)] border-0 bg-transparent cursor-default text-left min-w-0"
                                             >
                                                 <div className="flex justify-center pointer-events-none">
                                                     <PdfThumbnail />

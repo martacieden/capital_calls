@@ -128,7 +128,7 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
 
                 {tooltip && hoveredSlice && (
                     <div
-                        className="pointer-events-none absolute z-10 bg-[var(--color-black)] text-white rounded-lg px-3 py-2 text-xs w-72 max-w-[min(320px,85vw)] text-left border border-white/15"
+                        className="pointer-events-none absolute z-10 bg-[var(--color-black)] text-white rounded-[var(--radius-lg)] px-3 py-2 text-xs w-72 max-w-[min(320px,85vw)] text-left border border-white/15"
                         style={{
                             left: tooltip.x + 12,
                             top: tooltip.y - 36,
@@ -190,7 +190,7 @@ export function PortfolioAllocationChart({ data, onSliceClick, size = 220 }: Por
                     <div
                         key={seg.key}
                         className={cn(
-                            'grid grid-cols-[10px_minmax(0,1fr)_88px_48px_14px] items-center gap-2 text-[13px] transition-opacity duration-150 rounded-[4px] px-1 py-0.5 -mx-1 -my-0.5',
+                            'grid grid-cols-[10px_minmax(0,1fr)_88px_48px_14px] items-center gap-2 text-[13px] transition-opacity duration-150 rounded-[var(--radius-sm)] px-1 py-0.5 -mx-1 -my-0.5',
                             seg.isClickable && 'cursor-pointer hover:bg-[var(--color-neutral-2)]',
                             hovered === i && 'bg-[var(--color-neutral-2)]'
                         )}

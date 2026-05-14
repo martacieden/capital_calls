@@ -92,7 +92,7 @@ export function DonutChart({ data, size = 200, strokeWidth = 32, centerLabel, sh
                         <div
                             key={seg.label}
                             className={cn(
-                                'donut-chart__legend-item flex items-center gap-2 text-[13px] transition-opacity duration-150 cursor-pointer rounded-[4px] px-1 py-0.5 -mx-1 -my-0.5',
+                                'donut-chart__legend-item flex items-center gap-2 text-[13px] transition-opacity duration-150 cursor-pointer rounded-[var(--radius-sm)] px-1 py-0.5 -mx-1 -my-0.5',
                                 hovered === i && 'bg-[var(--color-neutral-2)]'
                             )}
                             style={{ opacity: hovered !== null && hovered !== i ? 0.4 : 1 }}

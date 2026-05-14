@@ -6,7 +6,7 @@ import type { PartialTheme } from '@nivo/theming'
 import { cn } from '@/lib/utils'
 import {
     IconChevronLeft, IconChevronRight, IconShare, IconDotsVertical, IconPlus,
-    IconExternalLink, IconSparkles, IconAlertTriangle, IconCheck, IconX,
+    IconExternalLink, IconSparkles, IconAlertTriangle, IconCheck, IconX, IconArrowRight,
 } from '@tabler/icons-react'
 import { getInvestmentById } from '@/data/thornton/investments-data'
 import type { InvestmentStatus, InvestmentPipelineStage, InvestmentApproval, InvestmentRecord } from '@/data/thornton/investments-data'
@@ -116,12 +116,13 @@ const CHART_THEME: PartialTheme = {
 
 // ─── tab types ─────────────────────────────────────────────────────────────
 
-type TabId = 'overview' | 'capital-calls' | 'documents' | 'ai-brief'
+type TabId = 'overview' | 'capital-calls' | 'documents' | 'monitoring' | 'ai-brief'
 
 const TABS: Array<{ id: TabId; label: string }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'capital-calls', label: 'Capital Calls' },
     { id: 'documents', label: 'Documents' },
+    { id: 'monitoring', label: 'Monitoring' },
     { id: 'ai-brief', label: 'AI Brief' },
 ]
 
@@ -349,7 +350,7 @@ export function InvestmentRecordPage({
     ], [cumulativeData])
 
     return (
-        <div className="flex flex-col flex-1 h-full overflow-hidden">
+        <div className="flex flex-col flex-1 h-full overflow-hidden max-w-[1120px] w-full mx-auto">
 
             {/* ── Top nav bar ──────────────────────────────────────────────── */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-neutral-4)] bg-white shrink-0">
@@ -374,6 +375,22 @@ export function InvestmentRecordPage({
                     <span className="text-[12px] font-mono text-[var(--color-neutral-9)] shrink-0">{investment.id}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-4">
+                    {nextDue && nextDue.status !== 'completed' && (
+                        <>
+                            <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[#FEF3C7] border border-[#FDE68A] px-2.5 py-1.5 text-[11px] font-semibold text-[#92400E]">
+                                <IconAlertTriangle size={12} stroke={2} />
+                                Capital call pending
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => onNavigateToCapCall(nextDue.id)}
+                                className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-black)] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#1a1a1a] transition-colors"
+                            >
+                                Review call
+                                <IconArrowRight size={13} stroke={2.5} />
+                            </button>
+                        </>
+                    )}
                     <button type="button" className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
                         <IconShare size={14} stroke={2} />
                         Share
@@ -493,26 +510,26 @@ export function InvestmentRecordPage({
                 </p>
 
                 {/* 3-number summary */}
-                <div className="mt-4 grid grid-cols-3 gap-4 rounded-[var(--radius-xl)] bg-[var(--color-neutral-2)] border border-[var(--color-neutral-3)] p-4">
-                    <div>
+                <div className="mt-4 grid grid-cols-3 gap-2 rounded-[var(--radius-xl)] bg-[var(--color-neutral-2)] border border-[var(--color-neutral-3)] p-2">
+                    <div className="rounded-[var(--radius-lg)] px-3 py-3">
                         <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1">Total commitment</p>
                         <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
                             {fmt(investment.totalCommitment)}
                         </p>
                     </div>
-                    <div>
-                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1">Called to date</p>
+                    <div className="rounded-[var(--radius-lg)] px-3 py-3" style={{ background: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#3B82F6] mb-1">Called to date</p>
                         <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-accent-9)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
                             {fmt(investment.called)}
                         </p>
-                        <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mt-1">{deployedPct}% deployed</p>
+                        <p className="m-0 text-[11px] text-[#3B82F6] mt-1 opacity-70">{deployedPct}% deployed</p>
                     </div>
-                    <div>
-                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1">Remaining unfunded</p>
+                    <div className="rounded-[var(--radius-lg)] px-3 py-3" style={{ background: '#FEFCE8', border: '1px solid #FEF08A' }}>
+                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#A16207] mb-1">Remaining unfunded</p>
                         <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
                             {fmt(remaining)}
                         </p>
-                        <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mt-1">{100 - deployedPct}% uncalled</p>
+                        <p className="m-0 text-[11px] text-[#A16207] mt-1 opacity-70">{100 - deployedPct}% uncalled</p>
                     </div>
                 </div>
 
@@ -542,7 +559,7 @@ export function InvestmentRecordPage({
 
             {/* ── OVERVIEW TAB ─────────────────────────────────────────────── */}
             {activeTab === 'overview' && (
-                <div className="flex-1 overflow-y-auto p-6 max-w-[960px] w-full">
+                <div className="flex-1 overflow-y-auto p-6 max-w-[1120px] w-full">
 
                     {/* IC Memo warning (IC Review stage only) */}
                     {hasICMemoWarning && (
@@ -667,7 +684,52 @@ export function InvestmentRecordPage({
 
             {/* ── CAPITAL CALLS TAB ────────────────────────────────────────── */}
             {activeTab === 'capital-calls' && (
-                <div className="flex-1 overflow-y-auto p-6 max-w-[960px] w-full">
+                <div className="flex-1 overflow-y-auto p-6 max-w-[1120px] w-full">
+
+                    {/* Pending call alert banner */}
+                    {nextDue && nextDue.status !== 'completed' && (
+                        <div className="rounded-[var(--radius-xl)] border border-[#FDE68A] bg-[#FFFBEB] p-4 mb-5 flex items-start gap-4">
+                            <div className="w-8 h-8 rounded-full bg-[#FEF3C7] flex items-center justify-center shrink-0 mt-0.5">
+                                <IconAlertTriangle size={16} stroke={2} color="#D97706" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <p className="m-0 text-[13px] font-semibold text-[#92400E]">
+                                        Call #{nextDue.callNumber} — {fmt(nextDue.amount)} due {new Date(nextDue.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                    {nextDueDays !== null && nextDueDays <= 14 && (
+                                        <span className="inline-flex items-center rounded-full bg-[#FDE68A] text-[#92400E] px-2 py-0.5 text-[10px] font-semibold">
+                                            {nextDueDays} days left
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-5 mt-2">
+                                    <div>
+                                        <p className="m-0 text-[10px] text-[#B45309] uppercase tracking-[0.06em] font-semibold">Total called</p>
+                                        <p className="m-0 text-[14px] font-semibold text-[#92400E]">{fmt(investment.called)}</p>
+                                    </div>
+                                    <div className="w-px h-7 bg-[#FDE68A]" />
+                                    <div>
+                                        <p className="m-0 text-[10px] text-[#B45309] uppercase tracking-[0.06em] font-semibold">This call</p>
+                                        <p className="m-0 text-[14px] font-semibold text-[#92400E]">{fmt(nextDue.amount)}</p>
+                                    </div>
+                                    <div className="w-px h-7 bg-[#FDE68A]" />
+                                    <div>
+                                        <p className="m-0 text-[10px] text-[#B45309] uppercase tracking-[0.06em] font-semibold">Uncalled</p>
+                                        <p className="m-0 text-[14px] font-semibold text-[#92400E]">{fmt(remaining)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => onNavigateToCapCall(nextDue.id)}
+                                className="shrink-0 flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[#D97706] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#B45309] transition-colors"
+                            >
+                                Review & approve
+                                <IconArrowRight size={13} stroke={2.5} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* KPI cards */}
                     <div className="grid grid-cols-3 gap-3 mb-6">
@@ -733,7 +795,7 @@ export function InvestmentRecordPage({
 
             {/* ── DOCUMENTS TAB ────────────────────────────────────────────── */}
             {activeTab === 'documents' && (
-                <div className="flex-1 overflow-y-auto p-6 max-w-[720px] w-full">
+                <div className="flex-1 overflow-y-auto p-6 max-w-[1120px] w-full">
                     <div className="mb-4">
                         <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-1">Documents</h3>
                         <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">Investment-related files and notices.</p>
@@ -744,7 +806,7 @@ export function InvestmentRecordPage({
                                 key={doc.name}
                                 className={`flex items-center gap-3 px-5 py-4 ${idx < investment.documents.length - 1 ? 'border-b border-[var(--color-neutral-3)]' : ''} hover:bg-[var(--color-neutral-2)] transition-colors`}
                             >
-                                <div className="w-8 h-8 rounded-[6px] bg-[#FEE2E2] flex items-center justify-center shrink-0">
+                                <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[#FEE2E2] flex items-center justify-center shrink-0">
                                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                                         <path d="M3 3.5h5.5L10 5v5.5H3V3.5z" stroke="#EF4444" strokeWidth="1.2" fill="none" />
                                         <path d="M8.5 3.5V5H10" stroke="#EF4444" strokeWidth="1.2" />
@@ -766,9 +828,107 @@ export function InvestmentRecordPage({
                 </div>
             )}
 
+            {/* ── MONITORING TAB ───────────────────────────────────────────── */}
+            {activeTab === 'monitoring' && (
+                <div className="flex-1 overflow-y-auto p-6 max-w-[1120px] w-full">
+                    {!investment.monitoring ? (
+                        <div className="flex items-center justify-center h-32 text-[13px] text-[var(--color-neutral-9)]">
+                            Monitoring data not yet available for this investment.
+                        </div>
+                    ) : (
+                        (() => {
+                            const monitoring = investment.monitoring
+                            return (
+                        <>
+                            {/* KPI cards */}
+                            <div className="grid grid-cols-3 gap-3 mb-6">
+                                {([
+                                    ['Net IRR', monitoring.irr, '#10B981'],
+                                    ['TVPI', monitoring.tvpi, '#10B981'],
+                                    ['NAV', fmt(monitoring.nav), 'var(--color-black)'],
+                                ] as const).map(([label, value, color]) => (
+                                    <div key={label} className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] px-4 py-3.5">
+                                        <p className="text-[11px] text-[var(--color-neutral-9)] m-0">{label}</p>
+                                        <p className="text-[26px] font-semibold tracking-[-0.01em] m-0 leading-[1.1] mt-1" style={{ color }}>
+                                            {value}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--color-neutral-9)] m-0 mt-0.5">{monitoring.reportDate}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* GP updates timeline */}
+                                <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                    <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-4">GP updates</h3>
+                                    <div className="flex flex-col">
+                                        {monitoring.gpUpdates.map((ev, idx) => {
+                                            const dotColor = ev.type === 'report' ? '#2563EB' : ev.type === 'payment' ? '#10B981' : '#F59E0B'
+                                            return (
+                                                <div key={idx} className="flex items-start gap-3">
+                                                    <div className="flex flex-col items-center shrink-0">
+                                                        <span className="mt-1 w-2.5 h-2.5 rounded-full shrink-0" style={{ background: dotColor }} />
+                                                        {idx < monitoring.gpUpdates.length - 1 && (
+                                                            <div className="w-px bg-[var(--color-neutral-4)] flex-1 my-1" style={{ minHeight: 16 }} />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-1 items-start justify-between gap-2 pb-3">
+                                                        <div className="min-w-0">
+                                                            <p className="m-0 text-[12px] font-semibold text-[var(--color-black)]">{ev.title}</p>
+                                                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{ev.description}</p>
+                                                        </div>
+                                                        <span className="text-[10px] text-[var(--color-neutral-8)] shrink-0 whitespace-nowrap">{ev.date}</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-4">
+                                    {/* Portfolio companies */}
+                                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                        <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-3">Portfolio companies</h3>
+                                        <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
+                                            {monitoring.portfolioCompanies.map(co => (
+                                                <div key={co.name} className="flex items-center justify-between py-2">
+                                                    <span className="text-[12px] text-[var(--color-black)]">{co.name}</span>
+                                                    {co.status === 'on-track' ? (
+                                                        <span className="text-[11px] font-semibold text-[#065F46]">On track</span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-semibold text-[#92400E]">Watch list</span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Next events */}
+                                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                        <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-3">Next events</h3>
+                                        <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
+                                            {monitoring.nextEvents.map(ev => (
+                                                <div key={ev.label} className="flex items-center justify-between py-2">
+                                                    <span className="text-[12px] text-[var(--color-black)]">{ev.label}</span>
+                                                    <span className={`text-[12px] font-medium ${ev.urgent ? 'text-[#C05500]' : 'text-[var(--color-neutral-10)]'}`}>
+                                                        {ev.date}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                            )
+                        })()
+                    )}
+                </div>
+            )}
+
             {/* ── AI BRIEF TAB ─────────────────────────────────────────────── */}
             {activeTab === 'ai-brief' && (
-                <div className="flex-1 overflow-y-auto p-6 max-w-[960px] w-full">
+                <div className="flex-1 overflow-y-auto p-6 max-w-[1120px] w-full">
                     {!brief ? (
                         <div className="flex items-center justify-center h-32 text-[13px] text-[var(--color-neutral-9)]">
                             AI brief not yet generated for this investment.
@@ -932,6 +1092,66 @@ export function InvestmentRecordPage({
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Capital Call Watch Items */}
+                                {linkedDecisions.length > 0 && (() => {
+                                    const watchItems = linkedDecisions
+                                        .filter(d => d.status !== 'completed')
+                                        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+                                        .map(d => {
+                                            const days = Math.ceil((new Date(d.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                                            const action =
+                                                d.status === 'pending' ? 'confirm receipt, review terms, and obtain required authorization signature' :
+                                                d.status === 'wire-ready' ? 'initiate wire transfer and retain a signed copy for the document record' :
+                                                d.status === 'approved' ? 'verify administrative oversight and proceed to execution' :
+                                                'monitor status and confirm fund has held a final close'
+                                            const urgency: 'red' | 'amber' | 'neutral' = days <= 7 ? 'red' : days <= 21 ? 'amber' : 'neutral'
+                                            return { d, days, action, urgency }
+                                        })
+                                    const URGENCY = {
+                                        red:     { dot: '#EF4444', bg: '#FEF2F2', text: '#991B1B', label: 'Urgent' },
+                                        amber:   { dot: '#F59E0B', bg: '#FFFBEB', text: '#92400E', label: 'Due soon' },
+                                        neutral: { dot: '#9CA3AF', bg: '#F9FAFB', text: '#374151', label: 'Upcoming' },
+                                    }
+                                    return (
+                                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
+                                            <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-3 flex items-center gap-2">
+                                                <IconAlertTriangle size={15} stroke={2} color="#D97706" />
+                                                Capital Call Watch Items
+                                            </h3>
+                                            <div className="flex flex-col gap-3">
+                                                {watchItems.map(({ d, days, action, urgency }) => {
+                                                    const ucfg = URGENCY[urgency]
+                                                    return (
+                                                        <button
+                                                            key={d.id}
+                                                            type="button"
+                                                            onClick={() => onNavigateToCapCall(d.id)}
+                                                            className="flex items-start gap-3 text-left group hover:bg-[var(--color-neutral-2)] rounded-[var(--radius-md)] p-2 -mx-2 transition-colors"
+                                                        >
+                                                            <span
+                                                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 mt-0.5"
+                                                                style={{ background: ucfg.bg, color: ucfg.text }}
+                                                            >
+                                                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: ucfg.dot }} />
+                                                                {ucfg.label}
+                                                            </span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="m-0 text-[12px] font-semibold text-[var(--color-black)]">
+                                                                    Call #{d.callNumber} — {fmt(d.amount)}
+                                                                </p>
+                                                                <p className="m-0 text-[11px] text-[var(--color-neutral-10)] mt-0.5 leading-[1.45]">
+                                                                    {action} before {new Date(d.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
+                                                                </p>
+                                                            </div>
+                                                            <span className="text-[11px] text-[var(--color-neutral-9)] shrink-0 mt-0.5">{days > 0 ? `${days}d` : 'today'}</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
                             </div>
                         </>
                     )}

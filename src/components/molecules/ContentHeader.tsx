@@ -94,7 +94,7 @@ export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick,
     }
 
     return (
-        <div className="flex w-full items-center justify-between gap-4 overflow-hidden">
+        <div className="flex w-full items-center justify-between gap-4 overflow-visible">
             <div className="flex min-w-0 flex-1 items-center gap-2 font-display text-[28px] font-black leading-[1.25] tracking-[-0.02em] [-webkit-text-stroke:0.3px_currentColor]">
                 {breadcrumb && (
                     <>
@@ -117,7 +117,7 @@ export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick,
                     </span>
                 )}
             </div>
-            {(onNewItemClick || secondaryAction || onActionClick) && (
+            {(onNewItemClick || secondaryAction || onActionClick || actionDropdownItems) && (
                 <div className="flex shrink-0 items-center gap-[var(--spacing-2)]">
                     {secondaryAction && (() => {
                         const SecIcon = secondaryAction.icon ?? IconPlus

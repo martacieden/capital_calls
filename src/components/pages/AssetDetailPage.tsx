@@ -221,7 +221,7 @@ export function AssetDetailPage({ item, relationships, getItemById, onBack, onNa
                 )}
 
             {/* Normal page content — hidden when expanded */}
-            <div className="flex flex-col flex-1 w-full max-w-[920px] px-[var(--spacing-6)] pt-[24px] pb-[var(--spacing-5)] mx-auto animate-[chat-area-in_0.25s_ease-out_both]" style={{ display: isGraphExpanded ? 'none' : undefined }}>
+            <div className="flex flex-col flex-1 w-full max-w-[1120px] px-[var(--spacing-6)] pt-[24px] pb-[var(--spacing-5)] mx-auto animate-[chat-area-in_0.25s_ease-out_both]" style={{ display: isGraphExpanded ? 'none' : undefined }}>
             <span ref={measureRef} className="absolute invisible whitespace-nowrap text-sm font-[var(--font-weight-medium)] pointer-events-none" aria-hidden="true" />
             {/* ── Header ── */}
             <div className="flex items-center justify-between gap-4 pt-3 pb-5 overflow-hidden">
@@ -293,7 +293,7 @@ export function AssetDetailPage({ item, relationships, getItemById, onBack, onNa
                 <div className="flex flex-col gap-3 mt-8" ref={detailsRef}>
                     <div className="flex flex-col gap-4">
                         <h3 className="text-base font-medium text-[var(--color-gray-12)] tracking-[-0.016px] leading-6 m-0">Details</h3>
-                        <div className="flex gap-4 rounded-xl">
+                        <div className="flex gap-4 rounded-[var(--radius-xl)]">
                             {[leftFields, rightFields].map((col, ci) => (
                                 <div key={ci} className="flex-1 flex flex-col gap-1 min-w-0 overflow-hidden">
                                     {col.map(f => {
@@ -510,7 +510,7 @@ export function AssetDetailPage({ item, relationships, getItemById, onBack, onNa
                                 <div key={doc.name} className="flex items-center h-10 px-2 border-b border-[var(--color-neutral-4)] gap-4 cursor-pointer transition-colors duration-150 hover:bg-[var(--color-gray-2)]">
                                     <div className="flex-1 flex items-center gap-2 text-sm font-[var(--font-weight-medium)] text-[var(--color-gray-12)] whitespace-nowrap overflow-hidden text-ellipsis leading-5">
                                         <div className={cn(
-                                            'flex items-center justify-center w-6 h-6 rounded-[6px] border border-[var(--color-white)] shrink-0',
+                                            'flex items-center justify-center w-6 h-6 rounded-[var(--radius-md)] border border-[var(--color-white)] shrink-0',
                                             doc.type === 'csv' ? 'bg-[var(--color-green-1)] text-[#30a46c]' : 'bg-[var(--color-accent-3)] text-[var(--color-accent-9)]'
                                         )}>
                                             {doc.type === 'csv' ? <IconTable size={14} stroke={1.75} /> : <IconFileText size={14} stroke={1.75} />}
@@ -518,12 +518,12 @@ export function AssetDetailPage({ item, relationships, getItemById, onBack, onNa
                                         <span>{doc.name}</span>
                                     </div>
                                     <span className="flex-1 text-sm font-normal text-[var(--color-gray-12)] whitespace-nowrap overflow-hidden text-ellipsis leading-5 px-4">{doc.detail}</span>
-                                    <button className="flex-[0_0_32px] flex items-center justify-center h-8 bg-none border-none text-[var(--color-neutral-11)] cursor-pointer rounded-[6px] transition-colors duration-150 hover:bg-[var(--color-neutral-3)]"><IconDots size={16} stroke={1.75} /></button>
+                                    <button className="flex-[0_0_32px] flex items-center justify-center h-8 bg-none border-none text-[var(--color-neutral-11)] cursor-pointer rounded-[var(--radius-md)] transition-colors duration-150 hover:bg-[var(--color-neutral-3)]"><IconDots size={16} stroke={1.75} /></button>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center gap-[var(--spacing-2)] min-h-[140px] px-6 py-8 rounded-xl bg-[var(--color-gray-2)] text-sm text-[var(--color-neutral-9)] leading-5 text-center">
+                        <div className="flex flex-col items-center justify-center gap-[var(--spacing-2)] min-h-[140px] px-6 py-8 rounded-[var(--radius-xl)] bg-[var(--color-gray-2)] text-sm text-[var(--color-neutral-9)] leading-5 text-center">
                             <IconFileText size={24} stroke={1.5} className="text-[var(--color-neutral-9)]" />
                             No documents attached yet. Upload files to link them to this item.
                         </div>

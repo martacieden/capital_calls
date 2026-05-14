@@ -19,7 +19,7 @@ export function KpiStatCard({ label, value, badge, icon: Icon, onClick }: KpiSta
             onClick={onClick}
         >
             {Icon && (
-                <div className="w-8 h-8 rounded-[4px] bg-[var(--color-card-blue-bg)] flex items-center justify-center text-[var(--color-card-blue)] mb-1">
+                <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-card-blue-bg)] flex items-center justify-center text-[var(--color-card-blue)] mb-1">
                     <Icon size={18} stroke={1.5} />
                 </div>
             )}

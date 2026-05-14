@@ -139,7 +139,7 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                     <div className="relative shrink-0 pt-1">
                         <FojoMascot size={44} className="block rounded-full" animated />
                         {chat.unreadCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-[4px] bg-[var(--color-red-9)] px-0.5 text-center text-[10px] font-bold leading-[16px] text-white shadow-[0_0_0_2px_var(--color-white)]">
+                            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] rounded-[var(--radius-sm)] bg-[var(--color-red-9)] px-0.5 text-center text-[10px] font-bold leading-[16px] text-white shadow-[0_0_0_2px_var(--color-white)]">
                                 {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
                             </span>
                         )}
@@ -197,7 +197,7 @@ export function FojoPanel({ visibility, onClose, onUnreadCountChange, onOpenTime
                                 onClick={() => chat.setIsDropdownOpen(prev => !prev)}
                             >
                                 <IconBell size={18} stroke={2} color='var(--color-neutral-11)' />
-                                {chat.unreadCount > 0 && <span className='absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[5px] bg-[var(--color-red-9)] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-red-1)] pointer-events-none animate-[badge-pulse_1.8s_ease-out_infinite]'>{chat.unreadCount > 9 ? '9+' : chat.unreadCount}</span>}
+                                {chat.unreadCount > 0 && <span className='absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[var(--radius-md)] bg-[var(--color-red-9)] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-red-1)] pointer-events-none animate-[badge-pulse_1.8s_ease-out_infinite]'>{chat.unreadCount > 9 ? '9+' : chat.unreadCount}</span>}
                             </button>
                             {chat.isDropdownOpen && (
                                 <FojoNotificationDropdown

@@ -104,6 +104,7 @@ function AppShell() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [mapZoomTargetId, setMapZoomTargetId] = useState<string | null>(null)
   const [isInitialLoading, setIsInitialLoading] = useState(true)
+  const [showFojoOnHome, setShowFojoOnHome] = useState(false)
   const [highlightedItemIds, setHighlightedItemIds] = useState<Set<string>>(new Set())
   const [isDetailGraphExpanded, setIsDetailGraphExpanded] = useState(false)
   const pickTemplate = useRandomTemplate(MOCK_COLLECTION_TEMPLATES)
@@ -707,12 +708,16 @@ function AppShell() {
               else if (id === 'investment-pipeline') setActivePage('investment-pipeline')
               else if (id === 'capital-flows') setActivePage('capital-flows')
           }}
-          onFojoToggle={() => setFojoForceOpen(!fojoForceOpen)}
+          onFojoToggle={() => {
+            const nextOpen = !fojoForceOpen
+            setFojoForceOpen(nextOpen)
+            if (activePage === 'home' && nextOpen) setShowFojoOnHome(true)
+          }}
           fojoUnreadCount={fojoUnreadCount}
           isFojoOpen={fojoVisibility === 'open'}
       />
 
-      {activePage !== 'home' && (
+      {(activePage !== 'home' || showFojoOnHome) && (
         <FojoPanel
           visibility={fojoVisibility}
           showCollapsedPreview={Boolean(portfolioPanelCategoryId) && activePage === 'portfolio' && !isSmallScreen}
@@ -722,6 +727,7 @@ function AppShell() {
             // Closing Fojo should return the regular app shell with left nav.
             setIsTimelineExpanded(false)
             setFojoForceOpen(false)
+            if (activePage === 'home') setShowFojoOnHome(false)
           }}
           onUnreadCountChange={setFojoUnreadCount}
           onOpenTimeline={handleOpenTimeline}
@@ -843,7 +849,7 @@ function AppShell() {
         >
           <FojoMascot size="100%" className="block rounded-full" animated />
           {fojoUnreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[5px] bg-[#DC2626] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-white)] animate-badge-pulse">
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[var(--radius-md)] bg-[#DC2626] px-1 text-center text-xs font-bold leading-[18px] text-white shadow-[0_0_0_2px_var(--color-white)] animate-badge-pulse">
               {fojoUnreadCount > 9 ? '9+' : fojoUnreadCount}
             </span>
           )}
@@ -858,8 +864,10 @@ function AppShell() {
         <div style={{ display: activePage === 'home' ? undefined : 'none', height: '100%' }}>
           <HomePage
             onNavigate={(page) => setActivePage(page)}
+            isFojoOpen={fojoVisibility === 'open'}
             onAskFojo={(prompt) => {
               setPendingFojoQuery(prompt)
+              setShowFojoOnHome(true)
               setFojoForceOpen(true)
             }}
           />

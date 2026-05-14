@@ -215,7 +215,7 @@ export function DocumentUploadSection({ initialProcessing, onUploadComplete }: D
         <div
             ref={dropRef}
             className={cn(
-                'doc-drop relative rounded-[6px] cursor-pointer overflow-hidden transition-all duration-[0.25s] ease-[cubic-bezier(0.16,1,0.3,1)]',
+                'doc-drop relative rounded-[var(--radius-lg)] cursor-pointer overflow-hidden transition-all duration-[0.25s] ease-[cubic-bezier(0.16,1,0.3,1)]',
                 isProcessing ? 'doc-drop--processing' : 'border-none px-[29.5px] py-[45.5px]',
                 isDragOver && 'doc-drop--dragover'
             )}
@@ -232,7 +232,7 @@ export function DocumentUploadSection({ initialProcessing, onUploadComplete }: D
             {/* Drop zone content */}
             <div className="doc-drop__zone flex items-center gap-3.5 justify-between transition-[opacity,transform] duration-150 ease-linear">
                 <div className="flex items-center gap-3.5 shrink-0">
-                    <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] text-[var(--color-neutral-11)] shrink-0">
+                    <div className="w-10 h-10 flex items-center justify-center rounded-[var(--radius-lg)] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] text-[var(--color-neutral-11)] shrink-0">
                         <IconCloudUpload size={20} stroke={1.5} />
                     </div>
                     <div className="flex flex-col gap-0.5">
@@ -274,7 +274,7 @@ export function DocumentUploadSection({ initialProcessing, onUploadComplete }: D
                     {steps[stepIndex]}
                 </div>
                 <div className="flex items-center gap-2.5 ml-auto">
-                    <div className="doc-drop__bar w-[120px] h-[5px] bg-[rgba(0,91,226,0.1)] rounded-[4px] overflow-hidden shrink-0">
+                    <div className="doc-drop__bar w-[120px] h-[5px] bg-[rgba(0,91,226,0.1)] rounded-[var(--radius-sm)] overflow-hidden shrink-0">
                         <div className="doc-drop__bar-fill w-0 h-full rounded bg-[var(--color-purple)] relative overflow-hidden" ref={barRef} />
                     </div>
                     <span className="text-xs font-[var(--font-weight-semibold)] text-[var(--color-purple-text)] min-w-8 text-right tabular-nums">{Math.round(progress * 100)}%</span>

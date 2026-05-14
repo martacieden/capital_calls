@@ -78,9 +78,9 @@ export function TimelineCard({ event, beneficiary, trust: _trust, onClick, onDou
                 <div className="flex flex-col gap-0.5 h-full overflow-hidden px-4.5 py-4">
                     <div className="flex items-center gap-2.5 mb-2.5">
                         {beneficiary?.imageUrl ? (
-                            <img className="size-7 rounded-[8px] shrink-0 object-cover" src={beneficiary.imageUrl} alt={beneficiary.name} />
+                            <img className="size-7 rounded-[var(--radius-lg)] shrink-0 object-cover" src={beneficiary.imageUrl} alt={beneficiary.name} />
                         ) : (
-                            <div className="size-7 rounded-[8px] shrink-0 flex items-center justify-center text-[11px] font-semibold bg-[var(--color-neutral-3)] text-[var(--color-neutral-11)] tracking-[0.02em]">
+                            <div className="size-7 rounded-[var(--radius-lg)] shrink-0 flex items-center justify-center text-[11px] font-semibold bg-[var(--color-neutral-3)] text-[var(--color-neutral-11)] tracking-[0.02em]">
                                 {beneficiary ? getInitials(beneficiary.name) : '?'}
                             </div>
                         )}
@@ -90,7 +90,7 @@ export function TimelineCard({ event, beneficiary, trust: _trust, onClick, onDou
                     <div className="flex items-start gap-2 mb-0.5">
                         <div className="text-[20px] font-[800] text-[var(--color-gray-12)] leading-[1.15] tracking-[-0.025em] flex-1">{getTypeLabel(event)}</div>
                         {event.recurring && (
-                            <span className="shrink-0 mt-1 inline-flex items-center h-[18px] px-1.5 rounded-[4px] bg-[var(--color-neutral-3)] text-[10px] font-[600] text-[var(--color-neutral-10)] leading-none whitespace-nowrap">
+                            <span className="shrink-0 mt-1 inline-flex items-center h-[18px] px-1.5 rounded-[var(--radius-sm)] bg-[var(--color-neutral-3)] text-[10px] font-[600] text-[var(--color-neutral-10)] leading-none whitespace-nowrap">
                                 Recurring
                             </span>
                         )}
@@ -109,8 +109,8 @@ export function TimelineCard({ event, beneficiary, trust: _trust, onClick, onDou
 
                     {primaryDoc && (
                         <div className="mt-auto pt-3.5 flex items-center gap-2.5">
-                            <div className="tl-slide__chip inline-flex items-center gap-1.5 py-1.5 pl-2 pr-2.5 rounded-[4px] bg-white border border-[var(--color-neutral-4)] text-xs font-medium text-[var(--color-neutral-11)] shadow-[0_1px_3px_rgba(0,0,0,0.04)] max-w-full transition-[border-color,box-shadow] duration-150">
-                                <div className="size-5 rounded-[4px] bg-[var(--color-blue-1)] flex items-center justify-center shrink-0">
+                            <div className="tl-slide__chip inline-flex items-center gap-1.5 py-1.5 pl-2 pr-2.5 rounded-[var(--radius-sm)] bg-white border border-[var(--color-neutral-4)] text-xs font-medium text-[var(--color-neutral-11)] shadow-[0_1px_3px_rgba(0,0,0,0.04)] max-w-full transition-[border-color,box-shadow] duration-150">
+                                <div className="size-5 rounded-[var(--radius-sm)] bg-[var(--color-blue-1)] flex items-center justify-center shrink-0">
                                     <IconFileText size={12} stroke={1.5} color="var(--color-accent-9)" />
                                 </div>
                                 <span className="whitespace-nowrap overflow-hidden text-ellipsis">{primaryDoc.replace('.pdf', '')}</span>

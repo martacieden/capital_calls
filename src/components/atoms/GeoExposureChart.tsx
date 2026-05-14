@@ -951,7 +951,7 @@ export function GeoExposureChart({
 
                             if (!row?.value || row.value <= 0) {
                                 return (
-                                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-lg px-3 py-2 shadow text-sm text-[var(--color-neutral-10)] max-w-[min(360px,92vw)]">
+                                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-lg)] px-3 py-2 shadow text-sm text-[var(--color-neutral-10)] max-w-[min(360px,92vw)]">
                                         <span className="font-medium text-[var(--color-black)]">{pname}</span>
                                         <span className="text-[var(--color-neutral-9)]"> · </span>
                                         <span>No exposure</span>
@@ -960,7 +960,7 @@ export function GeoExposureChart({
                             }
 
                             return (
-                                <div className="bg-white border border-[var(--color-neutral-4)] rounded-lg px-3 py-2 shadow-md text-sm max-w-[min(380px,94vw)]">
+                                <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-lg)] px-3 py-2 shadow-md text-sm max-w-[min(380px,94vw)]">
                                     <div className="font-semibold text-[var(--color-black)]">{row.label}</div>
                                     <div className="text-[var(--color-neutral-10)] mt-0.5 tabular-nums">
                                         {formatValue(row.value)}

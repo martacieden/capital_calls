@@ -34,7 +34,7 @@ export function TopHoldingsChart({ items, onItemClick, colorOverride }: TopHoldi
                             tabIndex={onItemClick ? 0 : undefined}
                             onClick={() => onItemClick?.(item.id)}
                             onKeyDown={e => { if (onItemClick && (e.key === 'Enter' || e.key === ' ')) onItemClick(item.id) }}
-                            className={`flex items-center gap-3 rounded-lg px-1 -mx-1 transition-colors ${onItemClick ? 'cursor-pointer hover:bg-[var(--color-neutral-2)]' : ''}`}
+                            className={`flex items-center gap-3 rounded-[var(--radius-lg)] px-1 -mx-1 transition-colors ${onItemClick ? 'cursor-pointer hover:bg-[var(--color-neutral-2)]' : ''}`}
                         >
                             <span
                                 className="text-[11px] sm:text-[13px] w-36 sm:w-44 shrink-0 truncate text-[var(--color-neutral-11)]"

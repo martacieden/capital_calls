@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import {
-    IconPlus, IconMail, IconPhone, IconSearch, IconUser,
-    IconBriefcase, IconScale,
+    IconPlus, IconUser,
+    IconBriefcase, IconScale, IconLayoutGrid, IconTable,
 } from '@tabler/icons-react'
 import { mockContacts } from '@/data/thornton/contacts-data'
 import type { Contact } from '@/data/thornton/contacts-data'
+import { cn } from '@/lib/utils'
+import { ContentHeader } from '@/components/molecules/ContentHeader'
+import { ToolbarSearchInput } from '@/components/atoms/ToolbarSearchInput'
 
 // ─── avatar initials ──────────────────────────────────────────────────────────
 
@@ -27,11 +30,11 @@ function initials(name: string): string {
 function ContactRow({ contact }: { contact: Contact }) {
     const color = getAvatarColor(contact.name)
     return (
-        <tr className="group border-b border-[var(--color-neutral-3)] last:border-0 hover:bg-[var(--color-neutral-2)] transition-colors">
-            <td className="px-5 py-3">
+        <tr className="list-row group">
+            <td className="list-cell list-cell--name">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-white shrink-0"
+                        className="list-avatar-mini flex items-center justify-center text-[10px] font-semibold text-white"
                         style={{ background: color }}
                     >
                         {initials(contact.name)}
@@ -39,29 +42,49 @@ function ContactRow({ contact }: { contact: Contact }) {
                     <span className="text-[13px] font-semibold text-[var(--color-black)]">{contact.name}</span>
                 </div>
             </td>
-            <td className="px-4 py-3 text-[13px] text-[var(--color-neutral-10)]">{contact.role}</td>
-            <td className="px-4 py-3">
-                <span className="flex items-center gap-1.5 text-[12px] text-[var(--color-neutral-10)]">
-                    <IconBriefcase size={13} stroke={1.8} className="shrink-0" />
+            <td className="list-cell text-[13px] text-[var(--color-neutral-11)]">{contact.role}</td>
+            <td className="list-cell">
+                <span className="text-[13px] text-[var(--color-neutral-11)]">
                     {contact.firm}
                 </span>
             </td>
-            <td className="px-4 py-3">
+            <td className="list-cell">
                 <a
                     href={`mailto:${contact.email}`}
-                    className="flex items-center gap-1.5 text-[12px] text-[var(--color-accent-9)] hover:underline"
+                    className="text-[13px] text-[var(--color-accent-9)] hover:underline"
                 >
-                    <IconMail size={13} stroke={1.8} className="shrink-0" />
                     {contact.email}
                 </a>
             </td>
-            <td className="px-5 py-3 text-[12px] text-[var(--color-neutral-10)] whitespace-nowrap">
-                <span className="flex items-center gap-1.5">
-                    <IconPhone size={13} stroke={1.8} className="shrink-0" />
-                    {contact.phone}
-                </span>
+            <td className="list-cell text-[13px] text-[var(--color-neutral-11)] whitespace-nowrap">
+                {contact.phone}
             </td>
         </tr>
+    )
+}
+
+function ContactCard({ contact }: { contact: Contact }) {
+    const color = getAvatarColor(contact.name)
+    return (
+        <article className="card group flex flex-col gap-[var(--spacing-3)] p-[var(--spacing-5)]">
+            <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[13px] font-semibold text-white"
+                style={{ background: color }}
+            >
+                {initials(contact.name)}
+            </div>
+
+            <div className="min-w-0">
+                <h3 className="m-0 truncate text-[15px] font-[var(--font-weight-semibold)] text-[var(--color-gray-12)]">
+                    {contact.name}
+                </h3>
+                <p className="m-0 mt-1 line-clamp-2 text-[13px] leading-[1.5] text-[var(--color-neutral-11)]">
+                    {contact.role}. {contact.specialization}.
+                </p>
+            </div>
+
+            <span className="mt-auto text-[13px] text-[var(--color-neutral-11)]">{contact.firm}</span>
+        </article>
     )
 }
 
@@ -78,20 +101,20 @@ function ContactSection({
 }) {
     if (contacts.length === 0) return null
     return (
-        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] overflow-hidden">
+        <div className="list-view">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-[var(--color-neutral-3)]">
                 <Icon size={15} stroke={2} className="text-[var(--color-neutral-9)] shrink-0" />
                 <h2 className="m-0 text-[13px] font-semibold text-[var(--color-neutral-11)]">{title}</h2>
                 <span className="ml-auto text-[11px] font-medium text-[var(--color-neutral-9)]">{contacts.length}</span>
             </div>
-            <table className="w-full border-collapse">
+            <table className="list-table">
                 <thead>
-                    <tr className="border-b border-[var(--color-neutral-3)]">
-                        <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)] w-[220px]">Name</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)]">Role</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)]">Firm</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)]">Email</th>
-                        <th className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)]">Phone</th>
+                    <tr className="list-header-row">
+                        <th className="list-header-cell list-header-cell--name" style={{ width: '24%' }}>Name</th>
+                        <th className="list-header-cell">Role</th>
+                        <th className="list-header-cell">Firm</th>
+                        <th className="list-header-cell">Email</th>
+                        <th className="list-header-cell">Phone</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -102,10 +125,35 @@ function ContactSection({
     )
 }
 
+function ContactCardSection({
+    icon: Icon,
+    title,
+    contacts,
+}: {
+    icon: typeof IconScale
+    title: string
+    contacts: Contact[]
+}) {
+    if (contacts.length === 0) return null
+    return (
+        <section>
+            <div className="mb-3 flex items-center gap-2">
+                <Icon size={15} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" />
+                <h2 className="m-0 text-[13px] font-semibold text-[var(--color-neutral-11)]">{title}</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4">
+                {contacts.map(contact => <ContactCard key={contact.id} contact={contact} />)}
+            </div>
+        </section>
+    )
+}
+
 // ─── main page ────────────────────────────────────────────────────────────────
 
 export function ContactsPage() {
     const [search, setSearch] = useState('')
+    const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
+    const contactCount = mockContacts.lawyers.length + mockContacts.accountants.length
 
     const query = search.toLowerCase()
 
@@ -124,65 +172,77 @@ export function ContactsPage() {
     const total = lawyers.length + accountants.length
 
     return (
-        <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
+        <div className="flex flex-col flex-1 gap-[var(--spacing-5)] pt-9 px-[var(--spacing-6)] pb-[var(--spacing-5)] max-w-[1120px] w-full mx-auto">
 
             {/* ── Header ──────────────────────────────────────────────────── */}
-            <div className="px-[var(--spacing-6)] pt-[36px] pb-0 bg-white shrink-0 border-b border-[var(--color-gray-4)]">
-                <div className="flex items-start justify-between gap-4 mb-5">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] m-0 mb-1">
-                            People
-                        </p>
-                        <h1
-                            className="m-0 text-[28px] font-bold tracking-[-0.02em] text-[var(--color-black)] leading-none"
-                            style={{ fontFamily: 'var(--font-display)' }}
-                        >
-                            Contacts
-                        </h1>
-                        <p className="m-0 mt-1.5 text-[13px] text-[var(--color-neutral-10)]">
-                            Legal, tax, and financial advisors across the Thornton family office.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        className="shrink-0 flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-[var(--color-accent-10)] transition-colors"
-                    >
-                        <IconPlus size={15} stroke={2.5} />
-                        New Contact
-                    </button>
-                </div>
-
-                {/* Search */}
-                <div className="flex items-center gap-2 mb-4 max-w-[360px]">
-                    <div className="relative flex-1">
-                        <IconSearch
-                            size={14}
-                            stroke={2}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral-9)] pointer-events-none"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Search by name, role, or firm…"
+            <ContentHeader
+                title="Contacts"
+                itemCount={contactCount}
+                onActionClick={() => {}}
+                actionLabel="New contact"
+                actionIcon={IconPlus}
+            />
+            <div className="sticky top-[calc(-1*var(--spacing-4))] z-10 bg-[var(--color-white)] pt-[var(--spacing-4)] -mt-[var(--spacing-5)] pb-[var(--spacing-4)] [&>*]:mt-0">
+                <div className="flex items-center justify-between flex-wrap gap-[var(--spacing-2)] rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] bg-[var(--color-white)] p-[var(--spacing-2)] shadow-[var(--shadow-toolbar)]">
+                    <div className="flex items-center">
+                        <ToolbarSearchInput
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            className="w-full rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white pl-8 pr-3 py-1.5 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:outline-none focus:border-[var(--color-accent-9)] transition-colors"
+                            onChange={setSearch}
+                            placeholder="Search contacts..."
                         />
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                        {([
+                            { id: 'cards' as const, label: 'Cards', icon: IconLayoutGrid },
+                            { id: 'table' as const, label: 'Table', icon: IconTable },
+                        ]).map((option) => {
+                            const OptionIcon = option.icon
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => setViewMode(option.id)}
+                                    aria-label={`Show ${option.label.toLowerCase()} view`}
+                                    title={option.label}
+                                    className={cn(
+                                        'flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border-none text-[var(--color-gray-12)] transition-colors',
+                                        viewMode === option.id
+                                            ? 'bg-[var(--color-accent-3)] text-[var(--color-accent-9)] hover:bg-[var(--color-accent-3)]'
+                                            : 'bg-transparent hover:bg-[var(--color-neutral-3)]',
+                                    )}
+                                >
+                                    <OptionIcon size={16} stroke={2} />
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
             </div>
 
             {/* ── Body ────────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 overflow-y-auto bg-[var(--color-white)]">
-                <div className="flex flex-col gap-4 px-[var(--spacing-6)] py-5 max-w-[1120px] w-full mx-auto">
-
-                    {total === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[var(--color-neutral-3)] flex items-center justify-center">
-                                <IconUser size={20} stroke={1.5} className="text-[var(--color-neutral-9)]" />
-                            </div>
-                            <p className="m-0 text-[14px] font-semibold text-[var(--color-neutral-11)]">No contacts found</p>
-                            <p className="m-0 text-[13px] text-[var(--color-neutral-9)]">Try a different search term.</p>
+            <div className="flex flex-col gap-5 flex-1 min-h-0">
+                {total === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[var(--color-neutral-3)] flex items-center justify-center">
+                            <IconUser size={20} stroke={1.5} className="text-[var(--color-neutral-9)]" />
                         </div>
+                        <p className="m-0 text-[14px] font-semibold text-[var(--color-neutral-11)]">No contacts found</p>
+                        <p className="m-0 text-[13px] text-[var(--color-neutral-9)]">Try a different search term.</p>
+                    </div>
+                ) : (
+                    viewMode === 'cards' ? (
+                        <>
+                            <ContactCardSection
+                                icon={IconScale}
+                                title="Legal Advisors"
+                                contacts={lawyers}
+                            />
+                            <ContactCardSection
+                                icon={IconBriefcase}
+                                title="Tax & Accounting"
+                                contacts={accountants}
+                            />
+                        </>
                     ) : (
                         <>
                             <ContactSection
@@ -196,8 +256,8 @@ export function ContactsPage() {
                                 contacts={accountants}
                             />
                         </>
-                    )}
-                </div>
+                    )
+                )}
             </div>
         </div>
     )

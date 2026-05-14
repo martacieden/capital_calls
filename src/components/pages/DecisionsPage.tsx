@@ -75,7 +75,7 @@ function WorkflowTag({ label, variant }: { label: string; variant: WorkflowTagVa
                 : 'border border-[var(--color-blue-3)] bg-[var(--color-blue-1)] text-[var(--color-accent-9)]'
     return (
         <span
-            className={`inline-flex items-center rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${cls}`}
+            className={`inline-flex items-center rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${cls}`}
         >
             {label}
         </span>
@@ -172,7 +172,7 @@ const THORNTON_DOCS = [
 
 function PdfDocIcon({ isCapitalCall, isSelected }: { isCapitalCall: boolean; isSelected: boolean }) {
     return (
-        <div className={`relative w-[72px] h-[88px] rounded-[6px] border-2 flex flex-col items-center justify-end pb-2 transition-all ${
+        <div className={`relative w-[72px] h-[88px] rounded-[var(--radius-lg)] border-2 flex flex-col items-center justify-end pb-2 transition-all ${
             isSelected
                 ? 'border-[var(--color-accent-9)] bg-[var(--color-blue-1)] shadow-md'
                 : 'border-[var(--color-neutral-4)] bg-white'
@@ -186,7 +186,7 @@ function PdfDocIcon({ isCapitalCall, isSelected }: { isCapitalCall: boolean; isS
                 <div className="w-2/3 h-[3px] rounded-full bg-[var(--color-neutral-3)]" />
             </div>
             {/* PDF badge */}
-            <div className={`rounded-[3px] px-1.5 py-0.5 text-[9px] font-bold text-white ${isCapitalCall ? 'bg-[#EF4444]' : 'bg-[#6B7280]'}`}>
+            <div className={`rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[9px] font-bold text-white ${isCapitalCall ? 'bg-[#EF4444]' : 'bg-[#6B7280]'}`}>
                 PDF
             </div>
             {/* Capital call indicator */}
@@ -380,7 +380,7 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
                                 {selectedDoc && (
                                     <div className="mt-4 flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--color-accent-9)] bg-[var(--color-blue-1)] px-4 py-3">
                                         <div className="flex items-center gap-2.5 min-w-0">
-                                            <div className="w-6 h-6 rounded-[4px] bg-[#FEE2E2] flex items-center justify-center shrink-0">
+                                            <div className="w-6 h-6 rounded-[var(--radius-sm)] bg-[#FEE2E2] flex items-center justify-center shrink-0">
                                                 <span className="text-[8px] font-bold text-[#EF4444]">PDF</span>
                                             </div>
                                             <div className="min-w-0">
@@ -414,7 +414,7 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
                         <div className="flex flex-col gap-4">
                             {/* File row */}
                             <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-4 py-3">
-                                <div className="w-8 h-8 rounded-[6px] bg-[#FEE2E2] flex items-center justify-center shrink-0">
+                                <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[#FEE2E2] flex items-center justify-center shrink-0">
                                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                                         <path d="M3 3.5h5.5L10 5v5.5H3V3.5z" stroke="#EF4444" strokeWidth="1.2" fill="none" />
                                         <path d="M8.5 3.5V5H10" stroke="#EF4444" strokeWidth="1.2" />
@@ -566,7 +566,7 @@ export function DecisionCard({ decision, isNew, onClick }: {
                             <WorkflowTag key={t.label} label={t.label} variant={t.variant} />
                         ))}
                         <span
-                            className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--color-gray-4)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-gray-12)] bg-[var(--color-neutral-2)]"
+                            className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-gray-4)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-gray-12)] bg-[var(--color-neutral-2)]"
                         >
                             {badge.label}
                         </span>
@@ -1001,7 +1001,7 @@ export function DecisionsPage({ onOpenDetail, embedded, embeddedMergeShell }: Pr
                                             <WorkflowTag key={t.label} label={t.label} variant={t.variant} />
                                         ))}
                                         <span
-                                            className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--color-gray-4)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-gray-12)] bg-[var(--color-neutral-2)]"
+                                            className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-gray-4)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-gray-12)] bg-[var(--color-neutral-2)]"
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: badge.dot }} />
                                             {badge.label}

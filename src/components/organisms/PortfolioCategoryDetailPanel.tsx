@@ -152,7 +152,7 @@ function PortfolioSubcategoryPick({
                 <ul
                     ref={menuRef}
                     role="listbox"
-                    className="fixed z-[5000] m-0 max-h-[min(280px,45vh)] list-none overflow-y-auto rounded-lg border border-[var(--color-gray-4)] bg-[var(--color-white)] p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12)]"
+                    className="fixed z-[5000] m-0 max-h-[min(280px,45vh)] list-none overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] bg-[var(--color-white)] p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.12)]"
                     style={{ top: menuStyle.top, left: menuStyle.left, minWidth: menuStyle.minWidth }}
                 >
                     <li role="presentation">

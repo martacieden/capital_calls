@@ -55,7 +55,7 @@ export function TopSectorsChart({ data, activeSector, onSectorClick, colorOverri
                             if (!isInteractive) return
                             if (e.key === 'Enter' || e.key === ' ') onSectorClick?.(item.sector)
                         }}
-                        className={`flex items-center gap-3 rounded-lg px-1 -mx-1 transition-colors ${isInteractive ? 'cursor-pointer hover:bg-[var(--color-neutral-2)]' : ''} ${dimmed ? 'opacity-40' : ''}`}
+                        className={`flex items-center gap-3 rounded-[var(--radius-lg)] px-1 -mx-1 transition-colors ${isInteractive ? 'cursor-pointer hover:bg-[var(--color-neutral-2)]' : ''} ${dimmed ? 'opacity-40' : ''}`}
                     >
                         <div className="flex items-center gap-1.5 w-36 sm:w-44 shrink-0 min-w-0">
                             <span className={`text-[11px] sm:text-[13px] truncate ${isActive ? 'font-semibold text-[var(--color-black)]' : 'text-[var(--color-neutral-11)]'}`}>

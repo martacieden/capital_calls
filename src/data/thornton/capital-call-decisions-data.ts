@@ -81,6 +81,9 @@ export interface CapitalCallDecision {
         reference: string
     }
     postDealStatus?: CapitalCallPostDealStatus
+    purposeBreakdown?: { investments: number; managementFees: number; expenses: number }
+    wireMatchedCallNumber?: number
+    wireMatchedCallDate?: string
     activityLog: Array<{
         time: string
         actor: string
@@ -120,7 +123,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
         ],
         allocatorNotes: 'Allocation aligned with Q1 rebalancing targets. RE Holding LLC has sufficient liquidity. Recommend approval.',
         approvals: [
-            { id: 'ap-1', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '3:59 PM' },
+            { id: 'ap-1', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '3:59 PM' },
             { id: 'ap-2', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'pending' },
             { id: 'ap-3', role: 'Compliance', name: 'Maya Mehta', initials: 'MM', color: '#2563EB', status: 'pending' },
         ],
@@ -139,6 +142,9 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'FRBKUS00',
             reference: 'CAPCAL-1 / RE Holding LLC',
         },
+        wireMatchedCallNumber: 6,
+        wireMatchedCallDate: 'Jan 15, 2026',
+        purposeBreakdown: { investments: 463_750, managementFees: 31_650, expenses: 4_600 },
         liquidityCheckResult: {
             status: 'ok',
             // Cash across entities after this wire; UI derives "before" as after + amount.
@@ -146,12 +152,12 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             note: 'Operating accounts + treasury MMF · comfortably covers this call.',
         },
         activityLog: [
-            { time: '3:59 PM', actor: 'Anastasiya Mudryk', action: 'Approved · Investment lead sign-off' },
+            { time: '3:59 PM', actor: 'Sarah Mitchell', action: 'Approved · Investment lead sign-off' },
             { time: '3:58 PM', actor: 'Fojo Assistant', action: 'Matched to investment INV-2024-014 · 98% confidence', isAI: true },
-            { time: '3:57 PM', actor: 'Anastasiya Mudryk', action: 'Set due date to May 30, 2026' },
-            { time: '3:55 PM', actor: 'Anastasiya Mudryk', action: 'Sent for approval · allocation reviewed' },
+            { time: '3:57 PM', actor: 'Sarah Mitchell', action: 'Set due date to May 30, 2026' },
+            { time: '3:55 PM', actor: 'Sarah Mitchell', action: 'Sent for approval · allocation reviewed' },
             { time: '3:51 PM', actor: 'Fojo Assistant', action: 'Extracted 6 fields from PDF · all matched', isAI: true },
-            { time: '3:50 PM', actor: 'Anastasiya Mudryk', action: 'Created from Meridian_CapCall_07.pdf' },
+            { time: '3:50 PM', actor: 'Sarah Mitchell', action: 'Created from Meridian_CapCall_07.pdf' },
         ],
     },
 
@@ -178,7 +184,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             { entity: 'Thornton Holdings Inc.', entityType: 'LLC', allocationPct: 30, allocationAmount: 262_500, accountLast4: '8841' },
         ],
         approvals: [
-            { id: 'ap-4', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'pending' },
+            { id: 'ap-4', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'pending' },
             { id: 'ap-5', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'pending' },
         ],
         matchedInvestmentId: 'INV-2023-007',
@@ -196,9 +202,12 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'CHASUS33',
             reference: 'CAPCAL-2 / Thornton Family Trust',
         },
+        wireMatchedCallNumber: 2,
+        wireMatchedCallDate: 'Oct 12, 2025',
+        purposeBreakdown: { investments: 811_125, managementFees: 55_650, expenses: 8_225 },
         activityLog: [
             { time: '9:12 AM', actor: 'Fojo Assistant', action: 'Matched to investment INV-2023-007 · 94% confidence', isAI: true },
-            { time: '9:10 AM', actor: 'Anastasiya Mudryk', action: 'Created from Whitmore_CapCall_03.pdf' },
+            { time: '9:10 AM', actor: 'Sarah Mitchell', action: 'Created from Whitmore_CapCall_03.pdf' },
         ],
     },
 
@@ -232,7 +241,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             note: 'Cash available. Pending CFO sign-off on Q2 cash reserve threshold.',
         },
         approvals: [
-            { id: 'ap-6', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '10:15 AM' },
+            { id: 'ap-6', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '10:15 AM' },
             { id: 'ap-7', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'approved', timestamp: '11:02 AM' },
         ],
         matchedInvestmentId: 'INV-2022-003',
@@ -250,12 +259,15 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'CHASUS33',
             reference: 'CAPCAL-3 / Thornton Family Trust',
         },
+        wireMatchedCallNumber: 4,
+        wireMatchedCallDate: 'Jan 15, 2026',
+        purposeBreakdown: { investments: 1_855_000, managementFees: 126_400, expenses: 18_600 },
         activityLog: [
             { time: '11:02 AM', actor: 'Marcus Klein', action: 'CIO approved · final call on commitment' },
-            { time: '10:15 AM', actor: 'Anastasiya Mudryk', action: 'Approved · allocation confirmed' },
-            { time: '10:08 AM', actor: 'Anastasiya Mudryk', action: 'Completed allocator review' },
+            { time: '10:15 AM', actor: 'Sarah Mitchell', action: 'Approved · allocation confirmed' },
+            { time: '10:08 AM', actor: 'Sarah Mitchell', action: 'Completed allocator review' },
             { time: '9:55 AM', actor: 'Fojo Assistant', action: 'Matched to investment INV-2022-003 · 99% confidence', isAI: true },
-            { time: '9:50 AM', actor: 'Anastasiya Mudryk', action: 'Created from Whitmore_CapCall_05.pdf' },
+            { time: '9:50 AM', actor: 'Sarah Mitchell', action: 'Created from Whitmore_CapCall_05.pdf' },
         ],
     },
 
@@ -281,7 +293,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             { entity: 'Thornton Holdings Inc.', entityType: 'LLC', allocationPct: 100, allocationAmount: 1_000_000, accountLast4: '8841' },
         ],
         approvals: [
-            { id: 'ap-8', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'pending' },
+            { id: 'ap-8', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'pending' },
             { id: 'ap-9', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'pending' },
         ],
         matchedInvestmentId: 'INV-2023-011',
@@ -299,10 +311,13 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'SVBKUS6S',
             reference: 'CAPCAL-4 / Thornton Holdings Inc.',
         },
+        wireMatchedCallNumber: 3,
+        wireMatchedCallDate: 'Nov 8, 2025',
+        purposeBreakdown: { investments: 928_000, managementFees: 63_000, expenses: 9_000 },
         activityLog: [
             { time: '2:34 PM', actor: 'Fojo Assistant', action: 'Matched to investment INV-2023-011 · 91% confidence · review recommended', isAI: true },
             { time: '2:30 PM', actor: 'Fojo Assistant', action: 'Extracted 6 fields · 1 field needs review (call number sequence)', isAI: true },
-            { time: '2:28 PM', actor: 'Anastasiya Mudryk', action: 'Uploaded WV2_CapCall_04_ThorntonHoldings.pdf' },
+            { time: '2:28 PM', actor: 'Sarah Mitchell', action: 'Uploaded WV2_CapCall_04_ThorntonHoldings.pdf' },
         ],
     },
 
@@ -335,7 +350,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             note: 'Cash position confirmed. $3.8M available across entities — sufficient for this call.',
         },
         approvals: [
-            { id: 'ap-10', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '9:15 AM' },
+            { id: 'ap-10', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '9:15 AM' },
             { id: 'ap-11', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'approved', timestamp: '10:30 AM' },
         ],
         matchedInvestmentId: 'INV-2024-014',
@@ -353,13 +368,16 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'FRBKUS00',
             reference: 'CAPCAL-5 / RE Holding LLC',
         },
+        wireMatchedCallNumber: 7,
+        wireMatchedCallDate: 'May 8, 2026',
+        purposeBreakdown: { investments: 417_200, managementFees: 28_600, expenses: 4_200 },
         activityLog: [
-            { time: '11:20 AM', actor: 'Anastasiya Mudryk', action: 'Liquidity confirmed · proceeding to validation' },
+            { time: '11:20 AM', actor: 'Sarah Mitchell', action: 'Liquidity confirmed · proceeding to validation' },
             { time: '10:30 AM', actor: 'Marcus Klein', action: 'CIO approved' },
-            { time: '9:15 AM', actor: 'Anastasiya Mudryk', action: 'Investment lead approved' },
-            { time: '9:05 AM', actor: 'Anastasiya Mudryk', action: 'Allocation review complete' },
+            { time: '9:15 AM', actor: 'Sarah Mitchell', action: 'Investment lead approved' },
+            { time: '9:05 AM', actor: 'Sarah Mitchell', action: 'Allocation review complete' },
             { time: '8:55 AM', actor: 'Fojo Assistant', action: 'Matched to INV-2024-014 · 97% confidence', isAI: true },
-            { time: '8:50 AM', actor: 'Anastasiya Mudryk', action: 'Created from Meridian_CapCall_08.pdf' },
+            { time: '8:50 AM', actor: 'Sarah Mitchell', action: 'Created from Meridian_CapCall_08.pdf' },
         ],
     },
 
@@ -392,7 +410,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             note: 'Strong liquidity position. Both trusts have confirmed cash availability.',
         },
         approvals: [
-            { id: 'ap-12', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '2:10 PM' },
+            { id: 'ap-12', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'approved', timestamp: '2:10 PM' },
             { id: 'ap-13', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'approved', timestamp: '3:45 PM' },
             { id: 'ap-14', role: 'CFO / Treasury', name: 'Diana Park', initials: 'DP', color: '#7C3AED', status: 'approved', timestamp: '4:20 PM' },
         ],
@@ -411,15 +429,18 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'CHASUS33',
             reference: 'CAPCAL-6 / Family Irrevocable Trust',
         },
+        wireMatchedCallNumber: 3,
+        wireMatchedCallDate: 'May 10, 2026',
+        purposeBreakdown: { investments: 811_125, managementFees: 55_650, expenses: 8_225 },
         activityLog: [
             { time: '4:20 PM', actor: 'Diana Park', action: 'CFO / Treasury approved · ready for execution' },
             { time: '3:45 PM', actor: 'Marcus Klein', action: 'CIO approved' },
             { time: '3:12 PM', actor: 'Finance Ops', action: 'Document validated · wire instructions confirmed' },
-            { time: '2:10 PM', actor: 'Anastasiya Mudryk', action: 'Investment lead approved' },
-            { time: '1:55 PM', actor: 'Anastasiya Mudryk', action: 'Liquidity confirmed · $5.1M available' },
-            { time: '1:30 PM', actor: 'Anastasiya Mudryk', action: 'Allocation reviewed and confirmed' },
+            { time: '2:10 PM', actor: 'Sarah Mitchell', action: 'Investment lead approved' },
+            { time: '1:55 PM', actor: 'Sarah Mitchell', action: 'Liquidity confirmed · $5.1M available' },
+            { time: '1:30 PM', actor: 'Sarah Mitchell', action: 'Allocation reviewed and confirmed' },
             { time: '9:05 AM', actor: 'Fojo Assistant', action: 'Matched to INV-2023-007 · 96% confidence', isAI: true },
-            { time: '9:00 AM', actor: 'Anastasiya Mudryk', action: 'Created from Whitmore_CapCall_04.pdf' },
+            { time: '9:00 AM', actor: 'Sarah Mitchell', action: 'Created from Whitmore_CapCall_04.pdf' },
         ],
     },
     // ── CAPCAL-7 · manually logged · awaiting-execution ─────────────────────
@@ -445,7 +466,7 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             { entity: 'Thornton Holdings Inc.', entityType: 'LLC', allocationPct: 100, allocationAmount: 1_000_000, accountLast4: '8841' },
         ],
         approvals: [
-            { id: 'ap-15', role: 'Investment lead', name: 'Anastasiya Mudryk', initials: 'AM', color: '#0D9488', status: 'pending' },
+            { id: 'ap-15', role: 'Investment lead', name: 'Sarah Mitchell', initials: 'AM', color: '#0D9488', status: 'pending' },
             { id: 'ap-16', role: 'CIO', name: 'Marcus Klein', initials: 'MK', color: '#0F766E', status: 'pending' },
         ],
         matchedInvestmentId: 'INV-2023-011',
@@ -463,8 +484,9 @@ export const CAPITAL_CALL_DECISIONS: CapitalCallDecision[] = [
             swift: 'CHASUS33',
             reference: 'CAPCAL-7 / Thornton Holdings Inc.',
         },
+        purposeBreakdown: { investments: 927_500, managementFees: 63_750, expenses: 8_750 },
         activityLog: [
-            { time: '10:30 AM', actor: 'Anastasiya Mudryk', action: 'Logged manually · awaiting capital call notice' },
+            { time: '10:30 AM', actor: 'Sarah Mitchell', action: 'Logged manually · awaiting capital call notice' },
         ],
     },
 ]

@@ -15,7 +15,7 @@ export function ConfirmDialog({ isOpen, title, message, confirmLabel = 'Delete',
     return (
         <>
             <div className="fixed inset-0 bg-black/30 backdrop-blur-[4px] z-[3000]" onClick={onCancel} />
-            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-[var(--color-white)] rounded-[10px] shadow-[0_24px_64px_rgba(0,0,0,0.15)] z-[3001] p-[var(--spacing-6)] text-center">
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-[var(--color-white)] rounded-[var(--radius-2xl)] shadow-[0_24px_64px_rgba(0,0,0,0.15)] z-[3001] p-[var(--spacing-6)] text-center">
                 <div className="w-12 h-12 rounded-full bg-[var(--color-red-1)] flex items-center justify-center mx-auto mb-[var(--spacing-4)]">
                     <IconAlertTriangle size={24} stroke={1.5} color="#dc2626" />
                 </div>

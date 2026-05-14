@@ -242,7 +242,7 @@ function CreateCategoryMenu({
     return createPortal(
         <>
             <div className="fixed inset-0 bg-black/30 backdrop-blur-[4px] z-[3000]" onClick={onClose} />
-            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-[var(--color-white)] rounded-[10px] shadow-[0_24px_64px_rgba(0,0,0,0.15)] z-[3001] p-[var(--spacing-6)]">
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-[var(--color-white)] rounded-[var(--radius-2xl)] shadow-[0_24px_64px_rgba(0,0,0,0.15)] z-[3001] p-[var(--spacing-6)]">
                 <h3 className="text-lg font-[var(--font-weight-bold)] text-[var(--color-gray-12)] mb-[var(--spacing-2)]">New category</h3>
                 <p className="text-sm text-[var(--color-neutral-11)] leading-[1.5] mb-[var(--spacing-6)]">Add a custom category to organize your assets.</p>
 

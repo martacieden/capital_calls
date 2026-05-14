@@ -240,7 +240,7 @@ function TaskDetailContent({
     const rightTypeFields = typeFields.filter((_, i) => i % 2 === 1)
 
     return (
-        <div className="flex flex-col flex-1 w-full max-w-[920px] px-[var(--spacing-6)] pt-[24px] pb-[var(--spacing-5)] mx-auto animate-[chat-area-in_0.25s_ease-out_both]">
+        <div className="flex flex-col flex-1 w-full max-w-[1120px] px-[var(--spacing-6)] pt-[24px] pb-[var(--spacing-5)] mx-auto animate-[chat-area-in_0.25s_ease-out_both]">
 
             {/* ── Header ── */}
             <div className="flex items-center justify-between gap-4 pt-3 pb-5 overflow-hidden">
@@ -323,7 +323,7 @@ function TaskDetailContent({
                         <h3 className="text-base font-medium text-[var(--color-gray-12)] tracking-[-0.016px] leading-6 m-0">
                             Details
                         </h3>
-                        <div className="flex gap-4 rounded-xl">
+                        <div className="flex gap-4 rounded-[var(--radius-xl)]">
                             <div className="flex-1 flex flex-col gap-1 min-w-0 overflow-hidden">
                                 <DetailKvRow label="Category">
                                     <span className={cn('inline-flex shrink-0 items-center gap-1 h-5 px-2 rounded-[var(--radius-sm)] text-xs font-[var(--font-weight-medium)]', TYPE_STYLES[task.type])}>
@@ -405,7 +405,7 @@ function TaskDetailContent({
                                         Open full record
                                     </button>
                                 </div>
-                                <div className="flex gap-4 rounded-xl">
+                                <div className="flex gap-4 rounded-[var(--radius-xl)]">
                                     <CatalogFieldGrid fields={catalogSnapshotFields} />
                                 </div>
                             </div>
@@ -539,7 +539,7 @@ function TaskDetailContent({
                             Upload
                         </button>
                     </div>
-                    <div className="flex flex-col items-center justify-center gap-[var(--spacing-2)] min-h-[140px] px-6 py-8 rounded-xl bg-[var(--color-gray-2)] text-sm text-[var(--color-neutral-9)] leading-5 text-center">
+                    <div className="flex flex-col items-center justify-center gap-[var(--spacing-2)] min-h-[140px] px-6 py-8 rounded-[var(--radius-xl)] bg-[var(--color-gray-2)] text-sm text-[var(--color-neutral-9)] leading-5 text-center">
                         <IconFileText size={24} stroke={1.5} className="text-[var(--color-neutral-9)]" />
                         No documents attached yet. Upload files to link them to this task.
                     </div>

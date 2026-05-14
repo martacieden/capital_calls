@@ -205,7 +205,7 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         projectedIrr: '+13–17%',
         projectedMoic: '1.9–2.3x',
         sponsor: 'Meridian Capital Partners',
-        assignee: 'Anastasiya M.',
+        assignee: 'Sarah M.',
         sourceDate: '2025-10-08',
         lastActivity: '2026-05-08',
         priority: 'high',

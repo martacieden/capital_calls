@@ -1,6 +1,7 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import {
     IconArrowRight,
-    IconBolt,
     IconBriefcase2,
     IconBuildingBank,
     IconChartBar,
@@ -9,6 +10,7 @@ import {
     IconActivityHeartbeat,
     IconSparkles,
 } from '@tabler/icons-react'
+import { MagicCard } from '@/components/ui/magic-card'
 
 /** Targets wired from the home dashboard into AppShell `activePage`. */
 export type HomeNavigateTarget =
@@ -20,6 +22,7 @@ export type HomeNavigateTarget =
 interface HomePageProps {
     onNavigate: (page: HomeNavigateTarget) => void
     onAskFojo?: (prompt: string) => void
+    isFojoOpen?: boolean
 }
 
 type QuickAction = {
@@ -33,7 +36,18 @@ type QuickAction = {
     onClick: () => void
 }
 
-export function HomePage({ onNavigate, onAskFojo }: HomePageProps) {
+export function HomePage({ onNavigate, onAskFojo, isFojoOpen = false }: HomePageProps) {
+    const [fojoQuestion, setFojoQuestion] = useState('')
+
+    function handleFojoSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+        const prompt = fojoQuestion.trim()
+        if (!prompt) return
+
+        onAskFojo?.(prompt)
+        setFojoQuestion('')
+    }
+
     const quickActions: QuickAction[] = [
         {
             id: 'deal-pipeline',
@@ -146,12 +160,30 @@ export function HomePage({ onNavigate, onAskFojo }: HomePageProps) {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-4 py-3">
-                <IconBolt size={15} stroke={2} className="text-[var(--color-accent-9)]" />
-                <p className="m-0 text-[13px] text-[var(--color-neutral-10)]">
-                    Fojo is open by default. Use the left panel to ask anything without leaving this page.
-                </p>
-            </div>
+            {!isFojoOpen ? (
+                <MagicCard gradientColor="rgba(0, 91, 226, 0.22)">
+                    <form
+                        onSubmit={handleFojoSubmit}
+                        className="flex items-center gap-2 p-1.5"
+                    >
+                        <input
+                            type="text"
+                            value={fojoQuestion}
+                            onChange={(event) => setFojoQuestion(event.target.value)}
+                            placeholder="Ask Fojo about pipeline, capital calls, or fund exposure..."
+                            className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-[13px] text-[var(--color-black)] outline-none placeholder:text-[var(--color-neutral-8)]"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!fojoQuestion.trim()}
+                            className="flex shrink-0 items-center gap-1.5 rounded-[var(--radius-lg)] bg-[var(--color-accent-9)] px-3.5 py-2 text-[12px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            Send
+                            <IconArrowRight size={14} stroke={2.5} />
+                        </button>
+                    </form>
+                </MagicCard>
+            ) : null}
         </div>
     )
 }

@@ -5,7 +5,7 @@ import { InvestmentPipelinePage } from '@/components/pages/InvestmentPipelinePag
 /** Shared chrome for Pipeline hub routes */
 export function PipelineHubFrame({ children }: { children: ReactNode }) {
     return (
-        <div className="flex flex-col flex-1 min-h-0 w-full max-w-[min(1680px,100%)] mx-auto">
+        <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1120px] mx-auto">
             <div
                 className={cn(
                     'flex flex-col flex-1 min-h-0 overflow-hidden rounded-[var(--radius-xl)]',

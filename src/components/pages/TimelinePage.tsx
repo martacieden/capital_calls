@@ -379,7 +379,7 @@ export function TimelinePage({
                                         return (
                                             <>{showNow && (
                                                 <div key="now" className="flex flex-col items-center shrink-0 z-[4] min-w-[24px] relative">
-                                                    <div className="absolute top-[calc(50%-48px)] bottom-[calc(50%-48px)] w-[2px] bg-[var(--color-accent-9)] rounded-[4px] opacity-65" />
+                                                    <div className="absolute top-[calc(50%-48px)] bottom-[calc(50%-48px)] w-[2px] bg-[var(--color-accent-9)] rounded-[var(--radius-sm)] opacity-65" />
                                                     <div className="absolute top-1/2 -translate-y-1/2 font-display text-xs font-[800] uppercase tracking-[0.06em] text-[var(--color-white)] bg-[var(--color-accent-9)] px-2.5 py-[3px] rounded-[var(--radius-full)] whitespace-nowrap z-[5]">Now · {currentYear}</div>
                                                 </div>
                                             )}
@@ -400,7 +400,7 @@ export function TimelinePage({
 
                                     {(activationEvents.length > 0 || conditionalEvents.length > 0) && (
                                         <div className="flex flex-col items-center shrink-0 z-[4] min-w-[24px] relative">
-                                            <div className="absolute top-[calc(50%-48px)] bottom-[calc(50%-48px)] w-[2px] bg-[var(--color-accent-9)] rounded-[4px] opacity-65" />
+                                            <div className="absolute top-[calc(50%-48px)] bottom-[calc(50%-48px)] w-[2px] bg-[var(--color-accent-9)] rounded-[var(--radius-sm)] opacity-65" />
                                             <div className="absolute top-1/2 -translate-y-1/2 font-display text-xs font-[800] uppercase tracking-[0.06em] text-[var(--color-white)] bg-[var(--color-accent-9)] px-2.5 py-[3px] rounded-[var(--radius-full)] whitespace-nowrap z-[5]">Life Events</div>
                                         </div>
                                     )}
@@ -432,7 +432,7 @@ export function TimelinePage({
                                         return (
                                             <>{showNow && (
                                                 <div key="now" className="flex flex-col items-center shrink-0 z-[4] min-w-[24px] relative">
-                                                    <div className="absolute top-[calc(50%-48px)] bottom-[calc(50%-48px)] w-[2px] bg-[var(--color-accent-9)] rounded-[4px] opacity-65" />
+                                                    <div className="absolute top-[calc(50%-48px)] bottom-[calc(50%-48px)] w-[2px] bg-[var(--color-accent-9)] rounded-[var(--radius-sm)] opacity-65" />
                                                     <div className="absolute top-1/2 -translate-y-1/2 font-display text-xs font-[800] uppercase tracking-[0.06em] text-[var(--color-white)] bg-[var(--color-accent-9)] px-2.5 py-[3px] rounded-[var(--radius-full)] whitespace-nowrap z-[5]">Now · {currentYear}</div>
                                                 </div>
                                             )}

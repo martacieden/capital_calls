@@ -46,7 +46,7 @@ export function SourceDocuments({ documents }: SourceDocumentsProps) {
                                     : <IconChevronRight size={14} stroke={2} />}
                             </span>
                             <span className="font-semibold text-[var(--color-black)] flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">{entity.entityName}</span>
-                            <span className="text-xs text-[var(--color-neutral-11)] bg-[var(--color-neutral-3)] px-1.5 py-px rounded-[4px] shrink-0">{entity.entityType}</span>
+                            <span className="text-xs text-[var(--color-neutral-11)] bg-[var(--color-neutral-3)] px-1.5 py-px rounded-[var(--radius-sm)] shrink-0">{entity.entityType}</span>
                             <span className="text-xs text-[var(--color-neutral-11)] shrink-0">{entity.documents.length} docs</span>
                             <span className={cn(
                                 'text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
@@ -60,9 +60,9 @@ export function SourceDocuments({ documents }: SourceDocumentsProps) {
                         {isOpen && (
                             <div className="pb-2 pl-[30px] flex flex-col gap-0">
                                 {entity.documents.map(doc => (
-                                    <div key={doc.name} className="flex items-center justify-between px-2 py-1.5 text-xs rounded-[4px] hover:bg-[var(--color-neutral-2)]">
+                                    <div key={doc.name} className="flex items-center justify-between px-2 py-1.5 text-xs rounded-[var(--radius-sm)] hover:bg-[var(--color-neutral-2)]">
                                         <span className="text-[var(--color-neutral-11)]">{doc.name}</span>
-                                        <span className={cn('text-xs font-medium px-1.5 py-px rounded-[4px]', docStatusClass(doc.status))}>
+                                        <span className={cn('text-xs font-medium px-1.5 py-px rounded-[var(--radius-sm)]', docStatusClass(doc.status))}>
                                             {doc.status}
                                         </span>
                                     </div>

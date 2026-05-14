@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { IconAlertTriangle, IconBolt, IconPlus, IconX } from '@tabler/icons-react'
+import { IconAlertTriangle, IconBolt, IconDots, IconPlus, IconX } from '@tabler/icons-react'
 import type { PipelineDeal, PipelineStage } from '@/data/thornton/pipeline-data'
 import { PIPELINE_DEALS } from '@/data/thornton/pipeline-data'
 import { CAPITAL_CALL_DECISIONS, type CapitalCallDecision } from '@/data/thornton/capital-call-decisions-data'
 import { capitalWorkflowToHubStage } from '@/data/thornton/hub-pipeline-stages'
-import { ToolbarButton } from '@/components/atoms/ToolbarButton'
 import { ToolbarDropdown } from '@/components/atoms/ToolbarDropdown'
 import { ToolbarSearchInput } from '@/components/atoms/ToolbarSearchInput'
 
@@ -20,10 +19,10 @@ type BoardColumn = {
 }
 
 const BOARD_COLUMNS: BoardColumn[] = [
-    { id: 'sourcing',  label: 'Sourcing',   dot: '#9CA3AF' },
-    { id: 'screening', label: 'Screening',  dot: '#F59E0B' },
-    { id: 'diligence', label: 'Diligence',  dot: '#1F2937' },
-    { id: 'decision',  label: 'Decision',   dot: '#4F46E5' },
+    { id: 'sourcing',  label: 'Sourcing',  dot: '#9CA3AF' },
+    { id: 'screening', label: 'Screening', dot: '#F59E0B' },
+    { id: 'diligence', label: 'Diligence', dot: '#1F2937' },
+    { id: 'decision',  label: 'Decision',  dot: '#4F46E5' },
 ]
 
 const STALLED_DAYS = 14
@@ -95,7 +94,7 @@ function DealCard({ deal, onOpenDeal }: { deal: PipelineDeal; onOpenDeal?: (id: 
         <button
             type="button"
             onClick={() => onOpenDeal?.(deal.id)}
-            className="w-full rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-3.5 py-3 text-left transition-colors hover:border-[var(--color-accent-6)] hover:shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
+            className="w-full rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-3.5 py-3 text-left outline-none transition-[border-color,box-shadow,background] hover:border-[#BFDBFE] hover:bg-[var(--color-blue-1)] hover:shadow-[0_1px_4px_rgba(0,91,226,0.08)] focus-visible:border-[#93C5FD] focus-visible:shadow-[0_0_0_3px_rgba(0,91,226,0.12)]"
         >
             <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="m-0 text-[13px] font-semibold leading-[1.35] text-[var(--color-black)]">{deal.dealName}</p>
@@ -114,7 +113,7 @@ function DealCard({ deal, onOpenDeal }: { deal: PipelineDeal; onOpenDeal?: (id: 
                 <div className="flex items-center gap-1.5">
                     {isStalled && (
                         <span className="rounded-[var(--radius-sm)] bg-[#FFF7ED] px-1.5 py-0.5 text-[10px] font-semibold text-[#C05500]">
-                            Stalled
+                            Stalled {daysAgo(deal.lastActivity)}d
                         </span>
                     )}
                     <span className="rounded-[var(--radius-sm)] bg-[var(--color-neutral-3)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-neutral-10)]">
@@ -139,7 +138,7 @@ function CapitalNoticeCard({
         <button
             type="button"
             onClick={() => onOpenCapitalCall?.(decision.id)}
-            className="w-full rounded-[var(--radius-xl)] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-3 text-left transition-colors hover:bg-[#DBEAFE] hover:border-[#93C5FD]"
+            className="w-full rounded-[var(--radius-xl)] border border-[#BFDBFE] bg-[#EFF6FF] px-3.5 py-3 text-left outline-none transition-[border-color,box-shadow,background] hover:border-[#93C5FD] hover:bg-[#DBEAFE] focus-visible:border-[#60A5FA] focus-visible:shadow-[0_0_0_3px_rgba(0,91,226,0.12)]"
         >
             <div className="flex items-center gap-1.5 mb-1.5">
                 <IconBolt size={12} stroke={2.5} className="text-[var(--color-accent-9)] shrink-0" />
@@ -175,7 +174,6 @@ export function InvestmentPipelinePage({
     const [query, setQuery] = useState('')
     const [ownerFilter, setOwnerFilter] = useState('any')
     const [typeFilter, setTypeFilter] = useState('any')
-    const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
 
     const owners = useMemo(() => ['any', ...new Set(PIPELINE_DEALS.map(d => d.assignee))], [])
     const sectors = useMemo(() => ['any', ...new Set(PIPELINE_DEALS.map(d => d.sector))], [])
@@ -190,9 +188,8 @@ export function InvestmentPipelinePage({
         )
         if (ownerFilter !== 'any') items = items.filter(d => d.assignee === ownerFilter)
         if (typeFilter !== 'any') items = items.filter(d => d.sector === typeFilter)
-        if (needsAttentionOnly) items = items.filter(d => d.priority === 'high' || d.missingDocs.length > 0)
         return items
-    }, [needsAttentionOnly, ownerFilter, query, typeFilter])
+    }, [ownerFilter, query, typeFilter])
 
     const filteredCapitalCalls = useMemo(() => CAPITAL_CALL_DECISIONS.filter(d => {
         if (toCapitalBoardStage(d) !== 'decision') return false
@@ -221,7 +218,7 @@ export function InvestmentPipelinePage({
     const activeCapital = CAPITAL_CALL_DECISIONS.reduce((s, d) => s + d.amount, 0)
     const stalled = filteredDeals.filter(d => daysAgo(d.lastActivity) > STALLED_DAYS).length
 
-    // active chips shown below toolbar
+    // Active chips only appear after the user applies a filter.
     const hasActiveFilters = ownerFilter !== 'any' || typeFilter !== 'any'
 
     return (
@@ -231,7 +228,7 @@ export function InvestmentPipelinePage({
         )}>
 
             {/* ── Header ──────────────────────────────────────────────────── */}
-            <div className="px-[var(--spacing-6)] pt-[36px] pb-0 bg-white shrink-0 border-b border-[var(--color-neutral-4)]">
+            <div className="px-[var(--spacing-6)] pt-[36px] pb-0 bg-white shrink-0">
                 <div className="flex items-start justify-between gap-4 mb-5">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] m-0 mb-1">
@@ -264,15 +261,6 @@ export function InvestmentPipelinePage({
                     </div>
                 </div>
 
-                {/* KPI tiles */}
-                <div className="grid grid-cols-5 gap-3 mb-5">
-                    <KpiTile label="Total in flight"  value={String(totalInFlight)} note="evaluating" />
-                    <KpiTile label="Avg days / stage" value={avgDays > 0 ? `${avgDays}d` : '—'} note="median" />
-                    <KpiTile label="Decisions YTD"    value={String(decisionsYtd)} note="approved" />
-                    <KpiTile label="Active capital"   value={fmt(activeCapital)} note="deployed" valueTone="accent" />
-                    <KpiTile label="Stalled"          value={String(stalled)} note={`>${STALLED_DAYS} days`} valueTone={stalled > 0 ? 'warning' : 'default'} />
-                </div>
-
                 {/* Toolbar — matches CatalogToolbar pattern exactly */}
                 <div className="mb-4">
                     <div className="flex items-center justify-between flex-wrap gap-[var(--spacing-2)] rounded-[var(--radius-lg)] border border-[var(--color-gray-4)] bg-[var(--color-white)] p-[var(--spacing-2)] shadow-[var(--shadow-toolbar)]">
@@ -299,56 +287,96 @@ export function InvestmentPipelinePage({
                                 placeholder="Search by deal, sector, assignee…"
                             />
                         </div>
-                        <ToolbarButton
-                            label="Needs attention"
-                            icon={<IconAlertTriangle size={16} stroke={2} color={needsAttentionOnly ? 'white' : 'var(--color-neutral-11)'} />}
-                            isActive={needsAttentionOnly}
-                            variant={needsAttentionOnly ? 'accent' : 'default'}
-                            onClick={() => setNeedsAttentionOnly(v => !v)}
-                        />
                     </div>
 
-                    {/* Active filter chips + stalled indicator */}
-                    <div className="mt-[var(--spacing-3)] flex flex-wrap items-start gap-1.5">
-                        {ownerFilter !== 'any' && (
-                            <button
-                                type="button"
-                                onClick={() => setOwnerFilter('any')}
-                                className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent-9)] min-h-[28px] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[13px] font-[var(--font-weight-medium)] text-white transition-[background] duration-150 hover:bg-[var(--color-accent-10)]"
-                            >
-                                Owner: {ownerFilter}
-                                <IconX size={13} className="ml-0.5 opacity-70" />
-                            </button>
-                        )}
-                        {typeFilter !== 'any' && (
-                            <button
-                                type="button"
-                                onClick={() => setTypeFilter('any')}
-                                className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent-9)] min-h-[28px] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[13px] font-[var(--font-weight-medium)] text-white transition-[background] duration-150 hover:bg-[var(--color-accent-10)]"
-                            >
-                                Sector: {typeFilter}
-                                <IconX size={13} className="ml-0.5 opacity-70" />
-                            </button>
-                        )}
-                        {!hasActiveFilters && (
-                            owners.filter(o => o !== 'any').map(o => (
+                    {hasActiveFilters ? (
+                        <div className="mt-[var(--spacing-3)] flex flex-wrap items-start gap-1.5">
+                            {ownerFilter !== 'any' && (
                                 <button
-                                    key={o}
                                     type="button"
-                                    onClick={() => setOwnerFilter(o)}
-                                    className="flex items-center rounded-[var(--radius-sm)] bg-[var(--color-neutral-3)] min-h-[28px] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[13px] font-[var(--font-weight-medium)] text-[var(--color-gray-12)] transition-[background] duration-150 hover:bg-[var(--color-blue-3)]"
+                                    onClick={() => setOwnerFilter('any')}
+                                    className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent-9)] min-h-[28px] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[13px] font-[var(--font-weight-medium)] text-white transition-[background] duration-150 hover:bg-[var(--color-accent-10)]"
                                 >
-                                    {o}
+                                    Owner: {ownerFilter}
+                                    <IconX size={13} className="ml-0.5 opacity-70" />
                                 </button>
-                            ))
-                        )}
-                    </div>
+                            )}
+                            {typeFilter !== 'any' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setTypeFilter('any')}
+                                    className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent-9)] min-h-[28px] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[13px] font-[var(--font-weight-medium)] text-white transition-[background] duration-150 hover:bg-[var(--color-accent-10)]"
+                                >
+                                    Sector: {typeFilter}
+                                    <IconX size={13} className="ml-0.5 opacity-70" />
+                                </button>
+                            )}
+                        </div>
+                    ) : null}
+                </div>
+
+                {/* KPI tiles */}
+                <div className="grid grid-cols-5 gap-3 mb-5">
+                    <KpiTile label="Total in flight"  value={String(totalInFlight)} note="evaluating" />
+                    <KpiTile label="Avg days / stage" value={avgDays > 0 ? `${avgDays}d` : '—'} note="median" />
+                    <KpiTile label="Decisions YTD"    value={String(decisionsYtd)} note="approved" />
+                    <KpiTile label="Active capital"   value={fmt(activeCapital)} note="deployed" valueTone="accent" />
+                    <KpiTile label="Stalled"          value={String(stalled)} note={`>${STALLED_DAYS} days`} valueTone={stalled > 0 ? 'warning' : 'default'} />
                 </div>
             </div>
 
+            {/* ── AI Pipeline Brief ───────────────────────────────────────── */}
+            {(() => {
+                const urgent = CAPITAL_CALL_DECISIONS
+                    .filter(d => d.approvals.some(a => a.status === 'pending'))
+                    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+                if (urgent.length === 0) return null
+                const top = urgent[0]
+                const dueLabel = new Date(top.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                const shortFund = top.fund.replace(', L.P.', '')
+                return (
+                    <div className="shrink-0 mx-6 mb-4 mt-1 flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[#BFDBFE] bg-[var(--color-blue-1)] px-4 py-2.5 shadow-[0_1px_3px_rgba(0,91,226,0.06)]">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-white text-[var(--color-accent-9)] shadow-[0_1px_2px_rgba(0,91,226,0.08)]">
+                                <IconBolt size={13} stroke={2.5} />
+                            </span>
+                            <span className="text-[12px] font-semibold text-[var(--color-gray-12)] shrink-0">Pipeline brief</span>
+                            <span className="text-[12px] text-[var(--color-neutral-10)]">
+                                {urgent.length} capital call{urgent.length > 1 ? 's' : ''} need{urgent.length === 1 ? 's' : ''} approval
+                                · {shortFund} {fmt(top.amount)} due {dueLabel}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => onOpenCapitalCall?.(top.id)}
+                            className="shrink-0 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-[var(--color-white)] px-3 py-1 text-[11px] font-semibold text-[var(--color-accent-9)] transition-colors hover:bg-[var(--color-accent-3)]"
+                        >
+                            Review
+                        </button>
+                    </div>
+                )
+            })()}
+
             {/* ── Board ───────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-white">
-                <div className="flex min-h-full gap-3 px-[var(--spacing-6)] py-5 w-max min-w-full">
+            <div className="flex-1 min-h-0 bg-white px-[var(--spacing-6)] pb-5">
+                <div className="flex h-full min-h-0 flex-col gap-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="m-0 text-base font-medium leading-6 tracking-[-0.016px] text-[var(--color-gray-12)]">
+                                Pipeline board
+                            </h3>
+                            <button
+                                type="button"
+                                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] border-none bg-transparent text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-3)]"
+                                aria-label="Board actions"
+                            >
+                                <IconDots size={16} stroke={1.75} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden rounded-[var(--radius-xl)] bg-[var(--color-neutral-2)]">
+                        <div className="flex min-h-full w-max min-w-full gap-3 p-3">
                     {BOARD_COLUMNS.map(col => {
                         const deals = dealsByColumn.get(col.id) ?? []
                         const capitalCalls = col.id === 'decision' ? filteredCapitalCalls : []
@@ -387,6 +415,8 @@ export function InvestmentPipelinePage({
                             </section>
                         )
                     })}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

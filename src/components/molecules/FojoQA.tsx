@@ -75,7 +75,7 @@ export function FojoQA({
                             key={opt.value}
                             type="button"
                             className={cn(
-                                'flex items-center gap-3 py-2 px-2.5 border-none rounded-lg bg-transparent cursor-pointer transition-[background] duration-150 text-left w-full hover:bg-[var(--color-gray-2)]',
+                                'flex items-center gap-3 py-2 px-2.5 border-none rounded-[var(--radius-lg)] bg-transparent cursor-pointer transition-[background] duration-150 text-left w-full hover:bg-[var(--color-gray-2)]',
                                 isSelected && multiSelect && 'bg-[var(--color-accent-3)] hover:bg-[var(--color-accent-3)]',
                             )}
                             onClick={() => toggleOption(opt.value)}
@@ -95,7 +95,7 @@ export function FojoQA({
                 {showOther && onOther && (
                     <button
                         type="button"
-                        className="flex items-center gap-3 py-2 px-2.5 border-none rounded-lg bg-transparent cursor-pointer transition-[background] duration-150 text-left w-full hover:bg-[var(--color-gray-2)]"
+                        className="flex items-center gap-3 py-2 px-2.5 border-none rounded-[var(--radius-lg)] bg-transparent cursor-pointer transition-[background] duration-150 text-left w-full hover:bg-[var(--color-gray-2)]"
                         onClick={onOther}
                     >
                         <div className="flex-1 flex flex-col gap-0.5 min-w-0">
@@ -113,7 +113,7 @@ export function FojoQA({
             {multiSelect && selected.size > 0 && (
                 <button
                     type="button"
-                    className="self-end h-8 px-4 border-none rounded-lg bg-[var(--color-accent-9)] text-[var(--color-white)] text-[13px] font-[var(--font-weight-medium)] cursor-pointer transition-opacity duration-150 mt-1 hover:opacity-90"
+                    className="self-end h-8 px-4 border-none rounded-[var(--radius-lg)] bg-[var(--color-accent-9)] text-[var(--color-white)] text-[13px] font-[var(--font-weight-medium)] cursor-pointer transition-opacity duration-150 mt-1 hover:opacity-90"
                     onClick={handleSubmitMulti}
                 >
                     Confirm ({selected.size} selected)
