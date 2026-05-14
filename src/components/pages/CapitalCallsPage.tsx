@@ -4,7 +4,7 @@ import { ResponsiveLine } from '@nivo/line'
 import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
-import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconX, IconArrowRight, IconFileText } from '@tabler/icons-react'
+import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconX, IconArrowRight, IconFileText, IconCloudUpload } from '@tabler/icons-react'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
 import { UploadModal } from '@/components/pages/DecisionsPage'
 import { cn } from '@/lib/utils'
@@ -434,14 +434,20 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     ) : null}
                     <ContentHeader
                         title="Capital Calls"
-                        secondaryAction={{
-                            label: 'Add info manually',
-                            onClick: () => setLogModalOpen(true),
-                            icon: IconPencil,
-                        }}
-                        onActionClick={() => setUploadModalOpen(true)}
                         actionLabel="New capital call"
                         actionIcon={IconPlus}
+                        actionDropdownItems={[
+                            {
+                                label: 'Upload capital call notice',
+                                icon: IconCloudUpload,
+                                onClick: () => setUploadModalOpen(true),
+                            },
+                            {
+                                label: 'Add info manually',
+                                icon: IconPencil,
+                                onClick: () => setLogModalOpen(true),
+                            },
+                        ]}
                     />
                 </div>
 

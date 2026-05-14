@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { IconPlus, IconChevronRight, IconPaperclip, IconFileText, IconX } from '@tabler/icons-react'
+import { IconPlus, IconChevronRight, IconPaperclip, IconFileText, IconX, IconChevronDown } from '@tabler/icons-react'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
 import { useClickOutside } from '@/lib/hooks/useClickOutside'
 import { usePlaceholderRotation } from '@/lib/hooks/usePlaceholderRotation'
@@ -12,6 +12,12 @@ const DEMO_FILES = [
     { id: 'dd-3', name: 'trust-amendment-2024.pdf' },
 ]
 
+export interface ActionDropdownItem {
+    label: string
+    icon?: ComponentType<{ size?: number; stroke?: number; className?: string }>
+    onClick: () => void
+}
+
 interface ContentHeaderProps {
     title: string
     itemCount?: number
@@ -20,17 +26,23 @@ interface ContentHeaderProps {
     onActionClick?: () => void
     actionLabel?: string
     actionIcon?: ComponentType<{ size?: number; stroke?: number }>
+    /** When provided, the primary action button opens a dropdown list instead of direct click. */
+    actionDropdownItems?: ActionDropdownItem[]
     breadcrumb?: { label: string; onClick: () => void }
     secondaryAction?: { label: string; onClick: () => void; buttonRef?: RefObject<HTMLButtonElement | null>; icon?: ComponentType<{ size?: number; stroke?: number }> }
 }
 
-export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick, actionLabel, actionIcon: ActionIcon, breadcrumb, secondaryAction }: ContentHeaderProps) {
+export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick, actionLabel, actionIcon: ActionIcon, actionDropdownItems, breadcrumb, secondaryAction }: ContentHeaderProps) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false)
     const [inputValue, setInputValue] = useState('')
     const [attachedFiles, setAttachedFiles] = useState<{ id: string; name: string }[]>([])
     const btnRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const actionMenuRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+
+    useClickOutside([actionMenuRef, btnRef], () => setIsActionMenuOpen(false), isActionMenuOpen)
 
     const placeholders = [
         'A 2024 Tesla Model X…',
@@ -116,11 +128,47 @@ export function ContentHeader({ title, itemCount, onNewItemClick, onActionClick,
                             </button>
                         )
                     })()}
-                    {(onNewItemClick || onActionClick) && (
-                        <button ref={btnRef} className="flex items-center justify-center gap-[var(--spacing-1)] rounded-[var(--radius-md)] border border-[var(--color-accent-9)] bg-[var(--color-accent-9)] px-4 py-0.5 pl-[12px] text-[14px] font-[var(--font-weight-semibold)] leading-[1.43] text-[var(--color-accent-contrast)] transition-[background,transform,color,border-color,opacity] duration-150 ease-linear min-h-[32px] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" onClick={onActionClick ?? (() => setIsDropdownOpen(v => !v))}>
-                            {ActionIcon ? <ActionIcon size={16} stroke={2} /> : <IconPlus size={16} stroke={2} />}
-                            <span>{actionLabel ?? 'Add asset'}</span>
-                        </button>
+                    {(onNewItemClick || onActionClick || actionDropdownItems) && (
+                        <div className="relative">
+                            <button
+                                ref={btnRef}
+                                className="flex items-center justify-center gap-[var(--spacing-1)] rounded-[var(--radius-md)] border border-[var(--color-accent-9)] bg-[var(--color-accent-9)] px-4 py-0.5 pl-[12px] text-[14px] font-[var(--font-weight-semibold)] leading-[1.43] text-[var(--color-accent-contrast)] transition-[background,transform,color,border-color,opacity] duration-150 ease-linear min-h-[32px] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                                onClick={
+                                    actionDropdownItems
+                                        ? () => setIsActionMenuOpen(v => !v)
+                                        : (onActionClick ?? (() => setIsDropdownOpen(v => !v)))
+                                }
+                            >
+                                {ActionIcon ? <ActionIcon size={16} stroke={2} /> : <IconPlus size={16} stroke={2} />}
+                                <span>{actionLabel ?? 'Add asset'}</span>
+                                {actionDropdownItems && (
+                                    <IconChevronDown size={14} stroke={2.5} className={`ml-0.5 transition-transform duration-150 ${isActionMenuOpen ? 'rotate-180' : ''}`} />
+                                )}
+                            </button>
+
+                            {/* Action items dropdown */}
+                            {actionDropdownItems && isActionMenuOpen && (
+                                <div
+                                    ref={actionMenuRef}
+                                    className="absolute right-0 top-[calc(100%+6px)] z-50 w-[220px] rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)] animate-[notif-dropdown-in_0.18s_cubic-bezier(0.16,1,0.3,1)] origin-top-right"
+                                >
+                                    {actionDropdownItems.map((item, i) => {
+                                        const ItemIcon = item.icon
+                                        return (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-[13px] font-medium text-[var(--color-neutral-12)] hover:bg-[var(--color-neutral-2)] transition-colors first:rounded-t-[var(--radius-lg)] last:rounded-b-[var(--radius-lg)]"
+                                                onClick={() => { item.onClick(); setIsActionMenuOpen(false) }}
+                                            >
+                                                {ItemIcon && <ItemIcon size={15} stroke={1.8} className="shrink-0 text-[var(--color-neutral-9)]" />}
+                                                {item.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             )}
