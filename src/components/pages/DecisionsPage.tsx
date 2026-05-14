@@ -107,6 +107,18 @@ const EXTRACTION_FIELDS = [
     { label: 'Wire instructions', value: 'ABA 021000128 / Account ···· 4419', confidence: 99 },
 ]
 
+function extractionConfidenceClass(confidence: number): string {
+    if (confidence < 96) {
+        return 'border border-[var(--color-red-9)]/20 bg-[var(--color-red-1)] text-[var(--color-red-9)]'
+    }
+
+    if (confidence < 98) {
+        return 'border border-[var(--color-orange-hover)] bg-[var(--color-orange-1)] text-[var(--color-orange-9)]'
+    }
+
+    return 'text-[var(--color-neutral-9)]'
+}
+
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 function fmt(v: number): string {
@@ -288,7 +300,7 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-neutral-4)]">
                     <div>
                         <h2 className="text-[16px] font-semibold text-[var(--color-black)] m-0">New capital call</h2>
-                        <p className="m-0 text-[12px] text-[var(--color-neutral-9)] mt-0.5">Upload a capital call notice PDF or select from Thornton Documents</p>
+                        <p className="m-0 text-[12px] text-[var(--color-neutral-9)] mt-0.5">Add a notice and let Fojo prefill the capital call record.</p>
                     </div>
                     <button type="button" onClick={onClose} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-neutral-3)] text-[var(--color-neutral-9)] transition-colors">
                         <IconX size={18} stroke={2} />
@@ -435,10 +447,10 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
 
                             {/* Fojo label */}
                             <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center shrink-0">
+                                <div className="w-5 h-5 rounded-full bg-[var(--color-accent-9)] flex items-center justify-center shrink-0">
                                     <IconSparkles size={11} className="text-white" />
                                 </div>
-                                <span className="text-[12px] font-semibold text-[#7C3AED]">
+                                <span className="text-[12px] font-semibold text-[var(--color-accent-9)]">
                                     {phase === 'done' ? 'Fojo extracted all fields' : 'Fojo is extracting…'}
                                 </span>
                                 {phase === 'extracting' && (
@@ -446,7 +458,7 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
                                         {[0, 1, 2].map(i => (
                                             <span
                                                 key={i}
-                                                className="w-1 h-1 rounded-full bg-[#7C3AED] opacity-70"
+                                                className="w-1 h-1 rounded-full bg-[var(--color-accent-9)] opacity-70"
                                                 style={{ animation: `bounce 1.2s ${i * 0.2}s infinite` }}
                                             />
                                         ))}
@@ -455,27 +467,31 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
                             </div>
 
                             {/* Extracted fields */}
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col border-y border-[var(--color-neutral-3)]">
                                 {EXTRACTION_FIELDS.map((field, idx) => {
                                     const visible = idx < visibleFields
                                     return (
                                         <div
                                             key={field.label}
-                                            className={`flex items-center justify-between rounded-[var(--radius-md)] px-3 py-2 transition-all duration-300 ${
+                                            className={`flex items-center justify-between border-b border-[var(--color-neutral-3)] px-1 py-2.5 transition-all duration-300 last:border-b-0 ${
                                                 visible
-                                                    ? 'opacity-100 translate-y-0 bg-[#FAFAFA] border border-[var(--color-neutral-3)]'
+                                                    ? 'opacity-100 translate-y-0'
                                                     : 'opacity-0 translate-y-1'
                                             }`}
                                             style={{ transitionProperty: 'opacity, transform' }}
                                         >
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <span className="text-[11px] text-[var(--color-neutral-9)] w-[110px] shrink-0">{field.label}</span>
-                                                <span className="text-[12px] font-medium text-[var(--color-black)] truncate"
-                                                    style={{ color: '#7C3AED' }}>
+                                                <span className="text-[12px] font-medium text-[var(--color-black)] truncate">
                                                     {field.value}
                                                 </span>
                                             </div>
-                                            <span className="text-[10px] font-semibold text-[var(--color-neutral-9)] shrink-0 ml-2">
+                                            <span
+                                                className={cn(
+                                                    'inline-flex min-w-[38px] justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums shrink-0 ml-2',
+                                                    extractionConfidenceClass(field.confidence),
+                                                )}
+                                            >
                                                 {field.confidence}%
                                             </span>
                                         </div>
@@ -486,8 +502,11 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
                             {/* Match found */}
                             {showMatch && (
                                 <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[#D1FAE5] bg-[#F0FDF4] px-4 py-3 transition-all duration-300">
-                                    <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[#1A1A2E] flex items-center justify-center text-white text-[13px] font-bold shrink-0">
-                                        G
+                                    <div
+                                        className="w-8 h-8 rounded-[var(--radius-md)] border border-[#BBF7D0] bg-[#ECFDF5] flex items-center justify-center shrink-0 text-[11px] font-semibold tracking-[-0.02em] text-[var(--color-green-9)]"
+                                        aria-label="Greentech Opp. Fund III investment preview"
+                                    >
+                                        GF
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="m-0 text-[12px] font-semibold text-[#065F46]">
@@ -506,14 +525,14 @@ export function UploadModal({ onClose, onCreated }: UploadModalProps) {
 
                             {/* Footer actions */}
                             {phase === 'done' && (
-                                <div className="flex gap-2 pt-1">
-                                    <button type="button" onClick={onClose} className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-4 py-2.5 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
+                                <div className="flex items-center justify-between gap-3 pt-1">
+                                    <button type="button" onClick={onClose} className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3.5 py-2 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
                                         Cancel
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => onCreated('CAPCAL-1')}
-                                        className="flex-1 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
+                                        className="rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-3.5 py-2 text-[12px] font-semibold text-white hover:opacity-90 transition-opacity"
                                     >
                                         Create record →
                                     </button>

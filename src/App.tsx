@@ -19,6 +19,7 @@ import { TimelinePage } from '@/components/pages/TimelinePage'
 import { HomePage } from '@/components/pages/HomePage'
 import { ValuationsPage } from '@/components/pages/ValuationsPage'
 import { PortfolioCategoryDetailPanel } from '@/components/organisms/PortfolioCategoryDetailPanel'
+import { CapitalActivitiesChartDetailPanel, type CapitalChartDrill } from '@/components/organisms/CapitalActivitiesChartDetailPanel'
 import { PortfolioCategoryDetailPage } from '@/components/pages/PortfolioCategoryDetailPage'
 import { CategoryHoldingsPage } from '@/components/pages/CategoryHoldingsPage'
 import { DocumentsPage } from '@/components/pages/DocumentsPage'
@@ -96,6 +97,7 @@ function AppShell() {
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const [portfolioPanelCategoryId, setPortfolioPanelCategoryId] = useState<string | null>(null)
+  const [capitalChartDrill, setCapitalChartDrill] = useState<CapitalChartDrill | null>(null)
   const [portfolioDetailCategoryId, setPortfolioDetailCategoryId] = useState<string | null>(null)
   const [previousPage, setPreviousPage] = useState<typeof activePage>('home')
   const [detailCapCallId, setDetailCapCallId] = useState<string | null>(null)
@@ -147,6 +149,7 @@ function AppShell() {
   useEffect(() => {
     if (activePage !== 'portfolio' && activePage !== 'portfolio-private') setPortfolioPanelCategoryId(null)
     if (activePage !== 'portfolio-category-detail') setPortfolioDetailCategoryId(null)
+    if (activePage !== 'capital-flows') setCapitalChartDrill(null)
   }, [activePage])
 
   useEffect(() => {
@@ -155,6 +158,12 @@ function AppShell() {
       setActivePage('home')
     }
   }, [activePage])
+
+  useEffect(() => {
+    if (activePage === 'capital-call-detail') {
+      setFojoForceOpen(true)
+    }
+  }, [activePage, setFojoForceOpen])
 
   const v3Empty = useDeferredUnmount(isProcessing, TIMING.v3EmptyUnmount)
 
@@ -804,6 +813,20 @@ function AppShell() {
         />
       )}
 
+      {activePage === 'capital-flows' && (
+        <CapitalActivitiesChartDetailPanel
+          drill={capitalChartDrill}
+          isOpen={capitalChartDrill != null}
+          onClose={() => setCapitalChartDrill(null)}
+          onOpenCapCall={(id) => {
+            setCapitalChartDrill(null)
+            setDetailCapCallId(id)
+            setPreviousPage('capital-flows')
+            setActivePage('capital-call-detail')
+          }}
+        />
+      )}
+
       {/* ── Contact Lawyer / CPA modal ── */}
       {contactModalState && (
         <ContactModal
@@ -994,6 +1017,7 @@ function AppShell() {
           />
         ) : activePage === 'capital-flows' ? (
           <CapitalCallsPage
+            onChartDrill={setCapitalChartDrill}
             onOpenDetail={(id) => {
               setDetailCapCallId(id)
               setPreviousPage('capital-flows')

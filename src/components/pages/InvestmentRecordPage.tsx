@@ -510,26 +510,26 @@ export function InvestmentRecordPage({
                 </p>
 
                 {/* 3-number summary */}
-                <div className="mt-4 grid grid-cols-3 gap-2 rounded-[var(--radius-xl)] bg-[var(--color-neutral-2)] border border-[var(--color-neutral-3)] p-2">
-                    <div className="rounded-[var(--radius-lg)] px-3 py-3">
-                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-neutral-9)] mb-1">Total commitment</p>
-                        <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                <div className="mt-3 grid grid-cols-3 gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-white p-1.5">
+                    <div className="rounded-[var(--radius-md)] px-2.5 py-2">
+                        <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)] mb-0.5">Total commitment</p>
+                        <p className="m-0 text-[18px] font-semibold tracking-[-0.015em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
                             {fmt(investment.totalCommitment)}
                         </p>
                     </div>
-                    <div className="rounded-[var(--radius-lg)] px-3 py-3" style={{ background: '#EFF6FF', border: '1px solid #DBEAFE' }}>
-                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#3B82F6] mb-1">Called to date</p>
-                        <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-accent-9)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                    <div className="rounded-[var(--radius-md)] border-l border-[var(--color-neutral-3)] px-2.5 py-2">
+                        <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)] mb-0.5">Called to date</p>
+                        <p className="m-0 text-[18px] font-semibold tracking-[-0.015em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
                             {fmt(investment.called)}
                         </p>
-                        <p className="m-0 text-[11px] text-[#3B82F6] mt-1 opacity-70">{deployedPct}% deployed</p>
+                        <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mt-0.5">{deployedPct}% deployed</p>
                     </div>
-                    <div className="rounded-[var(--radius-lg)] px-3 py-3" style={{ background: '#FEFCE8', border: '1px solid #FEF08A' }}>
-                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#A16207] mb-1">Remaining unfunded</p>
-                        <p className="m-0 text-[26px] font-semibold tracking-[-0.02em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                    <div className="rounded-[var(--radius-md)] border-l border-[var(--color-neutral-3)] px-2.5 py-2">
+                        <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)] mb-0.5">Remaining unfunded</p>
+                        <p className="m-0 text-[18px] font-semibold tracking-[-0.015em] text-[var(--color-black)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
                             {fmt(remaining)}
                         </p>
-                        <p className="m-0 text-[11px] text-[#A16207] mt-1 opacity-70">{100 - deployedPct}% uncalled</p>
+                        <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mt-0.5">{100 - deployedPct}% uncalled</p>
                     </div>
                 </div>
 

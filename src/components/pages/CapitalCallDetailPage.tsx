@@ -5,10 +5,11 @@ import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
 import {
-    IconChevronLeft, IconExternalLink, IconShare, IconDotsVertical,
+    IconExternalLink, IconShare, IconDotsVertical,
     IconCheck, IconAlertTriangle, IconFlag,
     IconArrowRight,
 } from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
 import { getDecisionById, getCapitalCallPostDealStatus } from '@/data/thornton/capital-call-decisions-data'
 import type { CapitalCallDecision, CapitalCallPostDealStatus } from '@/data/thornton/capital-call-decisions-data'
 import { CAPITAL_CALL_COMMITMENTS, getTotalCalled } from '@/data/thornton/capital-calls-data'
@@ -35,6 +36,14 @@ function fmtAxis(v: number): string {
 
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+function daysUntil(iso: string): number {
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const due = new Date(iso)
+    due.setHours(0, 0, 0, 0)
+    return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -189,7 +198,7 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
     if (!commitment) {
         return (
             <div className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
-                <h3 className="m-0 text-[15px] font-semibold text-[var(--color-black)]">Call analytics</h3>
+                <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Call analytics</h3>
                 <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-9)]">
                     No matching commitment found for this capital call.
                 </p>
@@ -223,15 +232,15 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
     return (
         <div className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h3 className="m-0 text-[15px] font-semibold text-[var(--color-black)]">Call analytics</h3>
+                <div className="min-w-0 flex-1">
+                    <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Call analytics</h3>
                     <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
                         Fund-level pacing filtered to {commitment.fundName}.
                     </p>
                 </div>
-                <div className="rounded-[var(--radius-lg)] bg-[var(--color-neutral-2)] px-3 py-2 text-right">
+                <div className="shrink-0 rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-3 py-1.5 text-right">
                     <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">This call</p>
-                    <p className="m-0 text-[14px] font-semibold tabular-nums text-[var(--color-black)]">{fmtDisplay(decisionAmount)}</p>
+                    <p className="m-0 text-[13px] font-semibold tabular-nums text-[var(--color-black)]">{fmtDisplay(decisionAmount)}</p>
                 </div>
             </div>
 
@@ -536,7 +545,6 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
     const [localStatus, setLocalStatus] = useState<CapitalCallPostDealStatus>(
         decision ? getCapitalCallPostDealStatus(decision) : 'uploaded'
     )
-    const [hoveredField, setHoveredField] = useState<number | null>(null)
 
     if (!decision) {
         return (
@@ -547,6 +555,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
     }
 
     const statusMeta = STATUS_META[localStatus]
+    const currentStatusIndex = STATUS_ORDER.indexOf(localStatus)
 
     function advanceStatus() {
         const next = nextStatus(localStatus)
@@ -555,6 +564,8 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
 
     const commitmentPct = Math.round((decision.amount / decision.commitment) * 100)
     const unfundedAmount = Math.round(decision.commitment * (1 - decision.drawnBefore))
+    const paidInAmount = Math.round(decision.drawnBefore * decision.commitment)
+    const accountLast4 = decision.wireInstructions.account.slice(-4)
     const compactTitle = `Call #${decision.callNumber} · ${fmtDisplay(decision.amount)} capital call`
     const compactFund = decision.fund.replace(', L.P.', '')
     const matchedCommitment = getCommitmentForDecision(decision)
@@ -574,366 +585,365 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
         wireInstructions: decision.wireInstructions,
     }
 
+    const dueDays = daysUntil(decision.dueDate)
+    const firstPendingIdx = decision.approvals.findIndex(a => a.status === 'pending')
     const verifyFields = buildVerifyFields(decision)
+    const validationChecks = [
+        {
+            label: 'Match check',
+            note: `${commitmentPct}% of ${fmtDisplay(decision.commitment)} = ${fmtDisplay(decision.amount)}`,
+            status: 'match' as const,
+        },
+        {
+            label: 'Ledger check',
+            note: `Unfunded commitment (${fmtDisplay(unfundedAmount)}) covers this call`,
+            status: 'match' as const,
+        },
+        {
+            label: 'Bank details',
+            note: decision.wireMatchedCallNumber
+                ? `Matches Call #${decision.wireMatchedCallNumber} on record`
+                : 'Bank details captured from notice',
+            status: 'match' as const,
+        },
+        {
+            label: 'IC approval on record',
+            note: `Investment Committee approved ${decision.matchedInvestmentName}`,
+            status: 'match' as const,
+        },
+    ]
 
     return (
         <div className="flex flex-col flex-1 h-full overflow-hidden max-w-[1120px] w-full mx-auto">
 
-            {/* ── Top nav bar ────────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-neutral-4)] bg-white shrink-0">
-                <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+            {/* ── Header ─────────────────────────────────────────────────────── */}
+            <div className="px-6 pt-9 pb-5 bg-white shrink-0">
+                <nav
+                    className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm leading-snug text-[var(--color-neutral-10)]"
+                    aria-label="Breadcrumb"
+                >
                     <button
                         type="button"
                         onClick={onBack}
-                        className="flex items-center gap-1.5 text-[13px] text-[var(--color-neutral-10)] hover:text-[var(--color-black)] transition-colors shrink-0"
+                        className="bg-transparent border-none p-0 text-inherit font-medium cursor-pointer transition-colors hover:text-[var(--color-black)]"
                     >
-                        <IconChevronLeft size={16} stroke={2} />
-                        {investmentName ?? 'Capital calls'}
+                        Capital Activities
                     </button>
-                    <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
-                    <span className="text-[12px] font-mono text-[var(--color-neutral-9)] shrink-0">{decision.id}</span>
-                    <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
-                    <span className="text-[12px] text-[var(--color-neutral-9)] shrink-0">
-                        Call #{decision.callNumber} of {decision.totalCalls}
-                    </span>
-                    <span className="text-[var(--color-neutral-5)] shrink-0">·</span>
-                    <span className="text-[12px] text-[var(--color-neutral-9)] shrink-0">
-                        Due {new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
+                    <span className="text-[var(--color-neutral-7)]">/</span>
+                    {investmentName ? (
+                        <>
+                            <span className="max-w-[280px] truncate">{investmentName}</span>
+                            <span className="text-[var(--color-neutral-7)]">/</span>
+                        </>
+                    ) : null}
+                    <span className="font-mono text-[12px] text-[var(--color-neutral-9)]">{decision.id}</span>
+                </nav>
+
+                <div className="mt-4 flex w-full items-start justify-between gap-4 overflow-visible">
+                    <div className="min-w-0">
+                        <h1 className="m-0 min-w-0 truncate font-display text-[28px] font-black leading-[1.25] tracking-[-0.02em] text-[var(--color-gray-12)] [-webkit-text-stroke:0.3px_currentColor]">
+                            {compactTitle}
+                        </h1>
+                        <p className="m-0 mt-1 text-[13px] text-[var(--color-neutral-10)]">
+                            {compactFund} · {decision.entity} · {decision.gp}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                        <button type="button" className="flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-0.5 text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]">
+                            <IconShare size={14} stroke={2} />
+                            Share
+                        </button>
+                        <button type="button" className="flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-0.5 text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]">
+                            Actions
+                            <IconDotsVertical size={14} stroke={2} />
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 ml-4">
-                    <button type="button" className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
-                        <IconShare size={14} stroke={2} />
-                        Share
-                    </button>
-                    <button type="button" className="flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors">
-                        Actions
-                        <IconDotsVertical size={14} stroke={2} />
-                    </button>
-                </div>
-            </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <span className="text-[12px] text-[var(--color-neutral-9)]">
+                            Call #{decision.callNumber} of {decision.totalCalls}
+                        </span>
+                        <span className="text-[12px] text-[var(--color-neutral-9)]">
+                            Due {new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                    </div>
 
-            {/* ── Title + stepper ─────────────────────────────────────────────── */}
-            <div className="px-6 pt-4 pb-4 bg-white border-b border-[var(--color-neutral-4)] shrink-0">
-                <h1 className="text-[22px] font-semibold text-[var(--color-black)] m-0 leading-[1.2] tracking-[-0.01em]">
-                    {compactTitle}
-                </h1>
-                <p className="m-0 mt-0.5 text-[13px] text-[var(--color-neutral-10)]">
-                    {compactFund} · {decision.entity} · {decision.gp}
-                </p>
-
-                {/* Workflow stepper */}
-                <div className="flex items-center mt-4 overflow-x-auto [scrollbar-width:none]">
-                    {STATUS_ORDER.map((step, idx) => {
-                        const currentIdx = STATUS_ORDER.indexOf(localStatus)
-                        const isCompleted = idx < currentIdx
-                        const isCurrent = idx === currentIdx
-                        return (
-                            <div key={step} className="flex items-center shrink-0">
-                                <div className="flex flex-col items-center gap-1">
-                                    <div className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                                        isCompleted ? 'bg-[#10B981]' : isCurrent ? 'bg-[var(--color-accent-9)]' : 'bg-[var(--color-neutral-4)]'
-                                    }`} />
-                                    <span className={`text-[10px] whitespace-nowrap leading-none ${
-                                        isCurrent ? 'font-semibold text-[var(--color-black)]' : isCompleted ? 'text-[#10B981]' : 'text-[var(--color-neutral-9)]'
-                                    }`}>
-                                        {STATUS_META[step].label}
-                                    </span>
-                                </div>
-                                {idx < STATUS_ORDER.length - 1 && (
-                                    <div className={`h-px w-10 mx-2 mb-3.5 shrink-0 ${isCompleted ? 'bg-[#10B981]' : 'bg-[var(--color-neutral-4)]'}`} />
-                                )}
-                            </div>
-                        )
-                    })}
+                    <div
+                        className="flex max-w-full flex-wrap items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2.5 py-1.5"
+                        aria-label={`Status: ${statusMeta.label}. Step ${currentStatusIndex + 1} of ${STATUS_ORDER.length}.`}
+                    >
+                        <span className="flex min-w-0 shrink items-center gap-1.5 border-r border-[var(--color-neutral-4)] pr-2">
+                            <span
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{ background: statusMeta.dot }}
+                                aria-hidden
+                            />
+                            <span className="truncate text-[12px] font-semibold text-[var(--color-black)]">
+                                {statusMeta.label}
+                            </span>
+                        </span>
+                        <div className="flex items-center">
+                            {STATUS_ORDER.map((step, idx) => {
+                                const isCompleted = idx < currentStatusIndex
+                                const isCurrent = idx === currentStatusIndex
+                                return (
+                                    <div key={step} className="group relative flex items-center shrink-0">
+                                        <span
+                                            className={`h-2 w-2 rounded-full transition-colors ${
+                                                isCompleted
+                                                    ? 'bg-[var(--color-neutral-10)]'
+                                                    : isCurrent
+                                                      ? 'bg-[var(--color-accent-9)]'
+                                                      : 'bg-[var(--color-neutral-5)]'
+                                            }`}
+                                        />
+                                        <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-2 py-1 text-[11px] font-medium text-[var(--color-neutral-11)] shadow-[var(--shadow-dropdown)] group-hover:block">
+                                            {STATUS_META[step].label}
+                                        </span>
+                                        {idx < STATUS_ORDER.length - 1 && (
+                                            <span className={`mx-1 h-px w-4 shrink-0 ${isCompleted ? 'bg-[var(--color-neutral-8)]' : 'bg-[var(--color-neutral-5)]'}`} />
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <span className="text-[12px] font-semibold tabular-nums text-[var(--color-black)]">
+                            {currentStatusIndex + 1}/{STATUS_ORDER.length}
+                        </span>
+                    </div>
                 </div>
             </div>
 
             {/* ── Body ────────────────────────────────────────────────────────── */}
-            <div className="flex flex-1 overflow-hidden min-h-0">
-
-                {/* LEFT: main scroll — key figures → verify → charts */}
-                <div className="flex flex-col gap-4 flex-1 overflow-y-auto p-6 min-w-0">
-
-                    {/* Key figures */}
-                    <div className="grid grid-cols-4 gap-3">
-                        {([
-                            ['Call amount', fmtDisplay(decision.amount), 'var(--color-black)'],
-                            ['% of commitment', `${commitmentPct}%`, 'var(--color-black)'],
-                            ['Paid-in to date', fmtDisplay(Math.round(decision.drawnBefore * decision.commitment)), '#047857'],
-                            ['Unfunded remaining', fmtDisplay(unfundedAmount), 'var(--color-neutral-10)'],
-                        ] as const).map(([label, value, color]) => (
-                            <div key={label} className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-4">
-                                <p className="m-0 text-[11px] text-[var(--color-neutral-9)] mb-1.5">{label}</p>
-                                <p className="m-0 text-[22px] font-semibold tracking-[-0.02em] leading-none" style={{ color }}>
-                                    {value}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Purpose breakdown */}
-                    {decision.purposeBreakdown && (() => {
-                        const pb = decision.purposeBreakdown!
-                        const rows: Array<[string, number]> = [
-                            ['Investments', pb.investments],
-                            ['Management fees', pb.managementFees],
-                            ['Expenses', pb.expenses],
-                        ]
-                        return (
-                            <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                                <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-3">Purpose breakdown</h3>
-                                <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
-                                    {rows.map(([label, amount]) => {
-                                        const pct = ((amount / decision.amount) * 100).toFixed(1)
-                                        return (
-                                            <div key={label} className="flex items-center justify-between py-2">
-                                                <span className="text-[12px] text-[var(--color-neutral-10)]">{label}</span>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[11px] text-[var(--color-neutral-9)] tabular-nums">{pct}%</span>
-                                                    <span className="text-[12px] font-semibold text-[var(--color-black)] tabular-nums w-[80px] text-right">{fmtDisplay(amount)}</span>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        )
-                    })()}
-
-                    {/* Verify section */}
-                    <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-1">
-                                    Verify against the document
-                                </h3>
-                                <p className="m-0 text-[12px] text-[var(--color-neutral-9)]">
-                                    Hover a row to highlight in the notice.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-1.5 rounded-[var(--radius-lg)] bg-[#F0FDF4] border border-[#D1FAE5] px-3 py-1.5 shrink-0">
-                                <IconCheck size={13} stroke={2.5} className="text-[#10B981]" />
-                                <span className="text-[11px] font-semibold text-[#047857]">
-                                    {verifyFields.filter(f => f.status === 'match').length}/{verifyFields.length} matched
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
-                            {verifyFields.map((field, idx) => (
-                                <div
-                                    key={field.label}
-                                    role="presentation"
-                                    className={`py-2.5 px-2 -mx-2 rounded-[var(--radius-md)] transition-colors ${hoveredField === idx ? 'bg-[#EFF6FF]' : ''}`}
-                                    onMouseEnter={() => setHoveredField(idx)}
-                                    onMouseLeave={() => setHoveredField(null)}
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)] mt-0.5 shrink-0 w-[120px]">
-                                            {field.label}
-                                        </p>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                            {field.aiConfidence != null && (
-                                                <span className="inline-flex items-center rounded bg-[#F3E8FF] px-1.5 py-0.5 text-[9px] font-bold text-[#5B21B6]">
-                                                    AI {field.aiConfidence}%
-                                                </span>
-                                            )}
-                                            <MatchBadge status={field.status} />
-                                        </div>
-                                    </div>
-                                    <div className="mt-1.5 grid grid-cols-2 gap-4">
-                                        <div className="min-w-0">
-                                            <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mb-0.5">Notice says</p>
-                                            <p className="m-0 text-[12px] text-[var(--color-black)] leading-[1.4]">{field.noticeSays}</p>
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="m-0 text-[10px] text-[var(--color-neutral-9)] mb-0.5">On file</p>
-                                            <p className="m-0 text-[12px] text-[var(--color-black)] leading-[1.4]">{field.onFile}</p>
-                                        </div>
-                                    </div>
-                                    {field.note && (
-                                        <p className="m-0 mt-1 text-[11px] text-[var(--color-neutral-9)] italic">{field.note}</p>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Approval chain */}
-                    {decision.approvals.length > 0 && (
-                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                            <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-4">Approval chain</h3>
-                            <div className="flex flex-col">
-                                {decision.approvals.map((approval, idx) => (
-                                    <div key={approval.id} className="flex items-start gap-3">
-                                        <div className="flex flex-col items-center shrink-0">
-                                            <div
-                                                className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                                                style={{ background: approval.color }}
-                                            >
-                                                {approval.initials}
-                                            </div>
-                                            {idx < decision.approvals.length - 1 && (
-                                                <div className="w-px flex-1 bg-[var(--color-neutral-4)] my-1" style={{ minHeight: 16 }} />
-                                            )}
-                                        </div>
-                                        <div className="flex flex-1 items-start justify-between gap-2 pb-3">
-                                            <div>
-                                                <p className="m-0 text-[12px] font-semibold text-[var(--color-black)] leading-[1.3]">{approval.name}</p>
-                                                <p className="m-0 text-[10px] text-[var(--color-neutral-9)]">{approval.role}</p>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-0.5 shrink-0">
-                                                {approval.status === 'approved' && (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] text-[#065F46] px-2 py-0.5 text-[10px] font-semibold">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                                                        Approved
-                                                    </span>
-                                                )}
-                                                {approval.status === 'pending' && (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FFFBEB] text-[#92400E] px-2 py-0.5 text-[10px] font-semibold">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-                                                        Awaiting
-                                                    </span>
-                                                )}
-                                                {approval.status === 'auto' && (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#F9FAFB] text-[#374151] px-2 py-0.5 text-[10px] font-semibold">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF]" />
-                                                        Auto
-                                                    </span>
-                                                )}
-                                                {approval.timestamp && (
-                                                    <span className="text-[10px] text-[var(--color-neutral-8)]">{approval.timestamp}</span>
-                                                )}
-                                            </div>
-                                        </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+                <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-6">
+                    <div className="flex min-w-0 flex-col gap-5">
+                        <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+                            <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Details</h3>
+                            <div className="mt-5 grid grid-cols-2 gap-x-16 gap-y-4">
+                                {([
+                                    ['Call amount', fmtDisplay(decision.amount)],
+                                    ['% of total commitment', `${commitmentPct}%`],
+                                    ['Due date', new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
+                                    ['Status', statusMeta.label],
+                                    ['Bank account (last 4)', `••••${accountLast4}`],
+                                    ['Routing number', decision.wireInstructions.aba],
+                                ] as const).map(([label, value]) => (
+                                    <div key={label} className="grid grid-cols-[132px_minmax(0,1fr)] items-center gap-3">
+                                        <p className="m-0 text-[13px] text-[var(--color-neutral-10)]">{label}</p>
+                                        <span className="inline-flex min-w-0 w-fit max-w-full rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[14px] font-semibold text-[var(--color-black)] tabular-nums">
+                                            <span className="truncate">{value}</span>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        </section>
 
-                    {/* Audit trail */}
-                    {decision.activityLog.length > 0 && (
-                        <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
-                            <h3 className="text-[14px] font-semibold text-[var(--color-black)] m-0 mb-3">Audit trail</h3>
-                            <div className="flex flex-col gap-2">
-                                {decision.activityLog.map((entry, idx) => (
-                                    <div key={idx} className="flex items-start gap-2.5">
-                                        <span
-                                            className="mt-1 w-2 h-2 rounded-full shrink-0"
-                                            style={{ background: entry.isAI ? '#2563EB' : '#10B981' }}
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="m-0 text-[12px] text-[var(--color-black)] leading-[1.4]">
-                                                {entry.actor}
-                                                {entry.isAI && (
-                                                    <span className="ml-1.5 text-[9px] font-semibold text-[#5B21B6] bg-[#F3E8FF] px-1.5 py-0.5 rounded">✦ AI</span>
-                                                )}
+                        <div className="flex flex-col gap-5">
+                            <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+                                <div className="min-w-0">
+                                    <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Commitment ledger</h3>
+                                    <p className="m-0 mt-1 text-[12px] leading-snug text-[var(--color-neutral-10)]">
+                                        {decision.matchedInvestmentName}
+                                    </p>
+                                </div>
+                                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    {([
+                                        ['Total commitment', fmtDisplay(decision.commitment)],
+                                        ['Paid-in capital', fmtDisplay(paidInAmount)],
+                                        ['Unfunded', fmtDisplay(unfundedAmount)],
+                                    ] as const).map(([label, value]) => (
+                                        <div
+                                            key={label}
+                                            className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-white px-3 py-3"
+                                        >
+                                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{label}</p>
+                                            <p className="m-0 mt-1.5 text-[16px] font-semibold tabular-nums text-[var(--color-black)]">
+                                                {value}
                                             </p>
-                                            <p className="m-0 text-[11px] text-[var(--color-neutral-9)]">{entry.action}</p>
                                         </div>
-                                        <span className="text-[10px] text-[var(--color-neutral-8)] shrink-0 tabular-nums">{entry.time}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Charts */}
-                    <DetailCallAnalytics commitment={matchedCommitment} decisionAmount={decision.amount} />
-
-                </div>
-
-                {/* RIGHT: PDF viewer + wire instructions */}
-                <div className="w-[400px] shrink-0 border-l border-[var(--color-neutral-4)] flex flex-col overflow-hidden bg-[var(--color-neutral-1)]">
-
-                    {/* PDF viewer — flex-1 fills available space */}
-                    <div className="flex-1 overflow-hidden">
-                        <PdfMock {...pdfProps} />
-                    </div>
-
-                    {/* Payment / release status */}
-                    <div className="shrink-0 border-t border-[var(--color-neutral-4)] bg-white p-4">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h3 className="m-0 text-[13px] font-semibold text-[var(--color-black)]">Payment / Release status</h3>
-                                <p className="m-0 mt-1 text-[11px] text-[var(--color-neutral-9)]">
-                                    Confirm the post-deal money movement once document checks are complete.
-                                </p>
-                            </div>
-                            <span
-                                className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                style={{ background: statusMeta.bg, color: statusMeta.text }}
-                            >
-                                <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusMeta.dot }} />
-                                {statusMeta.label}
-                            </span>
-                        </div>
-
-                        {localStatus !== 'paid' ? (
-                            <div className="mt-3 flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-2 text-[12px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
-                                >
-                                    <IconFlag size={13} stroke={2} />
-                                    Flag
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={advanceStatus}
-                                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-3 py-2 text-[12px] font-semibold text-white transition-opacity hover:opacity-90"
-                                >
-                                    {ADVANCE_LABELS[localStatus]}
-                                    <IconArrowRight size={13} stroke={2.5} />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="mt-3 rounded-[var(--radius-lg)] border border-[#D1FAE5] bg-[#F0FDF4] px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#10B981]">
-                                        <IconCheck size={11} stroke={2.5} className="text-white" />
-                                    </div>
-                                    <p className="m-0 text-[12px] font-semibold text-[#065F46]">Wire executed</p>
+                                    ))}
                                 </div>
-                                <p className="m-0 mt-1 text-[11px] text-[#047857]">
-                                    {fmt(decision.amount)} sent to {decision.wireInstructions.beneficiary}
-                                </p>
-                            </div>
+                            </section>
+
+                            <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+                                <div className="flex items-start justify-between gap-3">
+                                    <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Validation checks</h3>
+                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
+                                        <IconCheck size={12} stroke={2.5} className="text-[var(--color-green-9)]" />
+                                        {verifyFields.filter(field => field.status === 'match').length}/{verifyFields.length}
+                                    </span>
+                                </div>
+                                <div className="mt-4 hidden min-[480px]:grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-[var(--color-neutral-3)] pb-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)]">
+                                    <span>Item</span>
+                                    <span className="text-right">Outcome</span>
+                                </div>
+                                <div className="mt-3 flex flex-col divide-y divide-[var(--color-neutral-3)] min-[480px]:mt-2">
+                                    {validationChecks.map((check) => (
+                                        <div
+                                            key={check.label}
+                                            className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+                                        >
+                                            <IconCheck
+                                                size={15}
+                                                stroke={2.3}
+                                                className="mt-0.5 shrink-0 text-[var(--color-green-9)]"
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="m-0 text-[13px] font-semibold text-[var(--color-black)]">{check.label}</p>
+                                                <p className="m-0 mt-0.5 text-[12px] leading-snug text-[var(--color-neutral-10)]">
+                                                    {check.note}
+                                                </p>
+                                            </div>
+                                            <div className="shrink-0 pt-0.5 min-[480px]:pt-0">
+                                                <MatchBadge status={check.status} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        </div>
+
+                        <DetailCallAnalytics commitment={matchedCommitment} decisionAmount={decision.amount} />
+
+                        {decision.activityLog.length > 0 && (
+                            <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+                                <h3 className="m-0 text-[15px] font-semibold text-[var(--color-black)]">Activity</h3>
+                                <div className="mt-4 flex flex-col">
+                                    {[...decision.activityLog].reverse().map((entry, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 border-b border-[var(--color-neutral-3)] py-3 first:pt-0 last:border-b-0 last:pb-0">
+                                            <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-neutral-7)]" />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[12px] font-semibold text-[var(--color-black)]">{entry.actor}</span>
+                                                    {entry.isAI && (
+                                                        <span className="rounded-full bg-[var(--color-accent-1)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-accent-9)]">AI</span>
+                                                    )}
+                                                </div>
+                                                <p className="m-0 mt-0.5 text-[12px] leading-snug text-[var(--color-neutral-10)]">{entry.action}</p>
+                                            </div>
+                                            <span className="shrink-0 pt-0.5 text-[11px] text-[var(--color-neutral-9)]">{entry.time}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
                         )}
                     </div>
 
-                    {/* Wire instructions */}
-                    <div className="shrink-0 border-t border-[var(--color-neutral-4)] bg-white p-4">
-                        <h3 className="text-[13px] font-semibold text-[var(--color-black)] m-0 mb-3">Wire instructions</h3>
-                        {decision.wireMatchedCallNumber && (
-                            <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-[#D1FAE5] bg-[#F0FDF4] px-3 py-2 mb-3">
-                                <IconCheck size={13} stroke={2.5} className="text-[#10B981] shrink-0" />
-                                <span className="text-[11px] font-semibold text-[#065F46]">
-                                    Same as Call #{decision.wireMatchedCallNumber} · {decision.wireMatchedCallDate}
-                                </span>
+                    <aside className="flex min-w-0 flex-col gap-4">
+                        <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <h3 className="m-0 text-[14px] font-semibold text-[var(--color-black)]">Capital call notice</h3>
+                                <button type="button" className="flex items-center gap-1 text-[12px] font-medium text-[var(--color-neutral-10)] hover:text-[var(--color-black)]">
+                                    Open
+                                    <IconExternalLink size={13} stroke={2} />
+                                </button>
                             </div>
-                        )}
-                        <div className="space-y-1.5">
-                            {([
-                                ['Beneficiary', decision.wireInstructions.beneficiary],
-                                ['Bank', decision.wireInstructions.bank],
-                                ['ABA routing', decision.wireInstructions.aba],
-                                ['Account', decision.wireInstructions.account],
-                                ['Reference', decision.wireInstructions.reference],
-                            ] as const).map(([label, value]) => (
-                                <div key={label} className="grid grid-cols-[88px_1fr] gap-2">
-                                    <span className="text-[11px] text-[var(--color-neutral-9)]">{label}</span>
-                                    <span className="text-[11px] font-medium text-[var(--color-black)]">{value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                            <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white px-3 py-2">
+                                <p className="m-0 truncate text-[12px] font-semibold text-[var(--color-black)]">{decision.pdfName}</p>
+                                <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{decision.pdfPages} pages · {decision.pdfSizeKb} KB</p>
+                            </div>
+                            <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)]">
+                                <PdfMock {...pdfProps} />
+                            </div>
+                        </section>
 
+                        <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <h3 className="m-0 text-[14px] font-semibold text-[var(--color-black)]">Wire approval</h3>
+                                <span className="rounded-full bg-[var(--color-blue-1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-accent-9)]">In progress</span>
+                            </div>
+                            <div className="mt-4 flex flex-col gap-3">
+                                {decision.approvals.map((approval, idx) => {
+                                    const isApproved = approval.status === 'approved'
+                                    const isBottleneck = !isApproved && idx === firstPendingIdx
+                                    return (
+                                        <div
+                                            key={approval.id}
+                                            className={cn(
+                                                'flex items-start gap-3 rounded-[var(--radius-lg)] px-3 py-2.5',
+                                                isApproved && 'bg-[var(--color-blue-1)]/60',
+                                                isBottleneck && 'bg-[#FFFBEB] ring-1 ring-[#FCD34D]',
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
+                                                isApproved ? 'bg-[#ECFDF5] text-[var(--color-green-9)]' : isBottleneck ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[var(--color-neutral-2)] text-[var(--color-neutral-9)]',
+                                            )}>
+                                                {isApproved ? <IconCheck size={13} stroke={2.4} /> : idx + 1}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="m-0 text-[13px] font-semibold leading-snug text-[var(--color-black)]">{approval.role}</p>
+                                                <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{approval.name}</p>
+                                            </div>
+                                            <span className={cn(
+                                                'mt-0.5 shrink-0 text-[11px] font-semibold',
+                                                isApproved ? 'text-[var(--color-green-9)]' : isBottleneck ? 'text-[#D97706]' : 'text-[var(--color-neutral-9)]',
+                                            )}>
+                                                {isApproved ? 'approved' : isBottleneck ? 'awaiting' : 'pending'}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </section>
+                    </aside>
                 </div>
             </div>
+
+            {localStatus !== 'paid' ? (
+                <div className="shrink-0 border-t border-[var(--color-neutral-3)] bg-white px-6 py-3">
+                    <div
+                        className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-4 py-3 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.16)] sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                        role="region"
+                        aria-label="Next step"
+                    >
+                        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                            <span className="shrink-0 text-[13px] font-semibold text-[var(--color-black)]">Next step</span>
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-blue-1)] px-2.5 py-1 text-[12px] font-semibold text-[var(--color-accent-9)]">
+                                    <span
+                                        className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                        style={{ background: statusMeta.dot }}
+                                        aria-hidden
+                                    />
+                                    {statusMeta.label}
+                                </span>
+                                <span className="text-[12px] text-[var(--color-neutral-10)]">
+                                    <span className="text-[var(--color-neutral-7)]" aria-hidden>→ </span>
+                                    {ADVANCE_LABELS[localStatus]}
+                                </span>
+                                {dueDays <= 14 && dueDays >= 0 ? (
+                                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[#FFFBEB] px-2 py-1 text-[11px] font-medium text-[#92400E]">
+                                        <IconAlertTriangle size={12} stroke={2} className="shrink-0 text-[#D97706]" aria-hidden />
+                                        Due in {dueDays} day{dueDays !== 1 ? 's' : ''}
+                                    </span>
+                                ) : null}
+                            </div>
+                        </div>
+                        <div className="flex shrink-0 items-center justify-end gap-2 sm:justify-start">
+                            <button
+                                type="button"
+                                className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-2 text-[12px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                            >
+                                <IconFlag size={13} stroke={2} aria-hidden />
+                                Flag
+                            </button>
+                            <button
+                                type="button"
+                                onClick={advanceStatus}
+                                className="flex min-w-[140px] items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-2 text-[12px] font-semibold text-white transition-opacity hover:opacity-90"
+                            >
+                                {ADVANCE_LABELS[localStatus]}
+                                <IconArrowRight size={13} stroke={2.5} aria-hidden />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     )
 }

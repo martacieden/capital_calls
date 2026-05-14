@@ -4,12 +4,14 @@ import { ResponsiveLine } from '@nivo/line'
 import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
-import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconChevronDown, IconX, IconArrowRight, IconFileText, IconCloudUpload } from '@tabler/icons-react'
+import { IconPencil, IconTrash, IconPlus, IconChevronLeft, IconChevronDown, IconX, IconArrowRight, IconCloudUpload } from '@tabler/icons-react'
 import { ContentHeader } from '@/components/molecules/ContentHeader'
 import { ToolbarSearchInput } from '@/components/atoms/ToolbarSearchInput'
 import { ToolbarDropdown } from '@/components/atoms/ToolbarDropdown'
 import { UploadModal } from '@/components/pages/DecisionsPage'
+import type { CapitalChartDrill } from '@/components/organisms/CapitalActivitiesChartDetailPanel'
 import { cn } from '@/lib/utils'
+import { showToast } from '@/components/atoms/Toast'
 import {
     CAPITAL_CALL_COMMITMENTS,
     getTotalCalled,
@@ -228,141 +230,247 @@ function OverviewKpiTile({
     )
 }
 
-// ─── log capital call modal ───────────────────────────────────────────────────
+const DEFAULT_PACING_PCTS = [25, 25, 20, 15, 10, 5] as const
 
-const EXISTING_PDFS = [
-    'Meridian_CapCall_07_RE-Holding.pdf',
-    'Whitmore_CapCall_03_ThorntonTrust.pdf',
-    'WV2_CapCall_04_ThorntonHoldings.pdf',
-    'Whitmore_CapCall_05_Final_Trust.pdf',
-]
-
-function LogCapitalCallModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
-    const [amount, setAmount] = useState('')
-    const [pct, setPct] = useState('')
-    const [accountLast4, setAccountLast4] = useState('')
-    const [routing, setRouting] = useState('')
-    const [selectedPdf, setSelectedPdf] = useState(EXISTING_PDFS[0] ?? '')
+function AddCommitmentModal({ onClose }: { onClose: () => void }) {
+    const [fundName, setFundName] = useState('')
+    const [commitment, setCommitment] = useState('10000000')
+    const [currency, setCurrency] = useState('USD')
+    const [vintageYear, setVintageYear] = useState('2026')
+    const [firstCallYear, setFirstCallYear] = useState('2026')
+    const [alreadyCalled, setAlreadyCalled] = useState('0')
+    const [customPacing, setCustomPacing] = useState(false)
+    const [pacingPcts, setPacingPcts] = useState<number[]>([...DEFAULT_PACING_PCTS])
+    const [notes, setNotes] = useState('')
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
-        onCreated('CAPCAL-7')
+        showToast('Commitment saved (demo — data not persisted)', 'success')
+        onClose()
     }
 
+    function setPacingAt(index: number, raw: string) {
+        const n = raw.replace(/\D/g, '')
+        if (n === '') {
+            setPacingPcts(prev => {
+                const next = [...prev]
+                next[index] = 0
+                return next
+            })
+            return
+        }
+        const v = Math.min(100, Number.parseInt(n, 10) || 0)
+        setPacingPcts(prev => {
+            const next = [...prev]
+            next[index] = v
+            return next
+        })
+    }
+
+    const inputClass =
+        'w-full rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-3 py-2.5 text-[14px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] transition-[background,border-color,box-shadow] focus:border-[var(--color-accent-9)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-9)]'
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8" onClick={onClose}>
             <div
-                className="relative w-full max-w-[480px] rounded-[var(--radius-xl)] bg-white shadow-2xl"
+                className="relative w-full max-w-[560px] max-h-[min(92vh,880px)] overflow-y-auto rounded-[var(--radius-xl)] bg-white shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
-                {/* header */}
-                <div className="flex items-center justify-between border-b border-[var(--color-neutral-4)] px-6 py-4">
-                    <h2 className="m-0 text-[16px] font-semibold text-[var(--color-black)]">Log Capital Call #5</h2>
+                <div className="sticky top-0 z-[1] flex items-start justify-between gap-4 border-b border-[var(--color-neutral-4)] bg-white px-6 py-5">
+                    <h2 className="m-0 font-display text-[24px] font-black leading-tight tracking-[-0.02em] text-[var(--color-gray-12)]">
+                        Add Commitment
+                    </h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-neutral-9)] hover:bg-[var(--color-neutral-3)] transition-colors"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-neutral-9)] transition-colors hover:bg-[var(--color-neutral-3)]"
+                        aria-label="Close"
                     >
-                        <IconX size={16} stroke={2} />
+                        <IconX size={20} stroke={2} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-6 py-5">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Call Amount ($)</label>
-                            <input
-                                type="text"
-                                placeholder="e.g. 1,000,000"
-                                value={amount}
-                                onChange={e => setAmount(e.target.value)}
-                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Call % of Commitment</label>
-                            <input
-                                type="text"
-                                placeholder="e.g. 20"
-                                value={pct}
-                                onChange={e => setPct(e.target.value)}
-                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Bank Account (last 4)</label>
-                            <input
-                                type="text"
-                                maxLength={4}
-                                placeholder="e.g. 8841"
-                                value={accountLast4}
-                                onChange={e => setAccountLast4(e.target.value.replace(/\D/g, ''))}
-                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Routing Number</label>
-                            <input
-                                type="text"
-                                placeholder="e.g. 021000021"
-                                value={routing}
-                                onChange={e => setRouting(e.target.value)}
-                                className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] px-3 py-2 text-[13px] text-[var(--color-black)] placeholder:text-[var(--color-neutral-8)] focus:border-[var(--color-accent-9)] focus:outline-none"
-                            />
-                        </div>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-6 py-5">
+                    <div className="flex flex-col gap-1.5">
+                        <label htmlFor="commitment-fund-name" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                            Fund name
+                        </label>
+                        <input
+                            id="commitment-fund-name"
+                            type="text"
+                            autoComplete="off"
+                            placeholder="e.g. Sequoia Capital XVIII"
+                            value={fundName}
+                            onChange={e => setFundName(e.target.value)}
+                            className={inputClass}
+                        />
                     </div>
 
-                    {/* PDF selection */}
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[12px] font-medium text-[var(--color-neutral-11)]">Capital Call Notice</label>
-                        <div className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] overflow-hidden">
-                            {EXISTING_PDFS.map(pdf => (
-                                <label
-                                    key={pdf}
-                                    className="flex cursor-pointer items-center gap-3 border-b border-[var(--color-neutral-4)] px-4 py-2.5 last:border-b-0 hover:bg-[var(--color-neutral-2)] transition-colors"
-                                >
-                                    <input
-                                        type="radio"
-                                        name="pdf"
-                                        value={pdf}
-                                        checked={selectedPdf === pdf}
-                                        onChange={() => setSelectedPdf(pdf)}
-                                        className="accent-[var(--color-accent-9)]"
-                                    />
-                                    <IconFileText size={14} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" />
-                                    <span className="text-[12px] text-[var(--color-neutral-11)] truncate">{pdf}</span>
-                                </label>
-                            ))}
-                            <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-neutral-2)] transition-colors">
-                                <input
-                                    type="radio"
-                                    name="pdf"
-                                    value="upload"
-                                    checked={selectedPdf === 'upload'}
-                                    onChange={() => setSelectedPdf('upload')}
-                                    className="accent-[var(--color-accent-9)]"
-                                />
-                                <IconPlus size={14} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" />
-                                <span className="text-[12px] text-[var(--color-neutral-9)]">Upload a new file…</span>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="commitment-amount" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                                Commitment
                             </label>
+                            <input
+                                id="commitment-amount"
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="e.g. 10000000"
+                                value={commitment}
+                                onChange={e => setCommitment(e.target.value.replace(/[^\d]/g, ''))}
+                                className={inputClass}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="commitment-currency" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                                Currency
+                            </label>
+                            <div className="relative">
+                                <select
+                                    id="commitment-currency"
+                                    value={currency}
+                                    onChange={e => setCurrency(e.target.value)}
+                                    className={cn(inputClass, 'cursor-pointer appearance-none pr-10')}
+                                >
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                                <IconChevronDown
+                                    size={18}
+                                    stroke={2}
+                                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral-9)]"
+                                    aria-hidden
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* actions */}
-                    <div className="flex items-center justify-end gap-2 pt-1">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="vintage-year" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                                Vintage year
+                            </label>
+                            <input
+                                id="vintage-year"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={4}
+                                value={vintageYear}
+                                onChange={e => setVintageYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                className={inputClass}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="first-call-year" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                                First call year
+                            </label>
+                            <input
+                                id="first-call-year"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={4}
+                                value={firstCallYear}
+                                onChange={e => setFirstCallYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                className={inputClass}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label htmlFor="already-called" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                            Already called to date
+                        </label>
+                        <input
+                            id="already-called"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={alreadyCalled}
+                            onChange={e => setAlreadyCalled(e.target.value.replace(/[^\d]/g, ''))}
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <div className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-[var(--color-neutral-2)]/50 px-4 py-3">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                                <p className="m-0 text-[12px] font-medium text-[var(--color-neutral-11)]">Custom call pacing</p>
+                                <p className="m-0 mt-1 text-[11px] leading-snug text-[var(--color-neutral-9)]">
+                                    Default: 25 / 25 / 20 / 15 / 10 / 5 % over 6 years
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={customPacing}
+                                onClick={() => {
+                                    setCustomPacing(prev => {
+                                        const next = !prev
+                                        if (next) setPacingPcts([...DEFAULT_PACING_PCTS])
+                                        return next
+                                    })
+                                }}
+                                className={cn(
+                                    'relative mt-0.5 h-7 w-[44px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-9)] focus-visible:ring-offset-2',
+                                    customPacing ? 'bg-[var(--color-accent-9)]' : 'bg-[var(--color-neutral-5)]',
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                                        customPacing ? 'left-[22px]' : 'left-1',
+                                    )}
+                                />
+                            </button>
+                        </div>
+                        {customPacing ? (
+                            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                                {pacingPcts.map((pct, i) => (
+                                    <div key={i} className="flex flex-col gap-1">
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-neutral-9)]">
+                                            Y{i + 1}
+                                        </span>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={pct === 0 ? '' : String(pct)}
+                                            onChange={e => setPacingAt(i, e.target.value)}
+                                            className={cn(inputClass, 'py-2 text-[13px] tabular-nums')}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label htmlFor="commitment-notes" className="text-[12px] font-medium text-[var(--color-neutral-11)]">
+                            Notes
+                        </label>
+                        <textarea
+                            id="commitment-notes"
+                            rows={4}
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                            placeholder="Optional context for treasury or IC…"
+                            className={cn(inputClass, 'min-h-[100px] resize-y')}
+                        />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--color-neutral-3)] pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--color-neutral-11)] hover:bg-[var(--color-neutral-2)] transition-colors"
+                            className="rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-4 py-2.5 text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
+                            className="rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-5 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
                         >
-                            Log Capital Call
-                            <IconArrowRight size={14} stroke={2.5} />
+                            Save commitment
                         </button>
                     </div>
                 </form>
@@ -375,15 +483,17 @@ function LogCapitalCallModal({ onClose, onCreated }: { onClose: () => void; onCr
 
 interface Props {
     onOpenDetail?: (id: string) => void
+    /** Same pattern as portfolio: open side panel with chart drill-down preview */
+    onChartDrill?: (drill: CapitalChartDrill) => void
     /** Opened from Pipeline » Approved — tighter chrome + back navigation */
     hubLayout?: boolean
     onBackToPipeline?: () => void
 }
 
-export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: Props) {
+export function CapitalCallsPage({ onOpenDetail, onChartDrill, hubLayout, onBackToPipeline }: Props) {
     /** Shared PDF/email intake modal — wired from shell header while List view can stay mounted separately */
     const [uploadModalOpen, setUploadModalOpen] = useState(false)
-    const [logModalOpen, setLogModalOpen] = useState(false)
+    const [addCommitmentModalOpen, setAddCommitmentModalOpen] = useState(false)
     const [noticeSearch, setNoticeSearch] = useState('')
     const [noticeStatusFilter, setNoticeStatusFilter] = useState<'all' | CapitalCallPostDealStatus>('all')
     const [showAllNotices, setShowAllNotices] = useState(false)
@@ -522,14 +632,8 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     }}
                 />
             ) : null}
-            {logModalOpen ? (
-                <LogCapitalCallModal
-                    onClose={() => setLogModalOpen(false)}
-                    onCreated={id => {
-                        setLogModalOpen(false)
-                        setTimeout(() => onOpenDetail?.(id), 300)
-                    }}
-                />
+            {addCommitmentModalOpen ? (
+                <AddCommitmentModal onClose={() => setAddCommitmentModalOpen(false)} />
             ) : null}
 
             {/* ── Header ──────────────────────────────────────────────────── */}
@@ -566,9 +670,9 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                 onClick: () => setUploadModalOpen(true),
                             },
                             {
-                                label: 'Enter manually',
+                                label: 'Add commitment',
                                 icon: IconPencil,
-                                onClick: () => setLogModalOpen(true),
+                                onClick: () => setAddCommitmentModalOpen(true),
                             },
                         ]}
                     />
@@ -621,7 +725,8 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     <div className="order-[1] grid grid-cols-2 gap-4">
                             <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
                                 <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-0.5">Annual Capital Calls</h3>
-                                <p className="text-[12px] text-[var(--color-neutral-10)] m-0 mb-4">Projected liabilities by year, broken down by fund</p>
+                                <p className="text-[12px] text-[var(--color-neutral-10)] m-0 mb-1">Projected liabilities by year, broken down by fund</p>
+                                <p className="text-[11px] text-[var(--color-neutral-9)] m-0 mb-4">Click a segment to open the side preview.</p>
                                 <div style={{ height: 220 }}>
                                     <ResponsiveBar
                                         data={annualData}
@@ -646,6 +751,13 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                         tooltip={AnnualBarTooltip}
                                         theme={CHART_THEME}
                                         animate={false}
+                                        onClick={bar => {
+                                            onChartDrill?.({
+                                                kind: 'annual-bar',
+                                                year: String(bar.indexValue),
+                                                fundId: String(bar.id),
+                                            })
+                                        }}
                                     />
                                 </div>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
@@ -660,7 +772,8 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
 
                             <div className="bg-white border border-[var(--color-neutral-4)] rounded-[var(--radius-xl)] p-5">
                                 <h3 className="text-[15px] font-semibold text-[var(--color-black)] m-0 mb-0.5">Cumulative Deployment</h3>
-                                <p className="text-[12px] text-[var(--color-neutral-10)] m-0 mb-4">Capital deployed vs. remaining commitment over time</p>
+                                <p className="text-[12px] text-[var(--color-neutral-10)] m-0 mb-1">Capital deployed vs. remaining commitment over time</p>
+                                <p className="text-[11px] text-[var(--color-neutral-9)] m-0 mb-4">Click a point to open the side preview.</p>
                                 <div style={{ height: 220 }}>
                                     <ResponsiveLine
                                         data={nivoLineData}
@@ -672,10 +785,23 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                                         lineWidth={3.5}
                                         enablePointLabel={false}
                                         enablePoints
-                                        pointSize={6}
+                                        pointSize={8}
                                         pointColor={{ from: 'serieColor' }}
                                         pointBorderWidth={2}
                                         pointBorderColor="#ffffff"
+                                        onClick={raw => {
+                                            if (!onChartDrill) return
+                                            if (!raw || typeof raw !== 'object') return
+                                            if (!('data' in raw) || !('serieId' in raw)) return
+                                            const { x } = raw.data as { x: string; y: number }
+                                            const sid = raw.serieId as string
+                                            if (sid !== 'Called' && sid !== 'Uncalled') return
+                                            onChartDrill({
+                                                kind: 'cumulative-line',
+                                                year: String(x),
+                                                seriesId: sid as 'Called' | 'Uncalled',
+                                            })
+                                        }}
                                         layers={[
                                             'grid',
                                             'markers',
@@ -743,14 +869,26 @@ export function CapitalCallsPage({ onOpenDetail, hubLayout, onBackToPipeline }: 
                     <div className="order-[2]">
                         <div className="mb-3 flex flex-col gap-3">
                             <div className="min-w-0">
-                                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                                    <h2 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Commitments &amp; capital call notices</h2>
-                                    <span
-                                        className="text-[14px] font-semibold tabular-nums text-[var(--color-neutral-9)]"
-                                        aria-label={`${CAPITAL_CALL_COMMITMENTS.length} commitments`}
+                                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                                    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0">
+                                        <h2 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">
+                                            Commitments &amp; capital call notices
+                                        </h2>
+                                        <span
+                                            className="text-[14px] font-semibold tabular-nums text-[var(--color-neutral-9)]"
+                                            aria-label={`${CAPITAL_CALL_COMMITMENTS.length} commitments`}
+                                        >
+                                            {CAPITAL_CALL_COMMITMENTS.length}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddCommitmentModalOpen(true)}
+                                        className="flex shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-1.5 text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-9)] focus-visible:ring-offset-2"
                                     >
-                                        {CAPITAL_CALL_COMMITMENTS.length}
-                                    </span>
+                                        <IconPlus size={15} stroke={2} aria-hidden />
+                                        Add commitment
+                                    </button>
                                 </div>
                                 <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
                                     Portfolio commitments; expand one commitment to see its post-deal call notices. Use the arrow to open the summary capital call.
