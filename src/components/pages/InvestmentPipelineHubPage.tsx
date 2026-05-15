@@ -5,35 +5,26 @@ import { InvestmentPipelinePage } from '@/components/pages/InvestmentPipelinePag
 /** Shared chrome for Pipeline hub routes */
 export function PipelineHubFrame({ children }: { children: ReactNode }) {
     return (
-        <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1120px] mx-auto">
-            <div
-                className={cn(
-                    'flex flex-col flex-1 min-h-0 overflow-hidden rounded-[var(--radius-xl)]',
-                    'bg-[var(--color-white)]',
-                )}
-            >
-                <div className="flex flex-1 flex-col min-h-0 overflow-hidden bg-[var(--color-white)]">{children}</div>
+        <div className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-1 flex-col">
+            <div className={cn('flex h-full min-h-0 w-full flex-1 flex-col rounded-[var(--radius-xl)]', 'bg-[var(--color-white)]')}>
+                <div className="flex h-full min-h-0 w-full flex-1 flex-col bg-[var(--color-white)]">{children}</div>
             </div>
         </div>
     )
 }
 
 interface InvestmentPipelineHubPageProps {
-    onOpenCapitalCallDetail: (id: string) => void
+    /** Capital calls live under Capital Activities / Investments holdings — not on Pipeline. */
     onOpenDeal?: (id: string) => void
 }
 
 /**
- * Single Pipeline hub — deal cards in all lanes; capital-call Kanban tiles in IC Review / Approved only.
+ * Pipeline hub — active deal work (pre-approval → approval). Capital calls: Capital Activities.
  */
-export function InvestmentPipelineHubPage({ onOpenCapitalCallDetail, onOpenDeal }: InvestmentPipelineHubPageProps) {
+export function InvestmentPipelineHubPage({ onOpenDeal }: InvestmentPipelineHubPageProps) {
     return (
         <PipelineHubFrame>
-            <InvestmentPipelinePage
-                embeddedInHub
-                onOpenCapitalCall={onOpenCapitalCallDetail}
-                onOpenDeal={onOpenDeal}
-            />
+            <InvestmentPipelinePage embeddedInHub onOpenDeal={onOpenDeal} />
         </PipelineHubFrame>
     )
 }

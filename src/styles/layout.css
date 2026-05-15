@@ -31,8 +31,13 @@
   -ms-overflow-style: none;
 }
 
-/* Full-height hub: nested panes own vertical scroll (kanban, tables) */
+/* Hub routes: main column scrolls with content (capital activities, pipeline list). */
 .main-content.main-content--pipeline-hub {
+  overflow-y: auto;
+}
+
+/* Pipeline kanban: fill viewport; scroll inside lanes, not on main. */
+.main-content.main-content--pipeline-fill {
   overflow: hidden;
 }
 
@@ -167,7 +172,8 @@
 
 .capital-activities-scroll {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-neutral-5) transparent;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  scrollbar-gutter: stable;
 }
 
 .capital-activities-scroll::-webkit-scrollbar {
@@ -177,16 +183,51 @@
 
 .capital-activities-scroll::-webkit-scrollbar-track {
   background: transparent;
+  margin-block: 4px;
 }
 
 .capital-activities-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-5);
-  border: 2px solid var(--color-white);
+  background: rgba(100, 116, 139, 0.28);
+  border: 2px solid transparent;
+  background-clip: padding-box;
   border-radius: var(--radius-full);
 }
 
 .capital-activities-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neutral-7);
+  background: rgba(0, 91, 226, 0.38);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Pipeline kanban lanes — thin scrollbar, visible on hover only */
+.pipeline-kanban-lane {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.pipeline-kanban-lane:hover {
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+
+.pipeline-kanban-lane::-webkit-scrollbar {
+  width: 4px;
+}
+
+.pipeline-kanban-lane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pipeline-kanban-lane::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-full);
+}
+
+.pipeline-kanban-lane:hover::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.38);
+}
+
+.pipeline-kanban-lane:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
 }
 
 /* ── Focus Rings ── */

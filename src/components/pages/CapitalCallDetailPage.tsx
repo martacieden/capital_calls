@@ -1,19 +1,26 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
 import type { BarTooltipProps } from '@nivo/bar'
 import type { SliceTooltipProps, DefaultSeries } from '@nivo/line'
 import type { PartialTheme } from '@nivo/theming'
 import {
-    IconExternalLink, IconShare, IconDotsVertical,
+    IconExternalLink, IconShare,
     IconCheck, IconAlertTriangle, IconFlag,
     IconArrowRight,
+    IconClipboardList,
+    IconUserPlus,
+    IconArchive,
+    IconChevronDown,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { getDecisionById, getCapitalCallPostDealStatus } from '@/data/thornton/capital-call-decisions-data'
 import type { CapitalCallDecision, CapitalCallPostDealStatus } from '@/data/thornton/capital-call-decisions-data'
 import { CAPITAL_CALL_COMMITMENTS, getTotalCalled } from '@/data/thornton/capital-calls-data'
 import type { CapitalCallCommitment } from '@/data/thornton/capital-calls-data'
+import { buildCumulativeProjectionByYear } from '@/lib/capital-charts'
+import { showToast } from '@/components/atoms/Toast'
+import { useClickOutside } from '@/lib/hooks/useClickOutside'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -57,7 +64,6 @@ const DETAIL_FORECAST_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031']
 const DETAIL_CURRENT_YEAR = String(new Date().getFullYear())
 const DETAIL_CALLED_COLOR = '#005BE2'
 const DETAIL_UNCALLED_COLOR = '#93C5FD'
-
 const DETAIL_FUND_COLORS: Record<string, string> = {
     'greentech-fund-iii': '#059669',
     'whitmore-capital-i': '#005BE2',
@@ -169,27 +175,18 @@ function DetailAnnualTooltip({ data, commitment }: BarTooltipProps<DetailBarRow>
 }
 
 function DetailCumulativeTooltip({ slice }: SliceTooltipProps<DefaultSeries>) {
-    const calledPoint = slice.points.find(point => point.seriesId === 'Called')
-    const uncalledPoint = slice.points.find(point => point.seriesId === 'Uncalled')
     const year = String(slice.points[0]?.data.x ?? '')
 
     return (
-        <div className="min-w-[150px] rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white px-3 py-2.5 shadow-lg">
+        <div className="min-w-[180px] rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white px-3 py-2.5 shadow-lg">
             <p className="m-0 mb-2 text-[11px] font-medium text-[var(--color-neutral-10)]">Year {year}</p>
-            {calledPoint ? (
-                <div className="mb-1 flex items-center gap-2">
-                    <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: DETAIL_CALLED_COLOR }} />
-                    <span className="flex-1 text-[12px] text-[var(--color-neutral-11)]">Called</span>
-                    <span className="text-[12px] font-semibold tabular-nums text-[var(--color-black)]">{fmtDisplay(calledPoint.data.y as number)}</span>
+            {slice.points.map(point => (
+                <div key={point.seriesId} className="mb-1 flex items-center gap-2 last:mb-0">
+                    <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: point.seriesColor }} />
+                    <span className="flex-1 text-[12px] text-[var(--color-neutral-11)]">{point.seriesId}</span>
+                    <span className="text-[12px] font-semibold tabular-nums text-[var(--color-black)]">{fmtDisplay(point.data.y as number)}</span>
                 </div>
-            ) : null}
-            {uncalledPoint ? (
-                <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: DETAIL_UNCALLED_COLOR }} />
-                    <span className="flex-1 text-[12px] text-[var(--color-neutral-11)]">Uncalled</span>
-                    <span className="text-[12px] font-semibold tabular-nums text-[var(--color-black)]">{fmtDisplay(uncalledPoint.data.y as number)}</span>
-                </div>
-            ) : null}
+            ))}
         </div>
     )
 }
@@ -197,7 +194,7 @@ function DetailCumulativeTooltip({ slice }: SliceTooltipProps<DefaultSeries>) {
 function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: CapitalCallCommitment | null; decisionAmount: number }) {
     if (!commitment) {
         return (
-            <div className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+            <div className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
                 <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Call analytics</h3>
                 <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-9)]">
                     No matching commitment found for this capital call.
@@ -212,26 +209,15 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
         [commitment.id]: commitment.yearlyPacing[year] ?? 0,
     }))
     const annualTotal = annualData.reduce((sum, row) => sum + Number(row[commitment.id] ?? 0), 0)
-    const lineData = (() => {
-        let runningCalled = getTotalCalled(commitment)
-        const cumulativeRows = DETAIL_FORECAST_YEARS.map(year => {
-            runningCalled += commitment.yearlyPacing[year] ?? 0
-            return {
-                year,
-                called: runningCalled,
-                uncalled: Math.max(0, commitment.totalCommitment - runningCalled),
-            }
-        })
-
-        return [
-            { id: 'Called', data: cumulativeRows.map(row => ({ x: row.year, y: row.called })) },
-            { id: 'Uncalled', data: cumulativeRows.map(row => ({ x: row.year, y: row.uncalled })) },
-        ]
-    })()
+    const cumulativeRows = buildCumulativeProjectionByYear([commitment], DETAIL_FORECAST_YEARS, commitment.totalCommitment)
+    const lineData = [
+        { id: 'Called (paid)', data: cumulativeRows.map(row => ({ x: row.year, y: row.called })) },
+        { id: 'Remaining commitment', data: cumulativeRows.map(row => ({ x: row.year, y: row.uncalled })) },
+    ]
 
     return (
-        <div className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Call analytics</h3>
                     <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
@@ -244,11 +230,11 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] p-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] p-3">
                     <h4 className="m-0 text-[13px] font-semibold text-[var(--color-black)]">Annual Capital Calls</h4>
                     <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{fmtDisplay(annualTotal)} projected across remaining years</p>
-                    <div className="mt-3 h-[180px]">
+                    <div className="mt-2 h-[140px]">
                         <ResponsiveBar
                             data={annualData}
                             keys={[commitment.id]}
@@ -271,17 +257,17 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
                     </div>
                 </div>
 
-                <div className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] p-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] p-3">
                     <h4 className="m-0 text-[13px] font-semibold text-[var(--color-black)]">Cumulative Deployment</h4>
                     <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">Called vs remaining commitment over time</p>
-                    <div className="mt-3 h-[180px]">
+                    <div className="mt-2 h-[140px]">
                         <ResponsiveLine
                             data={lineData}
                             margin={{ top: 8, right: 12, bottom: 30, left: 52 }}
                             xScale={{ type: 'point' }}
                             yScale={{ type: 'linear', min: 0, max: commitment.totalCommitment * 1.05 }}
                             curve="monotoneX"
-                            colors={[DETAIL_CALLED_COLOR, DETAIL_UNCALLED_COLOR]}
+                            colors={({ id }) => (id === 'Remaining commitment' ? DETAIL_UNCALLED_COLOR : DETAIL_CALLED_COLOR)}
                             lineWidth={2.5}
                             enablePoints
                             pointSize={6}
@@ -322,8 +308,8 @@ function DetailCallAnalytics({ commitment, decisionAmount }: { commitment: Capit
                                 },
                             ]}
                             fill={[
-                                { match: { id: 'Called' }, id: 'detailCalledGrad' },
-                                { match: { id: 'Uncalled' }, id: 'detailUncalledGrad' },
+                                { match: { id: 'Called (paid)' }, id: 'detailCalledGrad' },
+                                { match: { id: 'Remaining commitment' }, id: 'detailUncalledGrad' },
                             ]}
                         />
                     </div>
@@ -377,7 +363,7 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, gp, amount, commi
                 </a>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="capital-activities-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
             <div className="p-4">
                 <div className="bg-white rounded-[var(--radius-lg)] p-6 text-[11px] leading-[1.6]" style={{ fontFamily: 'Georgia, serif' }}>
                     {page === 1 ? (
@@ -478,65 +464,6 @@ function PdfMock({ pdfName, pdfPages, pdfSizeKb, fund, entity, gp, amount, commi
     )
 }
 
-// ─── Verify fields ────────────────────────────────────────────────────────────
-
-function buildVerifyFields(decision: CapitalCallDecision): Array<{
-    label: string
-    noticeSays: string
-    onFile: string
-    status: 'match' | 'mismatch' | 'changed'
-    note?: string
-    aiConfidence?: number
-}> {
-    const commitmentPct = Math.round((decision.amount / decision.commitment) * 100)
-    return [
-        {
-            label: 'Fund / GP',
-            noticeSays: `${decision.fund} / ${decision.gp}`,
-            onFile: `${decision.fund} / ${decision.gp}`,
-            status: 'match',
-            aiConfidence: 99,
-        },
-        {
-            label: 'Limited Partner',
-            noticeSays: decision.entity,
-            onFile: decision.entity,
-            status: 'match',
-            aiConfidence: 100,
-        },
-        {
-            label: 'Amount called',
-            noticeSays: `${fmt(decision.amount)} USD`,
-            onFile: `${fmt(decision.amount)} USD (${commitmentPct}% of $${decision.commitment.toLocaleString('en-US')} commitment)`,
-            status: 'match',
-            aiConfidence: 98,
-        },
-        {
-            label: 'Call number',
-            noticeSays: `Call #${String(decision.callNumber).padStart(2, '0')}`,
-            onFile: `#${decision.callNumber} of ${decision.totalCalls} · next in sequence`,
-            status: 'match',
-            note: `${decision.priorCallsDrawn} prior calls drawn, sequence verified`,
-            aiConfidence: 97,
-        },
-        {
-            label: 'Funding deadline',
-            noticeSays: `${new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} · 5:00 PM ET`,
-            onFile: '— · T+22 days from notice',
-            status: 'match',
-            aiConfidence: 96,
-        },
-        {
-            label: 'Wire instructions',
-            noticeSays: `ABA ${decision.wireInstructions.aba} / Account ${decision.wireInstructions.account} / ${decision.wireInstructions.bank}`,
-            onFile: `ABA ${decision.wireInstructions.aba} / Account ${decision.wireInstructions.account} / ${decision.wireInstructions.bank}`,
-            status: 'match',
-            note: 'Wire instructions unchanged from previous call',
-            aiConfidence: 94,
-        },
-    ]
-}
-
 // ─── main component ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -544,13 +471,23 @@ interface Props {
     onBack: () => void
     investmentId?: string
     investmentName?: string
+    resolvePostDealStatus?: (d: CapitalCallDecision) => CapitalCallPostDealStatus
+    onPostDealStatusChange?: (noticeId: string, status: CapitalCallPostDealStatus) => void
 }
 
-export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
+export function CapitalCallDetailPage({
+    id,
+    onBack,
+    investmentName,
+    resolvePostDealStatus,
+    onPostDealStatusChange,
+}: Props) {
     const decision = getDecisionById(id)
-    const [localStatus, setLocalStatus] = useState<CapitalCallPostDealStatus>(
-        decision ? getCapitalCallPostDealStatus(decision) : 'uploaded'
-    )
+    const [flaggedForReview, setFlaggedForReview] = useState(false)
+    const [activityMenuOpen, setActivityMenuOpen] = useState(false)
+    const activityBtnRef = useRef<HTMLButtonElement>(null)
+    const activityMenuRef = useRef<HTMLDivElement>(null)
+    useClickOutside([activityBtnRef, activityMenuRef], () => setActivityMenuOpen(false), activityMenuOpen)
 
     if (!decision) {
         return (
@@ -560,12 +497,21 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
         )
     }
 
-    const statusMeta = STATUS_META[localStatus]
-    const currentStatusIndex = STATUS_ORDER.indexOf(localStatus)
+    const decisionId = decision.id
+
+    const workflowStatus = resolvePostDealStatus?.(decision) ?? getCapitalCallPostDealStatus(decision)
+
+    const statusMeta = STATUS_META[workflowStatus]
+    const currentStatusIndex = STATUS_ORDER.indexOf(workflowStatus)
 
     function advanceStatus() {
-        const next = nextStatus(localStatus)
-        if (next) setLocalStatus(next)
+        const next = nextStatus(workflowStatus)
+        if (next) onPostDealStatusChange?.(decisionId, next)
+    }
+
+    function handleFlag() {
+        setFlaggedForReview(true)
+        showToast('Call flagged for operations review (demo)', 'info')
     }
 
     const commitmentPct = Math.round((decision.amount / decision.commitment) * 100)
@@ -590,9 +536,16 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
         wireInstructions: decision.wireInstructions,
     }
 
+    const pdfPanel = (
+        <section className="overflow-hidden rounded-[var(--radius-xl)] bg-white ring-1 ring-[var(--color-neutral-4)]">
+            <div className="h-[min(380px,calc(100dvh-11rem))] min-h-[220px] overflow-hidden bg-[#F8F8F9] lg:h-[calc(100dvh-7.5rem)] lg:max-h-[calc(100dvh-7.5rem)] lg:min-h-[280px]">
+                <PdfMock {...pdfProps} />
+            </div>
+        </section>
+    )
+
     const dueDays = daysUntil(decision.dueDate)
     const firstPendingIdx = decision.approvals.findIndex(a => a.status === 'pending')
-    const verifyFields = buildVerifyFields(decision)
     const validationChecks = [
         {
             label: 'Match check',
@@ -618,11 +571,31 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
         },
     ]
 
-    return (
-        <div className="relative flex flex-col flex-1 h-full overflow-hidden max-w-[1120px] w-full mx-auto">
+    const validationPassedCount = validationChecks.filter(c => c.status === 'match').length
+    const validationTotalCount = validationChecks.length
 
+    const ledgerCommitmentTotal = matchedCommitment?.totalCommitment ?? decision.commitment
+    const calledToDate = matchedCommitment ? getTotalCalled(matchedCommitment) : Math.round(decision.commitment * decision.drawnBefore)
+    const unfundedLedger = Math.max(0, ledgerCommitmentTotal - calledToDate)
+    const payingEntitiesLine = (matchedCommitment?.payingEntities?.length
+        ? matchedCommitment.payingEntities
+        : [{ legalName: decision.entity }]
+    ).map((pe) => {
+        const role = pe.role ? ` (${pe.role})` : ''
+        const pct = pe.allocationPct != null ? ` · ${pe.allocationPct}%` : ''
+        return `${pe.legalName}${role}${pct}`
+    }).join(' · ')
+
+    return (
+        <div className="relative flex flex-col flex-1 h-full min-h-0 overflow-hidden max-w-[1120px] w-full mx-auto">
+            <div
+                className={cn(
+                    'capital-activities-scroll flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto',
+                    workflowStatus !== 'paid' ? 'pb-28' : 'pb-6',
+                )}
+            >
             {/* ── Header ─────────────────────────────────────────────────────── */}
-            <div className="px-6 pt-9 pb-5 bg-white shrink-0">
+            <div className="w-full bg-white px-6 pt-6 pb-4 lg:px-6">
                 <nav
                     className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm leading-snug text-[var(--color-neutral-10)]"
                     aria-label="Breadcrumb"
@@ -654,140 +627,362 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                        <button type="button" className="flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-0.5 text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]">
-                            <IconShare size={14} stroke={2} />
-                            Share
-                        </button>
-                        <button type="button" className="flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-0.5 text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]">
-                            Actions
-                            <IconDotsVertical size={14} stroke={2} />
-                        </button>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pt-0.5">
+                        <div
+                            className="flex max-w-full min-w-0 flex-wrap items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2 py-1"
+                            aria-label={`Status: ${statusMeta.label}. Step ${currentStatusIndex + 1} of ${STATUS_ORDER.length}.`}
+                        >
+                            <span className="flex min-w-0 shrink items-center gap-1.5 border-r border-[var(--color-neutral-4)] pr-2">
+                                <span
+                                    className="h-2 w-2 shrink-0 rounded-full"
+                                    style={{ background: statusMeta.dot }}
+                                    aria-hidden
+                                />
+                                <span className="truncate text-[12px] font-semibold text-[var(--color-black)]">
+                                    {statusMeta.label}
+                                </span>
+                            </span>
+                            <div className="flex items-center">
+                                {STATUS_ORDER.map((step, idx) => {
+                                    const isCompleted = idx < currentStatusIndex
+                                    const isCurrent = idx === currentStatusIndex
+                                    return (
+                                        <div key={step} className="group relative flex shrink-0 items-center">
+                                            <span
+                                                className={`h-2 w-2 rounded-full transition-colors ${
+                                                    isCompleted
+                                                        ? 'bg-[var(--color-neutral-10)]'
+                                                        : isCurrent
+                                                          ? 'bg-[var(--color-accent-9)]'
+                                                          : 'bg-[var(--color-neutral-5)]'
+                                                }`}
+                                            />
+                                            <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-2 py-1 text-[11px] font-medium text-[var(--color-neutral-11)] shadow-[var(--shadow-dropdown)] group-hover:block">
+                                                {STATUS_META[step].label}
+                                            </span>
+                                            {idx < STATUS_ORDER.length - 1 && (
+                                                <span className={`mx-1 h-px w-4 shrink-0 ${isCompleted ? 'bg-[var(--color-neutral-8)]' : 'bg-[var(--color-neutral-5)]'}`} />
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <span className="text-[12px] font-semibold tabular-nums text-[var(--color-black)]">
+                                {currentStatusIndex + 1}/{STATUS_ORDER.length}
+                            </span>
+                        </div>
+
+                        <div className="relative shrink-0">
+                            <button
+                                ref={activityBtnRef}
+                                type="button"
+                                aria-expanded={activityMenuOpen}
+                                aria-haspopup="menu"
+                                onClick={() => setActivityMenuOpen(open => !open)}
+                                className="flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-3 py-0.5 text-[12px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                            >
+                                Activity
+                                <IconChevronDown size={14} stroke={2} aria-hidden className={cn('transition-transform', activityMenuOpen && 'rotate-180')} />
+                            </button>
+                            {activityMenuOpen ? (
+                                <div
+                                    ref={activityMenuRef}
+                                    className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[220px] rounded-[var(--radius-lg)] border border-[var(--color-neutral-4)] bg-white py-1 shadow-[var(--shadow-dropdown)]"
+                                    role="menu"
+                                >
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                        onClick={() => {
+                                            setActivityMenuOpen(false)
+                                            showToast('Create task (demo)', 'info')
+                                        }}
+                                    >
+                                        <IconClipboardList size={16} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" aria-hidden />
+                                        Create task
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                        onClick={() => {
+                                            setActivityMenuOpen(false)
+                                            showToast('Assign owner (demo)', 'info')
+                                        }}
+                                    >
+                                        <IconUserPlus size={16} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" aria-hidden />
+                                        Assign
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                        onClick={() => {
+                                            setActivityMenuOpen(false)
+                                            showToast('Share link copied (demo)', 'success')
+                                        }}
+                                    >
+                                        <IconShare size={16} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" aria-hidden />
+                                        Share
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
+                                        onClick={() => {
+                                            setActivityMenuOpen(false)
+                                            showToast('Call archived for this workspace (demo)', 'success')
+                                        }}
+                                    >
+                                        <IconArchive size={16} stroke={2} className="shrink-0 text-[var(--color-neutral-9)]" aria-hidden />
+                                        Archive call
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <span className="text-[12px] text-[var(--color-neutral-9)]">
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <div
+                        className="flex max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2.5 py-1.5 text-[12px] text-[var(--color-neutral-9)]"
+                        aria-label={`Call ${decision.callNumber} of ${decision.totalCalls}, due ${new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
+                    >
+                        <span>
                             Call #{decision.callNumber} of {decision.totalCalls}
                         </span>
-                        <span className="text-[12px] text-[var(--color-neutral-9)]">
-                            Due {new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <span className="hidden text-[var(--color-neutral-6)] sm:inline" aria-hidden>
+                            ·
                         </span>
-                    </div>
-
-                    <div
-                        className="flex max-w-full flex-wrap items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2.5 py-1.5"
-                        aria-label={`Status: ${statusMeta.label}. Step ${currentStatusIndex + 1} of ${STATUS_ORDER.length}.`}
-                    >
-                        <span className="flex min-w-0 shrink items-center gap-1.5 border-r border-[var(--color-neutral-4)] pr-2">
-                            <span
-                                className="h-2 w-2 shrink-0 rounded-full"
-                                style={{ background: statusMeta.dot }}
-                                aria-hidden
-                            />
-                            <span className="truncate text-[12px] font-semibold text-[var(--color-black)]">
-                                {statusMeta.label}
-                            </span>
-                        </span>
-                        <div className="flex items-center">
-                            {STATUS_ORDER.map((step, idx) => {
-                                const isCompleted = idx < currentStatusIndex
-                                const isCurrent = idx === currentStatusIndex
-                                return (
-                                    <div key={step} className="group relative flex items-center shrink-0">
-                                        <span
-                                            className={`h-2 w-2 rounded-full transition-colors ${
-                                                isCompleted
-                                                    ? 'bg-[var(--color-neutral-10)]'
-                                                    : isCurrent
-                                                      ? 'bg-[var(--color-accent-9)]'
-                                                      : 'bg-[var(--color-neutral-5)]'
-                                            }`}
-                                        />
-                                        <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--color-neutral-4)] bg-white px-2 py-1 text-[11px] font-medium text-[var(--color-neutral-11)] shadow-[var(--shadow-dropdown)] group-hover:block">
-                                            {STATUS_META[step].label}
-                                        </span>
-                                        {idx < STATUS_ORDER.length - 1 && (
-                                            <span className={`mx-1 h-px w-4 shrink-0 ${isCompleted ? 'bg-[var(--color-neutral-8)]' : 'bg-[var(--color-neutral-5)]'}`} />
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                        <span className="text-[12px] font-semibold tabular-nums text-[var(--color-black)]">
-                            {currentStatusIndex + 1}/{STATUS_ORDER.length}
+                        <span>
+                            Due{' '}
+                            {new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                     </div>
                 </div>
             </div>
 
-            {/* ── Body ────────────────────────────────────────────────────────── */}
-            <div className={cn('flex-1 min-h-0 overflow-y-auto px-6', localStatus !== 'paid' ? 'pb-28' : 'pb-6')}>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-                    <div className="flex min-w-0 flex-col gap-5">
-                        <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
-                            <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Details</h3>
-                            <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:gap-x-16">
+            {flaggedForReview ? (
+                <div className="w-full border-b border-[#FCD34D] bg-[#FFFBEB] px-6 py-2.5 lg:px-6">
+                    <p className="m-0 text-[13px] font-semibold text-[#92400E]">Flagged for review</p>
+                    <p className="m-0 mt-0.5 text-[12px] text-[#A16207]">
+                        Treasury and operations have been nudged in this demo. Clear the flag once the issue is resolved.
+                    </p>
+                </div>
+            ) : null}
+
+            <div className="flex w-full min-w-0 flex-col lg:flex-row lg:items-start lg:gap-6 lg:px-6 lg:pb-6 lg:pt-2">
+            <div className="flex w-full min-w-0 flex-col gap-5 px-6 lg:min-w-0 lg:flex-1 lg:px-0 lg:pr-3">
+            {/* ── Body (ліва колонка) ─────────────────────────────────────────── */}
+                        <section className="rounded-[var(--radius-xl)] bg-[var(--color-neutral-2)]/45 p-4">
+                            <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Commitment ledger</h3>
+                            <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
+                                {matchedCommitment ? matchedCommitment.fundName : decision.fund} — key balances for this notice.
+                            </p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                 {([
-                                    ['Call amount', fmtDisplay(decision.amount)],
-                                    ['% of total commitment', `${commitmentPct}%`],
-                                    ['Due date', new Date(decision.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
-                                    ['Status', statusMeta.label],
-                                    ['Bank account (last 4)', `••••${accountLast4}`],
-                                    ['Routing number', decision.wireInstructions.aba],
+                                    ['Total commitment', fmtDisplay(ledgerCommitmentTotal)],
+                                    ['Called to date', fmtDisplay(calledToDate)],
+                                    ['Unfunded', fmtDisplay(unfundedLedger)],
+                                    ['This call', fmtDisplay(decision.amount)],
                                 ] as const).map(([label, value]) => (
-                                    <div key={label} className="grid grid-cols-[minmax(0,1fr)] items-start gap-1.5 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-center sm:gap-3">
-                                        <p className="m-0 text-[13px] text-[var(--color-neutral-10)]">{label}</p>
-                                        <span className="inline-flex min-w-0 w-fit max-w-full rounded-[var(--radius-sm)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[14px] font-semibold text-[var(--color-black)] tabular-nums">
-                                            <span className="truncate">{value}</span>
-                                        </span>
+                                    <div key={label}>
+                                        <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">{label}</p>
+                                        <p className="m-0 mt-1 text-[16px] font-semibold tabular-nums text-[var(--color-black)]">{value}</p>
                                     </div>
                                 ))}
                             </div>
+                            <p className="m-0 mt-4 text-[12px] leading-snug text-[var(--color-neutral-11)]">
+                                <span className="font-semibold text-[var(--color-black)]">Paying entities: </span>
+                                {payingEntitiesLine}
+                            </p>
                         </section>
 
                         <DetailCallAnalytics commitment={matchedCommitment} decisionAmount={decision.amount} />
 
-                        <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
-                                <div className="flex items-start justify-between gap-3">
-                                    <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Validation checks</h3>
-                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
-                                        <IconCheck size={12} stroke={2.5} className="text-[var(--color-green-9)]" />
-                                        {verifyFields.filter(field => field.status === 'match').length}/{verifyFields.length}
-                                    </span>
-                                </div>
-                                <div className="mt-4 hidden min-[480px]:grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-[var(--color-neutral-3)] pb-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-neutral-9)]">
-                                    <span>Item</span>
-                                    <span className="text-right">Outcome</span>
-                                </div>
-                                <div className="mt-3 flex flex-col divide-y divide-[var(--color-neutral-3)] min-[480px]:mt-2">
-                                    {validationChecks.map((check) => (
-                                        <div
-                                            key={check.label}
-                                            className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-                                        >
-                                            <IconCheck
-                                                size={15}
-                                                stroke={2.3}
-                                                className="mt-0.5 shrink-0 text-[var(--color-green-9)]"
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="m-0 text-[13px] font-semibold text-[var(--color-black)]">{check.label}</p>
-                                                <p className="m-0 mt-0.5 text-[12px] leading-snug text-[var(--color-neutral-10)]">
-                                                    {check.note}
+                        <section className="rounded-[var(--radius-xl)] bg-white p-4 ring-1 ring-[var(--color-neutral-4)]">
+                            <h3 className="m-0 text-[17px] font-semibold text-[var(--color-black)]">Payment &amp; validation</h3>
+                            <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
+                                What treasury needs to wire, and the checks that back this notice.
+                            </p>
+                            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                {([
+                                    ['Call amount', fmtDisplay(decision.amount)],
+                                    [
+                                        'Due date',
+                                        new Date(decision.dueDate).toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric',
+                                        }),
+                                    ],
+                                    ['% of commitment', `${commitmentPct}%`],
+                                    ['Validation', `${validationPassedCount}/${validationTotalCount} checks OK`],
+                                ] as const).map(([label, value]) => (
+                                    <div
+                                        key={label}
+                                        className="min-w-0 rounded-[var(--radius-md)] border border-[var(--color-neutral-3)] bg-[var(--color-neutral-2)]/50 px-3 py-2"
+                                    >
+                                        <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">
+                                            {label}
+                                        </p>
+                                        <p className="m-0 mt-0.5 truncate text-[13px] font-semibold tabular-nums text-[var(--color-black)]">
+                                            {value}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
+                                <div className="min-w-0">
+                                    <h4 className="m-0 text-[13px] font-semibold text-[var(--color-black)]">Funding &amp; wire</h4>
+                                    <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
+                                        Call terms first, then destination account — same order as a wire form.
+                                    </p>
+                                    <p className="m-0 mt-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">
+                                        This call
+                                    </p>
+                                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        {([
+                                            ['Call amount', fmtDisplay(decision.amount)],
+                                            ['% of commitment', `${commitmentPct}%`],
+                                            [
+                                                'Due date',
+                                                new Date(decision.dueDate).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                }),
+                                            ],
+                                            ['Workflow status', statusMeta.label],
+                                        ] as const).map(([label, value]) => (
+                                            <div key={label} className="min-w-0">
+                                                <p className="m-0 text-[11px] font-medium text-[var(--color-neutral-9)]">{label}</p>
+                                                <p className="m-0 mt-0.5 break-words text-[13px] font-semibold text-[var(--color-black)] tabular-nums">
+                                                    {value}
                                                 </p>
                                             </div>
-                                            <div className="shrink-0 pt-0.5 min-[480px]:pt-0">
-                                                <MatchBadge status={check.status} />
+                                        ))}
+                                    </div>
+                                    <p className="m-0 mt-5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-neutral-9)]">
+                                        Wire instructions
+                                    </p>
+                                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        {([
+                                            ['Account (last 4)', `••••${accountLast4}`],
+                                            ['ABA routing', decision.wireInstructions.aba],
+                                            ['Bank', decision.wireInstructions.bank],
+                                            ['SWIFT', decision.wireInstructions.swift],
+                                            ['Reference', decision.wireInstructions.reference],
+                                        ] as const).map(([label, value]) => (
+                                            <div key={label} className="min-w-0 sm:col-span-2">
+                                                <p className="m-0 text-[11px] font-medium text-[var(--color-neutral-9)]">{label}</p>
+                                                <p className="m-0 mt-0.5 break-words text-[13px] font-semibold text-[var(--color-black)] tabular-nums">
+                                                    {value}
+                                                </p>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </section>
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <h4 className="m-0 text-[13px] font-semibold text-[var(--color-black)]">Validation</h4>
+                                            <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
+                                                Evidence that figures and parties line up with the notice.
+                                            </p>
+                                        </div>
+                                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--color-neutral-11)]">
+                                            <IconCheck size={12} stroke={2.5} className="text-[var(--color-green-9)]" />
+                                            {validationPassedCount}/{validationTotalCount}
+                                        </span>
+                                    </div>
+                                    <div className="mt-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-white">
+                                        <div className="flex flex-col divide-y divide-[var(--color-neutral-3)]">
+                                            {validationChecks.map((check) => (
+                                                <div
+                                                    key={check.label}
+                                                    className="flex items-start gap-3 px-3 py-3"
+                                                >
+                                                    <IconCheck
+                                                        size={15}
+                                                        stroke={2.3}
+                                                        className="mt-0.5 shrink-0 text-[var(--color-green-9)]"
+                                                    />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="m-0 text-[13px] font-semibold text-[var(--color-black)]">{check.label}</p>
+                                                        <p className="m-0 mt-0.5 text-[12px] leading-snug text-[var(--color-neutral-10)]">
+                                                            {check.note}
+                                                        </p>
+                                                    </div>
+                                                    <div className="shrink-0 pt-0.5 min-[480px]:pt-0">
+                                                        <MatchBadge status={check.status} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section
+                            className="rounded-[var(--radius-xl)] bg-white p-4 ring-1 ring-[var(--color-neutral-4)]"
+                            aria-labelledby="wire-approvals-heading"
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <h3 id="wire-approvals-heading" className="m-0 text-[17px] font-semibold text-[var(--color-black)]">
+                                    Wire approvals
+                                </h3>
+                                <span className="inline-flex shrink-0 items-center rounded-full border border-[var(--color-neutral-4)] bg-[var(--color-neutral-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-neutral-11)]">
+                                    In progress
+                                </span>
+                            </div>
+                            <p className="m-0 mt-1 text-[12px] text-[var(--color-neutral-10)]">
+                                Separate release workflow — approvers must clear before treasury wires funds.
+                            </p>
+                            <div className="mt-4 flex flex-col gap-2">
+                                {decision.approvals.map((approval, idx) => {
+                                    const isApproved = approval.status === 'approved'
+                                    const isBottleneck = !isApproved && idx === firstPendingIdx
+                                    return (
+                                        <div
+                                            key={approval.id}
+                                            className={cn(
+                                                'flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--color-neutral-3)] bg-white px-3 py-2.5',
+                                                isBottleneck && 'border-[var(--color-neutral-4)]',
+                                            )}
+                                        >
+                                            <div
+                                                className={cn(
+                                                    'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
+                                                    isApproved
+                                                        ? 'bg-[var(--color-green-1)] text-[var(--color-green-9)]'
+                                                        : 'bg-[var(--color-neutral-2)] text-[var(--color-neutral-9)]',
+                                                )}
+                                            >
+                                                {isApproved ? <IconCheck size={13} stroke={2.4} /> : idx + 1}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="m-0 text-[13px] font-semibold leading-snug text-[var(--color-black)]">{approval.role}</p>
+                                                <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{approval.name}</p>
+                                            </div>
+                                            <span
+                                                className={cn(
+                                                    'mt-0.5 shrink-0 text-[11px] font-semibold',
+                                                    isApproved ? 'text-[var(--color-green-9)]' : 'text-[var(--color-neutral-10)]',
+                                                )}
+                                            >
+                                                {isApproved ? 'approved' : isBottleneck ? 'awaiting' : 'pending'}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </section>
 
                         {decision.activityLog.length > 0 && (
-                            <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-5">
+                            <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
                                 <h3 className="m-0 text-[15px] font-semibold text-[var(--color-black)]">Activity</h3>
                                 <div className="mt-4 flex flex-col">
                                     {[...decision.activityLog].reverse().map((entry, idx) => (
@@ -808,59 +1003,18 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                                 </div>
                             </section>
                         )}
-                    </div>
-
-                    <aside className="flex min-w-0 flex-col gap-4">
-                        <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white">
-                            <div className="h-[420px] overflow-hidden bg-[#F8F8F9]">
-                                <PdfMock {...pdfProps} />
-                            </div>
-                        </section>
-
-                        <section className="rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white p-4">
-                            <div className="flex items-center justify-between gap-3">
-                                <h3 className="m-0 text-[14px] font-semibold text-[var(--color-black)]">Wire approval</h3>
-                                <span className="rounded-full bg-[var(--color-blue-1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-accent-9)]">In progress</span>
-                            </div>
-                            <div className="mt-4 flex flex-col gap-3">
-                                {decision.approvals.map((approval, idx) => {
-                                    const isApproved = approval.status === 'approved'
-                                    const isBottleneck = !isApproved && idx === firstPendingIdx
-                                    return (
-                                        <div
-                                            key={approval.id}
-                                            className={cn(
-                                                'flex items-start gap-3 rounded-[var(--radius-lg)] px-3 py-2.5',
-                                                isApproved && 'bg-[var(--color-blue-1)]/60',
-                                                isBottleneck && 'bg-[#FFFBEB] ring-1 ring-[#FCD34D]',
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
-                                                isApproved ? 'bg-[#ECFDF5] text-[var(--color-green-9)]' : isBottleneck ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[var(--color-neutral-2)] text-[var(--color-neutral-9)]',
-                                            )}>
-                                                {isApproved ? <IconCheck size={13} stroke={2.4} /> : idx + 1}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="m-0 text-[13px] font-semibold leading-snug text-[var(--color-black)]">{approval.role}</p>
-                                                <p className="m-0 mt-0.5 text-[11px] text-[var(--color-neutral-9)]">{approval.name}</p>
-                                            </div>
-                                            <span className={cn(
-                                                'mt-0.5 shrink-0 text-[11px] font-semibold',
-                                                isApproved ? 'text-[var(--color-green-9)]' : isBottleneck ? 'text-[#D97706]' : 'text-[var(--color-neutral-9)]',
-                                            )}>
-                                                {isApproved ? 'approved' : isBottleneck ? 'awaiting' : 'pending'}
-                                            </span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </section>
-                    </aside>
+                <div className="lg:hidden pb-2">
+                    {pdfPanel}
                 </div>
             </div>
 
-            {localStatus !== 'paid' ? (
+                    <aside className="hidden min-w-0 shrink-0 lg:flex lg:sticky lg:top-4 lg:z-10 lg:w-[minmax(440px,480px)] lg:max-w-[480px] lg:flex-col lg:self-start">
+                        {pdfPanel}
+                    </aside>
+            </div>
+            </div>
+
+            {workflowStatus !== 'paid' ? (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-6 pb-4 pt-2">
                     <div
                         className="pointer-events-auto mx-auto flex max-w-full flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--color-neutral-4)] bg-white px-4 py-3 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.16)] sm:flex-row sm:items-center sm:justify-between sm:gap-4"
@@ -880,7 +1034,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                                 </span>
                                 <span className="text-[12px] text-[var(--color-neutral-10)]">
                                     <span className="text-[var(--color-neutral-7)]" aria-hidden>→ </span>
-                                    {ADVANCE_LABELS[localStatus]}
+                                    {ADVANCE_LABELS[workflowStatus]}
                                 </span>
                                 {dueDays <= 14 && dueDays >= 0 ? (
                                     <span className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[#FFFBEB] px-2 py-1 text-[11px] font-medium text-[#92400E]">
@@ -893,6 +1047,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                         <div className="flex shrink-0 items-center justify-end gap-2 sm:justify-start">
                             <button
                                 type="button"
+                                onClick={handleFlag}
                                 className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-neutral-5)] bg-white px-3 py-2 text-[12px] font-medium text-[var(--color-neutral-11)] transition-colors hover:bg-[var(--color-neutral-2)]"
                             >
                                 <IconFlag size={13} stroke={2} aria-hidden />
@@ -903,7 +1058,7 @@ export function CapitalCallDetailPage({ id, onBack, investmentName }: Props) {
                                 onClick={advanceStatus}
                                 className="flex min-w-[140px] items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-9)] px-4 py-2 text-[12px] font-semibold text-white transition-opacity hover:opacity-90"
                             >
-                                {ADVANCE_LABELS[localStatus]}
+                                {ADVANCE_LABELS[workflowStatus]}
                                 <IconArrowRight size={13} stroke={2.5} aria-hidden />
                             </button>
                         </div>

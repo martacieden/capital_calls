@@ -35,7 +35,7 @@ flowchart LR
 
 ## Таблиця: внутрішній етап → колонка hub
 
-Ім’я в колонках Kanban береться з `HUB_PIPELINE_COLUMNS`; текст етапу в деталі — з конфігу в `CapitalCallDetailPage` / канбан-чіпів.
+Підписи стадій **у спільному hub** (таблиця Investment Pipeline, інші екрани) беруться з `HUB_PIPELINE_COLUMNS`; текст гранулярного етапу в деталі — з конфігу в `CapitalCallDetailPage` / [`CapitalCallKanbanCard`](src/components/molecules/CapitalCallKanbanCard.tsx) у workspace Capital Flows.
 
 | `WorkflowStage` (дані) | Типові підписи в UI | Hub lane (`PipelineStage`) |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ flowchart LR
 | `validation` | Validation (docs) | `due-diligence` |
 | `execution` | Execution / wire-ready | `approved` |
 
-**Investment Pipeline hub** також може вбудовувати окремі **картки capital call** лише в певних колонках (`ic-review`, `approved`) — логіка в [`InvestmentPipelinePage.tsx`](src/components/pages/InvestmentPipelinePage.tsx) (`PIPELINE_EMBED_CAPITAL_COLUMNS`).
+**Investment Pipeline hub** ([`InvestmentPipelinePage.tsx`](src/components/pages/InvestmentPipelinePage.tsx)) — **лише угоди** (pre-approval → approval). Capital calls показуються в **Capital Activities** / контексті інвестицій, не в пайплайні.
 
 ## Ролі й фокус (орієнтир для UX)
 
@@ -75,4 +75,4 @@ flowchart LR
 - короткий бейдж етапу (`WorkflowStage`/hub lane);
 - entity / vehicle (і за потреби лінк на батьківський pipeline item).
 
-Це сумісне з уже реалізованими канбан-картами ([`CapitalCallKanbanCard`](src/components/molecules/CapitalCallKanbanCard.tsx)), баннером linked call на [`InvestmentPipelinePage`](src/components/pages/InvestmentPipelinePage.tsx), і деталлю ([`CapitalCallDetailPage.tsx`](src/components/pages/CapitalCallDetailPage.tsx)).
+Це сумісне з канбан-картами в **Capital Flows** ([`CapitalCallKanbanCard`](src/components/molecules/CapitalCallKanbanCard.tsx)), таблицею Investment Pipeline ([`InvestmentPipelinePage.tsx`](src/components/pages/InvestmentPipelinePage.tsx)), і деталлю ([`CapitalCallDetailPage.tsx`](src/components/pages/CapitalCallDetailPage.tsx)). Зв’язок угода ↔ виклик у даних — [`pipelineDealId`](src/data/thornton/capital-call-decisions-data.ts).

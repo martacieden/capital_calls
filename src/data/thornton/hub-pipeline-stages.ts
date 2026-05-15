@@ -2,8 +2,9 @@ import type { PipelineStage } from '@/data/thornton/pipeline-data'
 import type { WorkflowStage } from '@/data/thornton/capital-call-decisions-data'
 
 /**
- * Shared Investment Pipeline hub Kanban columns — aligned with deal-flow stages.
- * Capital-call operational steps map into these lanes so both workspaces match visually.
+ * Shared pipeline hub stages — deal-flow + capital workflow mapping.
+ * Display labels follow product defaults (Idea / Pre-approval / Approval / Monitoring);
+ * tenant-specific copy can replace `HUB_PIPELINE_COLUMNS` via future config.
  */
 
 export type HubPipelineColumn = {
@@ -16,15 +17,15 @@ export type HubPipelineColumn = {
 }
 
 export const HUB_PIPELINE_COLUMNS: HubPipelineColumn[] = [
-    { id: 'sourcing',       label: 'Sourcing',       dot: '#6B7280', text: '#374151', bg: '#F9FAFB', headerBg: '#F3F4F6' },
-    { id: 'initial-review', label: 'Initial Review', dot: '#3B82F6', text: '#1E40AF', bg: '#EFF6FF', headerBg: '#DBEAFE' },
-    { id: 'due-diligence',  label: 'Due Diligence',  dot: '#F59E0B', text: '#92400E', bg: '#FFFBEB', headerBg: '#FEF3C7' },
-    { id: 'ic-review',      label: 'IC Review',      dot: '#8B5CF6', text: '#5B21B6', bg: '#F5F3FF', headerBg: '#EDE9FE' },
-    { id: 'approved',       label: 'Approved',       dot: '#10B981', text: '#065F46', bg: '#ECFDF5', headerBg: '#D1FAE5' },
-    { id: 'declined',       label: 'Declined',       dot: '#EF4444', text: '#991B1B', bg: '#FEF2F2', headerBg: '#FECACA' },
+    { id: 'sourcing',       label: 'Idea',           dot: '#6B7280', text: '#374151', bg: '#F9FAFB', headerBg: '#F3F4F6' },
+    { id: 'initial-review', label: 'Pre-approval',   dot: '#3B82F6', text: '#1E40AF', bg: '#EFF6FF', headerBg: '#DBEAFE' },
+    { id: 'due-diligence',  label: 'Pre-approval',   dot: '#F59E0B', text: '#92400E', bg: '#FFFBEB', headerBg: '#FEF3C7' },
+    { id: 'ic-review',      label: 'Approval',       dot: '#8B5CF6', text: '#5B21B6', bg: '#F5F3FF', headerBg: '#EDE9FE' },
+    { id: 'approved',       label: 'Monitoring',     dot: '#10B981', text: '#065F46', bg: '#ECFDF5', headerBg: '#D1FAE5' },
+    { id: 'declined',       label: 'Rejected',       dot: '#EF4444', text: '#991B1B', bg: '#FEF2F2', headerBg: '#FECACA' },
 ]
 
-/** Capital Kanban subtitle — explains how backend workflow maps into this lane */
+/** Capital-board lane captions — operational steps mapped into deal-flow stages */
 export const HUB_CAPITAL_KANBAN_CAPTION: Record<PipelineStage, string> = {
     sourcing:
         'Notice intake — PDF upload, AI match & allocator notes.',

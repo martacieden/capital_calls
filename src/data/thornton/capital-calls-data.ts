@@ -8,6 +8,14 @@ export interface CapitalCall {
     status: CapitalCallStatus
 }
 
+export interface CommitmentPayingEntity {
+    legalName: string
+    /** e.g. LP, blocker, conduit */
+    role?: string
+    /** Optional % of LP share for this commitment */
+    allocationPct?: number
+}
+
 export interface CapitalCallCommitment {
     id: string
     fundName: string
@@ -17,6 +25,8 @@ export interface CapitalCallCommitment {
     calls: CapitalCall[]
     /** Projected capital calls by year (2026–2031 forecast schedule). */
     yearlyPacing: Record<string, number>
+    /** Legal entities that fund this LP commitment (single commitment, multiple payors). */
+    payingEntities: CommitmentPayingEntity[]
 }
 
 export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
@@ -41,6 +51,9 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             { id: 'gf3-12', callNumber: 12, dueDate: '2028-09-15', amount: 350_000, status: 'upcoming' },
         ],
         yearlyPacing: { '2026': 500_000, '2027': 900_000, '2028': 700_000 },
+        payingEntities: [
+            { legalName: 'Thornton Family Trust II', role: 'Limited partner', allocationPct: 100 },
+        ],
     },
     {
         id: 'whitmore-capital-i',
@@ -56,6 +69,10 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             { id: 'wc1-5', callNumber: 5, dueDate: '2026-06-01', amount: 2_000_000, status: 'pending' },
         ],
         yearlyPacing: { '2026': 2_000_000 },
+        payingEntities: [
+            { legalName: 'Thornton Holdings Inc.', role: 'LP / blocker', allocationPct: 60 },
+            { legalName: 'Dynasty Trust feeder — Blocker LLC', role: 'Conduit', allocationPct: 40 },
+        ],
     },
     {
         id: 'whitmore-ventures-ii',
@@ -71,6 +88,9 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             { id: 'wv2-5', callNumber: 5, dueDate: '2027-06-01', amount: 1_000_000, status: 'upcoming' },
         ],
         yearlyPacing: { '2026': 1_000_000, '2027': 1_000_000 },
+        payingEntities: [
+            { legalName: 'Thornton Holdings Inc.', role: 'Limited partner', allocationPct: 100 },
+        ],
     },
     {
         id: 'whitmore-real-assets-iii',
@@ -93,6 +113,10 @@ export const CAPITAL_CALL_COMMITMENTS: CapitalCallCommitment[] = [
             '2030': 500_000,
             '2031': 500_000,
         },
+        payingEntities: [
+            { legalName: 'Thornton Family Trust II', role: 'LP (primary)', allocationPct: 72 },
+            { legalName: 'RE Holding Company Ltd.', role: 'Co-invest entity', allocationPct: 28 },
+        ],
     },
 ]
 

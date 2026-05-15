@@ -10,6 +10,7 @@ import {
     type CapitalCallCommitment,
     type CapitalCallStatus,
 } from '@/data/thornton/capital-calls-data'
+import { buildCumulativeProjectionByYear } from '@/lib/capital-charts'
 
 const FORECAST_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const
 
@@ -27,9 +28,20 @@ const FUND_COLORS: Record<string, string> = {
     'whitmore-real-assets-iii': '#93C5FD',
 }
 
+/** Кольори серій «Cumulative Deployment» на CapitalCallsPage (mock: gold / navy). */
+const CUMULATIVE_CALLED_PREVIEW = '#D4AF37'
+const CUMULATIVE_UNCALLED_PREVIEW = '#1A2B4B'
+const CUMULATIVE_MODELED_PREVIEW = '#A78BFA'
+
 export type CapitalChartDrill =
     | { kind: 'annual-bar'; year: string; fundId: string }
-    | { kind: 'cumulative-line'; year: string; seriesId: 'Called' | 'Uncalled' }
+    | {
+          kind: 'cumulative-line'
+          year: string
+          seriesId: 'Called' | 'Uncalled' | 'Modeled'
+          /** Y value at the clicked point (e.g. modeled projection includes scenario). */
+          focusValue?: number
+      }
 
 function fmt(v: number): string {
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
@@ -87,18 +99,9 @@ export function CapitalActivitiesChartDetailPanel({
     )
 
     const cumulativeByYear = useMemo(() => {
-        const alreadyCalled = CAPITAL_CALL_COMMITMENTS.reduce((s, c) => s + getTotalCalled(c), 0)
-        let runningCalled = alreadyCalled
-        const out: Record<string, { called: number; uncalled: number }> = {}
-        for (const year of FORECAST_YEARS) {
-            runningCalled += annualTotals[year] ?? 0
-            out[year] = {
-                called: runningCalled,
-                uncalled: Math.max(0, totalCommitted - runningCalled),
-            }
-        }
-        return out
-    }, [annualTotals, totalCommitted])
+        const pts = buildCumulativeProjectionByYear(CAPITAL_CALL_COMMITMENTS, [...FORECAST_YEARS])
+        return Object.fromEntries(pts.map(p => [p.year, { called: p.called, uncalled: p.uncalled }]))
+    }, [])
 
     const topPacingInYear = useMemo(() => {
         return (year: string) =>
@@ -148,24 +151,40 @@ export function CapitalActivitiesChartDetailPanel({
         const row = cumulativeByYear[drill.year]
         const called = row?.called ?? 0
         const uncalled = row?.uncalled ?? 0
-        const focus = drill.seriesId === 'Called' ? called : uncalled
+        const isModeled = drill.seriesId === 'Modeled'
+        const focus = isModeled
+            ? (drill.focusValue ?? called)
+            : drill.seriesId === 'Called'
+              ? called
+              : uncalled
 
-        breadcrumbCurrent = `All commitments · ${drill.year} · ${drill.seriesId === 'Called' ? 'Funded' : 'Unfunded'}`
+        breadcrumbCurrent = isModeled
+            ? `All commitments · ${drill.year} · Modeled projection`
+            : `All commitments · ${drill.year} · ${drill.seriesId === 'Called' ? 'Funded (paid)' : 'Unfunded'}`
         eyebrow = 'Portfolio roll-up'
         leadAmount = fmt(focus)
-        leadCaption =
-            drill.seriesId === 'Called'
-                ? 'Cumulative paid-in across every LP commitment through this year (from schedule + history).'
-                : 'Unfunded remainder after projected pacing through this year — not a single fund, entire book.'
+        leadCaption = isModeled
+            ? 'Includes the optional “modeled commitment” overlay. Baseline matches the chart: paid through 2025, then portfolio yearly pacing.'
+            : drill.seriesId === 'Called'
+              ? 'Cumulative deployment through this year: paid through 2025 year-end, plus modeled draws from yearly pacing (2026+).'
+              : 'Remaining commitment after that same cumulative deployment.'
 
         previewBarPct =
             totalCommitted > 0 ? Math.min(100, Math.round((called / totalCommitted) * 100)) : 0
-        previewColor = drill.seriesId === 'Called' ? '#93C5FD' : '#1C2024'
-        previewBarCaption = 'Funded vs total commitment base'
+        previewColor =
+            drill.seriesId === 'Uncalled'
+                ? CUMULATIVE_UNCALLED_PREVIEW
+                : drill.seriesId === 'Modeled'
+                  ? CUMULATIVE_MODELED_PREVIEW
+                  : CUMULATIVE_CALLED_PREVIEW
+        previewBarCaption = 'Projected funded vs total commitment base'
 
-        summaryRows.push(['Called (cumulative)', fmt(called)])
+        summaryRows.push(['Called (cumulative, projected)', fmt(called)])
         summaryRows.push(['Uncalled (cumulative)', fmt(uncalled)])
         summaryRows.push(['Total commitment base', fmt(totalCommitted)])
+        if (isModeled && drill.focusValue != null) {
+            summaryRows.push(['Clicked projection (incl. modeled)', fmt(drill.focusValue)])
+        }
     }
 
     const fund = drill.kind === 'annual-bar'

@@ -14,18 +14,24 @@ export interface PipelineDeal {
     sector: string
     stage: PipelineStage
     targetAmount: number
+    amountMax?: number           // if set, display as range: $targetAmount–$amountMax
     projectedIrr: string | null
     projectedMoic: string | null
     sponsor: string
     assignee: string
+    geography?: string           // e.g. 'North America', 'Global', 'Europe'
     sourceDate: string
     lastActivity: string
+    closingDate?: string         // subscription / execution deadline; used for overdue calc
     priority: 'high' | 'medium' | 'low'
     aiScore: number
+    isNew?: boolean
     tags: string[]
     notes?: string
     missingDocs: string[]
     approvals: PipelineApproval[]
+    pendingCapitalCallsCount?: number
+    pendingCapitalCallsAmount?: number
 }
 
 export const PIPELINE_DEALS: PipelineDeal[] = [
@@ -36,14 +42,17 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         sector: 'Healthcare',
         stage: 'sourcing',
         targetAmount: 3_000_000,
+        amountMax: 3_500_000,
         projectedIrr: '+18–22%',
         projectedMoic: '2.5–3.0x',
         sponsor: 'BioNova Capital Partners',
         assignee: 'Sarah W.',
+        geography: 'North America',
         sourceDate: '2026-04-28',
         lastActivity: '2026-05-10',
         priority: 'high',
         aiScore: 72,
+        isNew: true,
         tags: ['Healthcare', 'Series C', 'ESG'],
         notes: 'Introduced via Meridian network. Targeting FDA-approved diagnostics companies.',
         missingDocs: ['Term Sheet', 'Financial Model', 'Cap Table'],
@@ -58,10 +67,12 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         sector: 'Infrastructure',
         stage: 'sourcing',
         targetAmount: 10_000_000,
+        amountMax: 12_000_000,
         projectedIrr: '+9–12%',
         projectedMoic: '1.5–1.8x',
         sponsor: 'Atlantic Asset Management LLC',
         assignee: 'James C.',
+        geography: 'Global',
         sourceDate: '2026-05-01',
         lastActivity: '2026-05-12',
         priority: 'medium',
@@ -80,14 +91,17 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         sector: 'Technology',
         stage: 'initial-review',
         targetAmount: 2_000_000,
+        amountMax: 2_500_000,
         projectedIrr: '+22–28%',
         projectedMoic: '2.8–3.5x',
         sponsor: 'Horizon Ventures LP',
         assignee: 'Emily R.',
+        geography: 'North America',
         sourceDate: '2026-04-10',
         lastActivity: '2026-05-08',
         priority: 'medium',
         aiScore: 68,
+        isNew: true,
         tags: ['Technology', 'VC', 'Growth'],
         notes: 'Early-stage fund with strong track record but high geographic concentration in Bay Area.',
         missingDocs: ['LP Agreement Draft', 'Audited Financials 2024'],
@@ -103,10 +117,12 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         sector: 'Real Assets / ESG',
         stage: 'due-diligence',
         targetAmount: 5_000_000,
+        amountMax: 7_000_000,
         projectedIrr: '+13–16%',
         projectedMoic: '1.7–2.0x',
         sponsor: 'SolarGrid Capital Group',
         assignee: 'Sarah W.',
+        geography: 'Europe',
         sourceDate: '2026-03-15',
         lastActivity: '2026-05-11',
         priority: 'high',
@@ -131,6 +147,7 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         projectedMoic: '1.4–1.6x',
         sponsor: 'Pacific Capital Partners LLC',
         assignee: 'James C.',
+        geography: 'North America',
         sourceDate: '2026-02-18',
         lastActivity: '2026-05-09',
         priority: 'high',
@@ -156,8 +173,10 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         projectedMoic: '2.2–2.8x',
         sponsor: 'Meridian Capital Partners',
         assignee: 'Emily R.',
+        geography: 'North America',
         sourceDate: '2025-11-10',
         lastActivity: '2026-04-30',
+        closingDate: '2026-04-15',
         priority: 'medium',
         aiScore: 94,
         tags: ['Private Equity', 'Growth', 'North America'],
@@ -169,6 +188,8 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
             { role: 'Legal Counsel', name: 'Marcus Williams', status: 'approved', date: '2026-03-15' },
             { role: 'IC Review', name: 'Investment Committee', status: 'approved', date: '2026-03-20' },
         ],
+        pendingCapitalCallsCount: 1,
+        pendingCapitalCallsAmount: 800_000,
     },
     {
         id: 'DEAL-007',
@@ -181,8 +202,10 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         projectedMoic: '3.0–5.0x',
         sponsor: 'Whitmore Capital Group',
         assignee: 'Sarah W.',
+        geography: 'Global',
         sourceDate: '2025-12-05',
         lastActivity: '2026-04-28',
+        closingDate: '2026-04-01',
         priority: 'low',
         aiScore: 88,
         tags: ['Venture Capital', 'Technology', 'Global'],
@@ -194,6 +217,8 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
             { role: 'Legal Counsel', name: 'Marcus Williams', status: 'approved', date: '2026-02-18' },
             { role: 'IC Review', name: 'Investment Committee', status: 'approved', date: '2026-02-22' },
         ],
+        pendingCapitalCallsCount: 2,
+        pendingCapitalCallsAmount: 1_000_000,
     },
     {
         id: 'DEAL-009',
@@ -206,6 +231,7 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         projectedMoic: '1.9–2.3x',
         sponsor: 'Meridian Capital Partners',
         assignee: 'Sarah M.',
+        geography: 'Global',
         sourceDate: '2025-10-08',
         lastActivity: '2026-05-08',
         priority: 'high',
@@ -230,6 +256,7 @@ export const PIPELINE_DEALS: PipelineDeal[] = [
         projectedMoic: null,
         sponsor: 'UrbanTech Capital LLC',
         assignee: 'James C.',
+        geography: 'North America',
         sourceDate: '2026-01-20',
         lastActivity: '2026-03-15',
         priority: 'low',

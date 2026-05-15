@@ -28,10 +28,16 @@ import { TasksPage } from '@/components/pages/TasksPage'
 import { TaskDetailPage } from '@/components/pages/TaskDetailPage'
 import { InvestmentPipelineHubPage } from '@/components/pages/InvestmentPipelineHubPage'
 import { CapitalCallsPage } from '@/components/pages/CapitalCallsPage'
+import { CapitalCallsPageV2 } from '@/components/pages/CapitalCallsPageV2'
 import { CapitalCallDetailPage } from '@/components/pages/CapitalCallDetailPage'
 import { InvestmentRecordPage } from '@/components/pages/InvestmentRecordPage'
 import { ContactsPage } from '@/components/pages/ContactsPage'
 import { getInvestmentById } from '@/data/thornton/investments-data'
+import {
+    getCapitalCallPostDealStatus,
+    type CapitalCallDecision,
+    type CapitalCallPostDealStatus,
+} from '@/data/thornton/capital-call-decisions-data'
 import { ToastContainer, showToast, updateToast } from '@/components/atoms/Toast'
 import { SearchOverlay } from '@/components/organisms/SearchOverlay'
 import fojoMascotSmall from '@/assets/fojo-mascot-small.svg'
@@ -100,8 +106,15 @@ function AppShell() {
   const [capitalChartDrill, setCapitalChartDrill] = useState<CapitalChartDrill | null>(null)
   const [portfolioDetailCategoryId, setPortfolioDetailCategoryId] = useState<string | null>(null)
   const [previousPage, setPreviousPage] = useState<typeof activePage>('home')
+  const [capitalFlowsVersion, setCapitalFlowsVersion] = useState<'v1' | 'v2' | 'v3'>('v1')
   const [detailCapCallId, setDetailCapCallId] = useState<string | null>(null)
   const [detailInvestmentId, setDetailInvestmentId] = useState<string | null>(null)
+  /** Overrides mock post-deal status when user advances workflow on detail (syncs to Capital Activities list). */
+  const [capCallStatusById, setCapCallStatusById] = useState<Record<string, CapitalCallPostDealStatus>>({})
+  const resolvePostDealStatus = useCallback(
+    (d: CapitalCallDecision) => capCallStatusById[d.id] ?? getCapitalCallPostDealStatus(d),
+    [capCallStatusById],
+  )
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [mapZoomTargetId, setMapZoomTargetId] = useState<string | null>(null)
@@ -882,7 +895,7 @@ function AppShell() {
       <main
         className={`main-content${isAnyFullscreen ? ' main-content--map-expanded' : ''}${
           activePage === 'investment-pipeline' || activePage === 'capital-flows' ? ' main-content--pipeline-hub' : ''
-        }`}
+        }${activePage === 'investment-pipeline' ? ' main-content--pipeline-fill' : ''}`}
       >
         <div style={{ display: activePage === 'home' ? undefined : 'none', height: '100%' }}>
           <HomePage
@@ -1004,11 +1017,6 @@ function AppShell() {
           />
         ) : activePage === 'investment-pipeline' ? (
           <InvestmentPipelineHubPage
-            onOpenCapitalCallDetail={(id) => {
-              setDetailCapCallId(id)
-              setPreviousPage('investment-pipeline')
-              setActivePage('capital-call-detail')
-            }}
             onOpenDeal={(id) => {
               setDetailInvestmentId(id)
               setPreviousPage('investment-pipeline')
@@ -1016,19 +1024,41 @@ function AppShell() {
             }}
           />
         ) : activePage === 'capital-flows' ? (
-          <CapitalCallsPage
-            onChartDrill={setCapitalChartDrill}
-            onOpenDetail={(id) => {
-              setDetailCapCallId(id)
-              setPreviousPage('capital-flows')
-              setActivePage('capital-call-detail')
-            }}
-          />
+          capitalFlowsVersion === 'v2' ? (
+            <CapitalCallsPageV2
+              resolvePostDealStatus={resolvePostDealStatus}
+              onChartDrill={setCapitalChartDrill}
+              onOpenDetail={(id) => {
+                setDetailCapCallId(id)
+                setPreviousPage('capital-flows')
+                setActivePage('capital-call-detail')
+              }}
+              onSwitchToV1={() => setCapitalFlowsVersion('v1')}
+            />
+          ) : (
+            <CapitalCallsPage
+              layout={capitalFlowsVersion === 'v3' ? 'classic' : 'default'}
+              resolvePostDealStatus={resolvePostDealStatus}
+              onChartDrill={setCapitalChartDrill}
+              onOpenDetail={(id) => {
+                setDetailCapCallId(id)
+                setPreviousPage('capital-flows')
+                setActivePage('capital-call-detail')
+              }}
+              onSwitchToV2={() => setCapitalFlowsVersion('v2')}
+              onSwitchToClassicLayout={() => setCapitalFlowsVersion('v3')}
+              onSwitchToPriorityLayout={() => setCapitalFlowsVersion('v1')}
+            />
+          )
         ) : activePage === 'capital-call-detail' && detailCapCallId ? (
           <CapitalCallDetailPage
             id={detailCapCallId}
             investmentId={detailInvestmentId ?? undefined}
             investmentName={detailInvestmentId ? getInvestmentById(detailInvestmentId)?.fundNameShort : undefined}
+            resolvePostDealStatus={resolvePostDealStatus}
+            onPostDealStatusChange={(noticeId, status) => {
+              setCapCallStatusById(prev => ({ ...prev, [noticeId]: status }))
+            }}
             onBack={() => {
               if (detailInvestmentId && previousPage === 'investment-record') {
                 setActivePage('investment-record')

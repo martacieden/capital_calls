@@ -15,7 +15,6 @@ import { MagicCard } from '@/components/ui/magic-card'
 export type HomeNavigateTarget =
     | 'investment-pipeline'
     | 'capital-flows'
-    | 'portfolio'
     | 'documents'
 
 interface HomePageProps {
@@ -55,7 +54,7 @@ export function HomePage({ onNavigate, onAskFojo, isFojoOpen = false }: HomePage
             icon: IconBriefcase2,
             iconBgClass: 'bg-[var(--color-blue-3)]',
             iconColorClass: 'text-[var(--color-accent-9)]',
-            cardTintClass: 'hover:bg-[var(--color-blue-2)] hover:border-[var(--color-blue-6)]',
+            cardTintClass: 'hover:bg-[var(--color-blue-hover)] hover:border-[#BFDBFE]',
             onClick: () => onNavigate('investment-pipeline'),
         },
         {

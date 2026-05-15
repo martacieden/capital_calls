@@ -17,7 +17,7 @@ interface NavItem {
     hint?: string
 }
 
-/** One Pipeline board: deal flow in every lane; capital-call cards in IC Review and Approved. */
+/** Pipeline: deal flow + capital calls in one workspace (table view in hub). */
 const navItems: NavItem[] = [
     { icon: IconHome, label: 'Dashboard', id: 'home' },
     {
